@@ -1,6 +1,6 @@
 # AWS Panel 架构与工程规划
 
-更新日期：2026-11-02。状态：根据 PPanel 后端架构调整后的设计，供后续实现使用。
+更新日期：2026-11-02。状态：架构基线与工程骨架。本文包含后续能力的目标设计；当前已实现范围及运行方法见 [开发与运行](development.md)。
 
 ## 项目定位
 
@@ -8,7 +8,7 @@ AWS Panel 是面向小团队的自托管 AWS 管理工具。成员通过自己�
 
 本次确定项目的基础结构与工程约定。具体 AWS 服务操作、网络模板、实例初始化内容、功能优先级和视觉风格留待后续设计。
 
-已确定的使用场景是小团队内部使用和多 AWS 账号管理，采用单进程应用、北京时间（Asia/Shanghai）和唯一业务数据库 PostgreSQL，并支持为不同账号凭据配置独立 SOCKS5 出口。以下其余技术栈与模块划分是本设计的建议基线；首版按单个部署服务一个团队组织数据。
+已确定的使用场景是小团队内部使用和多 AWS 账号管理，采用单进程应用、Go template + htmx + Tabler、北京时间（Asia/Shanghai）和唯一业务数据库 PostgreSQL，并支持为不同账号凭据配置独立 SOCKS5 出口。以下其余技术栈与模块划分是本设计的建议基线；首版按单个部署服务一个团队组织数据。
 
 后端参考 PPanel 当前代码中的模块门面、嵌套 internal 隔离、作用域事务、Hertz 接入和 Asynq 任务链路。具体来源与采用范围见 [PPanel 后端参考与取舍](ppanel-reference.md)。
 
@@ -18,7 +18,7 @@ AWS Panel 是面向小团队的自托管 AWS 管理工具。成员通过自己�
 
 ```mermaid
 flowchart LR
-    Browser[浏览器 React]
+    Browser[浏览器 htmx 与 Tabler]
     subgraph App[单个 Go 应用进程]
         API[Hertz API 与静态页面]
         Worker[Asynq Worker]
@@ -50,9 +50,9 @@ API 与后台服务通过各自的 goroutine 并发运行，共享依赖和配�
 
 | 层次 | 建议选择 | 用途 |
 | --- | --- | --- |
-| Web | React、TypeScript、Vite | 管理界面与前端构建 |
-| UI | Ant Design | 表格、筛选、表单、布局与反馈 |
-| 前端数据 | TanStack Query | 查询缓存、刷新与异步请求状态 |
+| Web | Go html/template | 服务端渲染完整页面和 HTML 片段 |
+| UI | Tabler | 管理界面的布局、表格、表单与反馈 |
+| 页面交互 | htmx、少量原生 JavaScript | 表单提交、筛选、局部刷新与状态更新 |
 | HTTP | CloudWeGo Hertz | 原生 handler、路由分组、中间件、SSE |
 | AWS | AWS SDK for Go v2 | 服务客户端、签名、临时凭据与基础重试 |
 | AWS 出口 | 独立 net/http.Client 与 Transport | 连接级 SOCKS5、超时、连接池和 TLS 校验 |
@@ -67,7 +67,7 @@ API 与后台服务通过各自的 goroutine 并发运行，共享依赖和配�
 | 实时进度 | SSE | 单向任务事件与断线重连 |
 | 部署 | Docker Compose | 小团队自托管和本地集成环境 |
 
-初始化工程时选择当时稳定且仍受维护的依赖版本，通过 Go Modules、前端锁文件和固定容器版本记录。PPanel 的版本号作为对照，不直接视为本项目已验证的依赖组合。
+依赖通过 Go Modules 和静态资源清单锁定。htmx 与 Tabler 文件及许可证随仓库维护，清单保存来源、版本与 SHA-256；构建和运行不依赖外部 CDN，也不需要 Node.js 构建链。PPanel 的版本号作为对照，不直接视为本项目已验证的依赖组合。
 
 数据库只使用 PostgreSQL，这是项目约束，不是首版的临时范围。不提供数据库类型切换、其他数据库驱动、多方言迁移或兼容层；仓储接口用于模块隔离。开发、集成测试和生产使用同一种数据库，数据库测试也不使用 SQLite 替代 PostgreSQL。
 
@@ -150,9 +150,9 @@ AWS 账号与连接分开存储：同一个 AWS 账号可以有多种连接方�
 
 这一配置控制面板后端发往 AWS API 的流量，实例自身的联网与 SSH、浏览器访问面板、PostgreSQL 和 Redis 连接分别遵循各自网络配置。代理也不改变 AWS Region、IAM 身份或权限。出口一致性不等于 AWS 风控保证。
 
-AWS 客户端工厂接收账号连接解析出的不可变凭据与出口快照，为每个连接和配置版本创建独立 HTTP Client 与 Transport，并通过 config.WithHTTPClient 注入 SDK。服务客户端缓存进一步区分区域和服务。SDK 配置支持自定义 HTTP 客户端，参见 [AWS SDK HTTP 配置](https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-http.html)。
+AWS 客户端工厂接收账号连接解析出的不可变凭据与出口快照，为每个连接和配置版本创建独立 HTTP Client 与 Transport，并在 aws.Config.HTTPClient 中显式注入。配置仅接收调用方传入的区域和凭据提供器，不自动加载宿主机的共享凭据文件或环境凭据。后续服务客户端缓存进一步区分区域和服务。SDK 支持自定义 HTTP 客户端，参见 [AWS SDK HTTP 配置](https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-http.html)。
 
-SOCKS5 路径显式设置 Transport 的代理，不使用 ProxyFromEnvironment；direct 路径显式禁用代理。Go net/http 支持 socks5 与 socks5h，参见 [Transport 文档](https://pkg.go.dev/net/http#Transport)。目标 AWS 主机名交给 SOCKS5 代理解析，代理服务器地址本身按本机网络解析；AWS HTTPS 保持原始主机名校验和证书验证。SOCKS5 本身不提供代理握手与认证的加密，不能将它等同于 TLS。
+SOCKS5 路径显式注入带超时与取消能力的 DialContext，不使用 ProxyFromEnvironment；direct 路径显式禁用代理。实现采用 golang.org/x/net/proxy 的 SOCKS5 ContextDialer，参见 [Go 代理接口](https://pkg.go.dev/golang.org/x/net/proxy)。拨号与 SOCKS 握手共同受独立超时约束，避免 HTTP 连接池脱离请求 context 后无限等待。目标 AWS 主机名交给 SOCKS5 代理解析，代理服务器地址本身按本机网络解析；AWS HTTPS 保持原始主机名校验和证书验证。SOCKS5 本身不提供代理握手与认证的加密，不能将它等同于 TLS。
 
 单进程中不得修改全局 HTTP_PROXY、HTTPS_PROXY、ALL_PROXY、NO_PROXY 或共享 DefaultTransport 来切换账号出口。显式配置覆盖环境变量影响，独立连接池防止连接在账号或代理版本之间串用。连接、SOCKS5 握手、TLS 和总请求时间均有边界，取消请求能终止对应网络等待。
 
@@ -272,19 +272,25 @@ AWS 返回的时间保留原始时刻，在展示和业务日历计算时转换�
 
 HTTP 接口使用 /api/v1 前缀。查询返回面板 DTO；长操作提交成功后返回 202、任务 ID 和任务位置。统一错误结构包含稳定错误码、可读信息、request_id 和是否可重试；原始 AWS 响应先脱敏再决定是否展示。
 
-前端按业务模块组织页面、请求与表单，共享组件集中在 shared。服务器状态由 TanStack Query 管理，表单编辑状态留在对应页面，只有会话摘要和跨页面选择需要全局状态。
+页面和 HTML 片段由业务模块的 HTTP handler 调用同一个模块门面后渲染，模板和公共布局放在 web/templates，静态资源放在 web/static，并用 go:embed 打包。htmx 负责局部请求与 DOM 更新；表单、筛选和分页的最终状态以服务器和 URL 为准，少量浏览器交互使用原生 JavaScript。
+
+完整页面与片段使用不同路由，或明确通过请求头协商，并设置相应缓存策略。HX-Request 等头只控制响应形态，不是身份或权限凭证。模板默认 HTML 转义，不将云端名称、日志、错误或用户输入直接转换成 template.HTML。
 
 账号、区域等筛选可以进入 URL 以支持分享和恢复，但后端始终独立校验权限。批量任务提交时将目标集合固化，页面之后切换筛选不改变已经提交的目标。
 
-接口定义沿用 PPanel 的代码优先方式：模块 contract 中的 Go DTO、handler 文档注释和集中路由构成契约来源，Swaggo 生成 Swagger 2.0 文档。生成文件不手工修改，前端类型使用支持该版本的生成工具；SSE 事件另有强类型 DTO 与协议说明。接口修改时同步生成，并以路由清单和契约测试检查方法、路径、权限、响应状态与 schema。
+JSON API 沿用 PPanel 的代码优先方式：模块 contract 中的 Go DTO、handler 文档注释和集中路由构成契约来源，Swaggo 生成 Swagger 2.0 文档。生成文件不手工修改。模板使用 Go 视图模型，不维护另一套 TypeScript DTO；SSE 事件另有强类型 DTO 与协议说明。接口修改时同步生成，并以路由清单和契约测试检查方法、路径、权限、响应状态与 schema。
 
 HTTP 状态采用 2xx、4xx、5xx 的常规语义，业务错误码保留在响应体。新增项目无需继承 PPanel 的全 HTTP 200 响应兼容约定。文档中的安全方案描述当前 Cookie 会话，不直接沿用 BearerAuth 注释。
 
 API 同源提供静态页面、REST 和 SSE。会话采用可撤销的服务端会话以及 Secure、HttpOnly、SameSite Cookie；写请求进行 CSRF 与来源校验。初次安装通过一次性本地初始化创建管理员，成员由管理员建立；后续接入 OIDC 保持 identity 边界不变。
 
+htmx 的写表单和请求头携带服务端签发的 CSRF token，JSON 与 HTML 入口执行相同授权。片段错误使用相应 HTTP 状态，前端明确配置允许显示的错误片段；认证失效时返回登录跳转指令，避免把登录页塞进局部表格。当前骨架只提供只读状态页面，认证和写操作尚未开放。
+
 任务事件先入库，再经 SSE 投递。按任务分配单调递增序号，浏览器重连使用 Last-Event-ID 补读，重复事件按序号忽略。该重连机制见 [SSE 标准](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-last-event-id-header)。
 
 Hertz 使用原生 SSE 接口，流写入的生命周期与 handler 一致，不把请求上下文交给后台任务；参考 [Hertz SSE 文档](https://www.cloudwego.io/docs/hertz/tutorials/basic-feature/sse/)。
+
+任务界面收到 SSE 事件后可刷新相应 HTML 片段，事件序号与任务状态仍由数据库维护。骨架阶段的系统状态使用 htmx 轮询和手动刷新，业务任务出现后再接入 SSE。
 
 事件保留期之外返回需要重载快照的信号；SSE 中断时可回退轮询。订阅建立时及持续连接期间检查会话和授权，撤销权限后停止传送事件。事件订阅不能获得超出资源和任务读取权限的信息。
 
@@ -292,7 +298,7 @@ Hertz 使用原生 SSE 接口，流写入的生命周期与 handler 一致，不
 
 ## 建议目录
 
-以下为待实现的目录规划，仅文档已建立。
+以下目录在骨架中按实际使用建立；业务模块的完整内部结构随对应功能逐步补齐。
 
 ```text
 aws-panel/
@@ -343,11 +349,12 @@ aws-panel/
     aws-panel.example.yaml
   api/generated/           # 生成的 Swagger 文档
   web/
-    src/
-      app/                 # 应用入口、路由与布局
-      features/            # 按业务模块组织页面
-      shared/              # 通用组件与工具
-      api/                 # 生成客户端与请求封装
+    assets.go              # go:embed 与模板渲染
+    templates/             # 布局、页面和局部片段
+    static/
+      vendor/              # 固定版本的 htmx、Tabler 与许可证
+      app.css
+      app.js
   deploy/
     compose.yaml
     Dockerfile
@@ -376,7 +383,7 @@ internal/module/<name>/
 
 ## 部署与维护
 
-前端构建产物随应用镜像发布，由同进程的 Hertz 提供。部署时启动一个运行 run 命令的应用容器，以及 PostgreSQL、Redis 两个依赖服务；也可以连接已有数据库和 Redis。HTTPS 由部署入口的反向代理终止，仅对外暴露 Web 入口，数据库和 Redis 保持内部访问。
+模板与静态资源嵌入 Go 二进制，由同进程的 Hertz 提供，不需要独立前端构建或静态文件服务器。部署时启动一个运行 run 命令的应用容器，以及 PostgreSQL、Redis 两个依赖服务；也可以连接已有数据库和 Redis。HTTPS 由部署入口的反向代理终止，仅对外暴露 Web 入口，数据库和 Redis 保持内部访问。
 
 首版按单应用实例部署。更新应用会同时重启 API 与后台服务，期间 Web 短暂不可用；已提交任务依靠持久化状态在重启后核对和恢复。后续增加应用副本前，需要补齐调度器选主或去重、共享 AWS 调用预算以及跨进程配置同步，不能只提高容器副本数。
 

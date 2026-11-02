@@ -1,0 +1,37 @@
+[
+  {
+    "file": "htmx.min.js",
+    "package": "htmx.org",
+    "version": "2.0.11",
+    "url": "https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js",
+    "sha256": "d6fdc75f204e6bdefa99b69bf1e6d4ac69b8a364f77929f45c13476b4000f717"
+  },
+  {
+    "file": "htmx.LICENSE",
+    "package": "htmx.org",
+    "version": "2.0.11",
+    "url": "https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/LICENSE",
+    "sha256": "d3d2456f76414f2456104660ebd65aff1c04cd7966b942bdabd63f3cdb316a38"
+  },
+  {
+    "file": "tabler.min.css",
+    "package": "@tabler/core",
+    "version": "1.7.3",
+    "url": "https://cdn.jsdelivr.net/npm/@tabler/core@1.7.3/dist/css/tabler.min.css",
+    "sha256": "00601301716c0bd97acbec6c2b6cb98f257d148063ef168aa06f902b1e7d9ea5"
+  },
+  {
+    "file": "tabler.min.js",
+    "package": "@tabler/core",
+    "version": "1.7.3",
+    "url": "https://cdn.jsdelivr.net/npm/@tabler/core@1.7.3/dist/js/tabler.min.js",
+    "sha256": "4ff08167c8e5e3dbc05f424b9586c8e79778fc226950be19b74d6232e52c2f56"
+  },
+  {
+    "file": "tabler.LICENSE",
+    "package": "tabler/tabler",
+    "version": "license-blob-aa69649cde83c2d6517ec2498a9c10f5bb3bf54c",
+    "url": "https://raw.githubusercontent.com/tabler/tabler/dev/LICENSE",
+    "sha256": "4f88a82d13be3c5c63a12c5631eae914aa4381b6dc17641bf1ab85f3f8f6c8a5"
+  }
+]

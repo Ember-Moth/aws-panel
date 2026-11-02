@@ -1,0 +1,76 @@
+name: aws-panel
+
+x-application: &application
+  image: aws-panel:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+  environment: &application-environment
+    TZ: Asia/Shanghai
+    AWS_PANEL_HTTP_ADDRESS: 0.0.0.0:8080
+    AWS_PANEL_DB_HOST: postgres
+    AWS_PANEL_DB_NAME: aws_panel
+    AWS_PANEL_DB_USER: aws_panel
+    AWS_PANEL_DB_PASSWORD: ${AWS_PANEL_DB_PASSWORD:?Set AWS_PANEL_DB_PASSWORD in deploy/.env}
+    AWS_PANEL_REDIS_ADDRESS: redis:6379
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *application
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    stop_grace_period: 40s
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/aws-panel", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  migrate:
+    <<: *application
+    profiles: ["tools"]
+    command: ["migrate", "up"]
+    environment:
+      <<: *application-environment
+      AWS_PANEL_DB_USER: aws_panel_migrator
+      AWS_PANEL_DB_PASSWORD: ${AWS_PANEL_MIGRATION_DB_PASSWORD:?Set AWS_PANEL_MIGRATION_DB_PASSWORD in deploy/.env}
+
+  postgres:
+    image: postgres:17.11-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    environment:
+      POSTGRES_DB: aws_panel
+      POSTGRES_USER: aws_panel_migrator
+      POSTGRES_PASSWORD: ${AWS_PANEL_MIGRATION_DB_PASSWORD:?Set AWS_PANEL_MIGRATION_DB_PASSWORD in deploy/.env}
+      AWS_PANEL_DB_PASSWORD: ${AWS_PANEL_DB_PASSWORD:?Set AWS_PANEL_DB_PASSWORD in deploy/.env}
+      TZ: Asia/Shanghai
+    command: ["postgres", "-c", "timezone=Asia/Shanghai", "-c", "log_timezone=Asia/Shanghai"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/01-runtime-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aws_panel_migrator -d aws_panel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8.10.3-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:

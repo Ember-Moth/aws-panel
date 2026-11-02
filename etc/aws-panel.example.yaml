@@ -1,0 +1,26 @@
+# Copy to etc/aws-panel.yaml. Private config and password files are gitignored.
+# Default listeners are loopback-only; credentials can be provided with *_FILE.
+http:
+  address: 127.0.0.1:8080
+  shutdown_timeout: 10s
+database:
+  host: 127.0.0.1
+  port: 5432
+  name: aws_panel
+  user: aws_panel
+  password: ""
+  password_file: ""
+  ssl_mode: disable
+  max_open: 12
+  max_idle: 4
+redis:
+  address: 127.0.0.1:6379
+  password: ""
+  password_file: ""
+  db: 0
+worker:
+  concurrency: 4
+  shutdown_timeout: 15s
+  heartbeat_interval: 1m
+log:
+  level: info

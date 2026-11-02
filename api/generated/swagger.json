@@ -1,0 +1,103 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "AWS Panel foundation API. Cloud operations are not yet exposed.",
+        "title": "AWS Panel API",
+        "contact": {},
+        "version": "0.1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/system": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Get system status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.SystemResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "contract.SystemStatus": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "revision": {
+                    "type": "string"
+                },
+                "server_time": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "worker_healthy": {
+                    "type": "boolean"
+                },
+                "worker_heartbeat": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.SystemResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.SystemStatus"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "httpx.Envelope": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "$ref": "#/definitions/httpx.Error"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "httpx.Error": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

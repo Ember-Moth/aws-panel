@@ -1,0 +1,8 @@
+.git
+.local
+bin
+build
+etc/aws-panel.yaml
+deploy/.env
+.env
+*.log

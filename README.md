@@ -2,7 +2,7 @@
 
 面向小团队、自托管的 AWS 账号与资源管理面板。通过统一的账号接入、成员权限和后台任务，把常用 AWS 操作组织成可追踪、可复用的工作流程。
 
-项目当前处于架构设计阶段。具体 AWS 功能与实现顺序将在后续确定。
+当前已具备可运行的工程骨架：单进程启动、配置、PostgreSQL 迁移、Hertz 页面与 API、Asynq 心跳任务及独立 SOCKS5 HTTP 客户端。具体 AWS 功能与实现顺序将在后续确定。
 
 ## 设计方向
 
@@ -20,7 +20,7 @@
 
 | 部分 | 选择 |
 | --- | --- |
-| 前端 | React、TypeScript、Vite、Ant Design |
+| 前端 | Go html/template、htmx、Tabler，本地静态资源嵌入二进制 |
 | 后端 | Go、Hertz、Cobra、AWS SDK for Go v2 |
 | AWS 出口 | 按连接隔离的 HTTP 客户端与 SOCKS5 配置 |
 | 数据 | 仅 PostgreSQL，使用 GORM 与 golang-migrate |
@@ -29,7 +29,27 @@
 | 可观测性 | 结构化日志、OpenTelemetry |
 | 部署 | Docker Compose：一个应用容器，加 PostgreSQL 与 Redis；页面和 API 同源 |
 
-单进程、北京时间、仅使用 PostgreSQL 和按连接配置 SOCKS5 出口已确定；其余组件按当前设计推进，依赖版本在初始化工程时锁定。
+单进程、北京时间、仅使用 PostgreSQL 和按连接配置 SOCKS5 出口已确定。Go 依赖由 go.mod/go.sum 锁定，前端资源版本与校验值记录在 web/static/vendor/manifest.json。
+
+## 本地运行
+
+需要 Go（版本见 go.mod）、PostgreSQL 和 Redis。前端无需 Node.js 或独立构建。
+
+```sh
+cp etc/aws-panel.example.yaml etc/aws-panel.yaml
+# 按本地环境编辑数据库和 Redis 配置
+make build
+./bin/aws-panel --config etc/aws-panel.yaml migrate up
+./bin/aws-panel --config etc/aws-panel.yaml run
+```
+
+打开 http://127.0.0.1:8080。完整配置、Compose 和验证方式见 [开发与运行](docs/development.md)。
+
+## 当前范围
+
+- 已有：工作台基础页面、htmx 状态刷新、健康探针、版本化迁移、队列与调度器心跳、日志和追踪上下文、架构约束测试。
+- 已有基础组件：按调用方隔离的直连/SOCKS5 客户端与显式 AWS SDK 配置，尚未连接账号管理界面或真实 AWS 操作。
+- 后续：成员登录、权限、账号与秘密存储、代理配置管理、业务任务/outbox、SSE 和具体 AWS 服务模块。
 
 ## 项目设计
 
@@ -37,4 +57,4 @@
 
 后端技术栈与工程约定的参考依据见 [PPanel 后端参考与取舍](docs/ppanel-reference.md)。
 
-目前仓库只有设计文档，尚无可运行的应用。
+基础检查使用 `make check` 和 `make test-race`；安装本地 PostgreSQL/Redis 工具后可运行 `make smoke`，它只使用自动创建的临时实例。

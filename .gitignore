@@ -1,0 +1,9 @@
+/bin/
+/build/
+/etc/aws-panel.yaml
+/deploy/.env
+/.env
+/.local/
+*.log
+.DS_Store
+__pycache__/
