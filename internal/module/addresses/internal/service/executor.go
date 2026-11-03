@@ -46,7 +46,13 @@ func (e *Executor) config(ctx context.Context, call oc.Call, write bool) (aws.Co
 	return e.deps.Clients.ConfigForBound(ctx, call.ActorID, call.Target.Binding.ConnectionID, call.Target.Binding.Region, write, call.Target.Binding.Fingerprint, call.Check)
 }
 func tags(call oc.Call) map[string]string {
-	return map[string]string{"aws-panel:step": call.StepID, "aws-panel:token": call.Token, "aws-panel:spec": hash(string(call.Input))}
+	v := map[string]string{"aws-panel:step": call.StepID, "aws-panel:token": call.Token, "aws-panel:spec": hash(string(call.Input))}
+	var spec contract.Spec
+	if json.Unmarshal(call.Input, &spec) == nil && spec.Managed && spec.Instance != nil {
+		v["aws-panel:instance"] = spec.Instance.ID
+		v["aws-panel:role"] = "instance-ip"
+	}
+	return v
 }
 func expectedEffect(call oc.Call) *oc.Effect {
 	return &oc.Effect{StepID: call.StepID, JobID: call.JobID, AccountID: call.Target.Binding.AccountID, Region: call.Target.Binding.Region, Purpose: "addresses." + call.Kind, SpecHash: hash(string(call.Input)), Token: call.Token}
@@ -56,10 +62,10 @@ func sameEffect(row *oc.Effect, call oc.Call) bool {
 	return row.StepID == v.StepID && row.JobID == v.JobID && row.AccountID == v.AccountID && row.Region == v.Region && row.Purpose == v.Purpose && row.Token == v.Token && row.SpecHash == v.SpecHash
 }
 func sameAddress(value, expected *contract.Address) bool {
-	return value != nil && expected != nil && value.ID == expected.ID && value.ARN == expected.ARN && value.IP == expected.IP
+	return value != nil && expected != nil && value.ID == expected.ID && value.ARN == expected.ARN && value.IP == expected.IP && value.BorderGroup == expected.BorderGroup && (expected.Kind == "" || value.Kind == expected.Kind)
 }
 func sameInstance(value, expected *contract.Instance) bool {
-	return value != nil && expected != nil && value.ID == expected.ID && value.ARN == expected.ARN && value.NetworkInterfaceID == expected.NetworkInterfaceID && value.PrivateIP == expected.PrivateIP
+	return value != nil && expected != nil && value.ID == expected.ID && value.ARN == expected.ARN && value.NetworkInterfaceID == expected.NetworkInterfaceID && value.PrivateIP == expected.PrivateIP && value.BorderGroup == expected.BorderGroup && value.WavelengthZoneID == expected.WavelengthZoneID
 }
 func attachedTo(kind string, address *contract.Address, instance *contract.Instance) bool {
 	if address == nil || instance == nil || !address.Attached || address.InstanceID != instance.ID {
@@ -277,6 +283,19 @@ func (e *Executor) Execute(ctx context.Context, call oc.Call) oc.Result {
 	}
 	var observed observation
 	if call.Kind == "allocate" {
+		if spec.Target.Service == "wavelength" {
+			cat, err := e.deps.Cloud.Catalogue(ctx, cfg, spec.Target.Service, call.Target.Binding.AWSAccountID)
+			if err != nil {
+				return noSend(err)
+			}
+			valid := false
+			for _, z := range cat.WavelengthZones {
+				valid = valid || (z.BorderGroup == spec.BorderGroup && (spec.Target.WavelengthZoneID == "" || z.ID == spec.Target.WavelengthZoneID))
+			}
+			if !valid || spec.BorderGroup == "" {
+				return noSend(contract.ErrUnsupported)
+			}
+		}
 		found, err := e.deps.Cloud.FindAllocated(ctx, cfg, spec.Target.Service, call.Target.Binding.AWSAccountID, spec.NewName, tags(call))
 		if err != nil {
 			return noSend(err)
@@ -325,6 +344,9 @@ func (e *Executor) Execute(ctx context.Context, call oc.Call) oc.Result {
 	switch call.Kind {
 	case "allocate":
 		border := spec.Target.Region
+		if spec.Target.Service == "wavelength" {
+			border = spec.BorderGroup
+		}
 		if spec.Instance != nil && spec.Instance.BorderGroup != "" {
 			border = spec.Instance.BorderGroup
 		}
@@ -447,10 +469,13 @@ func (e *Executor) reconcileAllocation(ctx context.Context, cfg aws.Config, call
 		current = &found[0]
 	}
 	if current != nil {
+		if spec.Target.Service == "wavelength" && (current.Kind != "wavelength" || current.BorderGroup != spec.BorderGroup) {
+			return attention("CARRIER_BORDER_GROUP_CHANGED", current.ARN)
+		}
 		if row.ResourceID != "" && row.ResourceID != current.ID {
 			return attention("ALLOCATION_CHANGED", row.ResourceID)
 		}
-		if spec.Target.Service == "ec2" {
+		if spec.Target.Service != "lightsail" {
 			for key, value := range tags(call) {
 				if current.Tags[key] != value {
 					return attention("ALLOCATION_OWNERSHIP_UNCONFIRMED", current.ARN)
@@ -528,7 +553,7 @@ func (e *Executor) reconcileAllocation(ctx context.Context, cfg aws.Config, call
 	row.ResourceID = current.ID
 	row.Code = "ALLOCATION_CONFIRMED"
 	row.ResourceLocks = AddressLocks(spec.Target.Service, *current)
-	if spec.Target.Service == "ec2" {
+	if spec.Target.Service != "lightsail" {
 		row.Proof = string(mustJSON(effectProof{Address: current}))
 	}
 	if err := e.deps.Effects.RecordEffect(ctx, *row, effectLease(call)); err != nil {

@@ -135,7 +135,7 @@ func summarize(view contract.Overview, rows map[string]entity.Snapshot) contract
 		metric := contract.Metric{Key: kind, Name: names[kind], ExpectedScopes: len(expected[kind]), UnknownAccounts: unknown[kind], Partial: uncertain[kind]}
 		for k := range expected[kind] {
 			v := values[k]
-			if !v.known {
+			if !v.known || (kind == contract.EC2IPs && !v.data.CarrierKnown) {
 				continue
 			}
 			metric.Known = true
@@ -176,7 +176,20 @@ func summarize(view contract.Overview, rows map[string]entity.Snapshot) contract
 	}
 	ipMetric.UnknownAccounts = len(ipUnknownAccounts)
 	ipMetric.Count = int64(len(ipSet))
-	view.Metrics = append(view.Metrics, ipMetric, regionMetric)
+	carrier := contract.Metric{Key: "carrier_ips", Name: "Carrier IP", ExpectedScopes: len(expected[contract.EC2IPs]), UnknownAccounts: unknown[contract.EC2IPs], Partial: uncertain[contract.EC2IPs]}
+	for k := range expected[contract.EC2IPs] {
+		v := values[k]
+		if !v.known || !v.data.CarrierKnown || v.data.CarrierCount < 0 {
+			continue
+		}
+		carrier.Known = true
+		carrier.KnownScopes++
+		carrier.Count += v.data.CarrierCount
+		carrier.UpdatedAt = minTime(carrier.UpdatedAt, v.row.LastSuccessAt)
+		carrier.Stale = carrier.Stale || stale(v, view.CheckedAt) || accounts[v.row.AccountID].Status != "ready"
+	}
+	carrier.Partial = carrier.Partial || carrier.UnknownAccounts > 0 || carrier.KnownScopes < carrier.ExpectedScopes
+	view.Metrics = append(view.Metrics, ipMetric, regionMetric, carrier)
 	type quotaObservation struct {
 		scope string
 		quota contract.Quota

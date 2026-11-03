@@ -45,11 +45,12 @@ type SubmitRequest struct {
 	IdempotencyKey string `json:"idempotency_key"`
 }
 type formView struct {
-	View        string
-	Options     contract.Options
-	Value       contract.Target
-	Catalogue   *contract.Catalogue
-	CSRF, Error string
+	ZoneSelection []string
+	View          string
+	Options       contract.Options
+	Value         contract.Target
+	Catalogue     *contract.Catalogue
+	CSRF, Error   string
 }
 type previewView struct {
 	Preview   contract.Preview
@@ -93,7 +94,14 @@ func decode(c *app.RequestContext, value any) error {
 	return nil
 }
 func (h *Handler) render(ctx context.Context, c *app.RequestContext, code int, name string, model any) {
-	body, err := h.renderer.Page(name, view.Layout(ctx, "EC2 实例", "ec2"), model)
+	title, active := "EC2 实例", "ec2"
+	if v, ok := model.(formView); ok && v.Value.WavelengthZoneID != "" {
+		title, active = "Wavelength 实例", "wavelength"
+	}
+	if v, ok := model.(previewView); ok && len(v.Preview.Targets) > 0 && v.Preview.Targets[0].Spec.Target.WavelengthZoneID != "" {
+		title, active = "Wavelength 操作预览", "wavelength"
+	}
+	body, err := h.renderer.Page(name, view.Layout(ctx, title, active), model)
 	view.HTML(c, code, body, err)
 }
 func (h *Handler) fail(ctx context.Context, c *app.RequestContext, err error) {
@@ -110,7 +118,11 @@ func (h *Handler) Form(ctx context.Context, c *app.RequestContext) {
 		h.fail(ctx, c, err)
 		return
 	}
-	value := contract.Target{ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Action: c.DefaultQuery("action", "create"), InstanceID: c.Query("instance_id"), Name: "panel-ec2", DiskGB: 16, PublicIPv4: true, IPv6: true, LoginMethod: "ssh_key"}
+	value := contract.Target{WavelengthZoneID: c.Query("wavelength_zone_id"), ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Action: c.DefaultQuery("action", "create"), InstanceID: c.Query("instance_id"), Name: "panel-ec2", DiskGB: 16, PublicIPv4: false, IPv6: true, LoginMethod: "ssh_key"}
+	if value.WavelengthZoneID != "" {
+		value.PublicIPv4 = false
+		value.IPv6 = false
+	}
 	mode := "instances"
 	if c.Query("action") != "" {
 		mode = computeView(value.Action)
@@ -154,7 +166,7 @@ func (h *Handler) Prepare(ctx context.Context, c *app.RequestContext) {
 	if api(c) {
 		err = decode(c, &req)
 	} else {
-		value = contract.Target{ConnectionID: c.PostForm("connection_id"), Region: c.PostForm("region"), Action: c.PostForm("action"), InstanceID: c.PostForm("instance_id")}
+		value = contract.Target{WavelengthZoneID: c.PostForm("wavelength_zone_id"), ConnectionID: c.PostForm("connection_id"), Region: c.PostForm("region"), Action: c.PostForm("action"), InstanceID: c.PostForm("instance_id")}
 		var password string
 		if value.Action == "network" {
 			value.Name = c.PostForm("network_name")
@@ -172,6 +184,8 @@ func (h *Handler) Prepare(ctx context.Context, c *app.RequestContext) {
 			value.ImageID = c.PostForm("image_id")
 			value.InstanceType = c.PostForm("instance_type")
 			value.SubnetID = c.PostForm("subnet_id")
+			value.IngressSubnetID = c.PostForm("ingress_subnet_id")
+			value.IngressType = c.PostForm("ingress_type")
 			value.PublicIPv4 = c.PostForm("public_ipv4") == "true"
 			value.IPv6 = c.PostForm("ipv6") == "true"
 			value.LoginMethod = c.PostForm("login_method")
@@ -185,6 +199,14 @@ func (h *Handler) Prepare(ctx context.Context, c *app.RequestContext) {
 			}
 		}
 		req.Targets = []contract.InputTarget{{Target: value, RootPassword: password}}
+		if value.Action == "wavelength_opt_in" {
+			req.Targets = nil
+			for _, z := range c.PostArgs().PeekAll("wavelength_zone_id") {
+				v := value
+				v.WavelengthZoneID = string(z)
+				req.Targets = append(req.Targets, contract.InputTarget{Target: v})
+			}
+		}
 
 	}
 
@@ -210,7 +232,17 @@ func (h *Handler) Prepare(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	code, fault := status(err)
-	body, renderErr := h.renderer.Render("ec2-form", formView{View: computeView(value.Action), Options: options, Value: value, CSRF: auth.CSRF(ctx), Error: previewMessage(fault)})
+	selection := []string{}
+	for _, v := range req.Targets {
+		if v.WavelengthZoneID != "" {
+			selection = append(selection, v.WavelengthZoneID)
+		}
+	}
+	templateName := "ec2-form"
+	if value.Action == "wavelength_opt_in" {
+		templateName = "wavelength-form"
+	}
+	body, renderErr := h.renderer.Render(templateName, formView{ZoneSelection: selection, View: computeView(value.Action), Options: options, Value: value, CSRF: auth.CSRF(ctx), Error: previewMessage(fault)})
 	view.HTML(c, code, body, renderErr)
 }
 
@@ -288,11 +320,19 @@ type CatalogueResponse struct {
 // @Security SessionCookie
 // @Param connection_id query string true "Connection UUID"
 // @Param region query string true "AWS region"
+// @Param wavelength_zone_id query string false "Wavelength Zone ID for gp2 IPv4 creation"
+// @Param refresh query boolean false "Refresh directory data from AWS"
 // @Success 200 {object} CatalogueResponse
 // @Failure 400,401,403,409,503 {object} httpx.Envelope
 // @Router /ec2/catalogue [get]
 func (h *Handler) Catalogue(ctx context.Context, c *app.RequestContext) {
-	result, err := h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"))
+	var result contract.Catalogue
+	var err error
+	if zone := c.Query("wavelength_zone_id"); zone != "" {
+		result, err = h.service.WavelengthCatalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"), zone, c.Query("refresh") == "true")
+	} else {
+		result, err = h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"), c.Query("refresh") == "true")
+	}
 	if err != nil {
 		h.fail(ctx, c, err)
 		return
@@ -312,20 +352,45 @@ type ListingResponse struct {
 // @Security SessionCookie
 // @Param connection_id query string true "Connection UUID"
 // @Param region query string true "AWS region"
+// @Param refresh query boolean false "Refresh instance status from AWS"
 // @Success 200 {object} ListingResponse
 // @Failure 400,401,403,409,503 {object} httpx.Envelope
 // @Router /ec2/instances [get]
 func (h *Handler) Instances(ctx context.Context, c *app.RequestContext) {
-	v, err := h.service.Instances(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"))
+	v, err := h.service.Instances(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"), c.Query("refresh") == "true")
 	if err != nil {
 		h.fail(ctx, c, err)
 		return
+	}
+	if zone := c.Query("wavelength_zone_id"); zone != "" {
+		zs, e := h.service.WavelengthZones(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"), c.Query("refresh") == "true")
+		if e != nil {
+			h.fail(ctx, c, e)
+			return
+		}
+		name := ""
+		for _, z := range zs.Zones {
+			if z.ID == zone {
+				name = z.Name
+			}
+		}
+		if name == "" {
+			h.fail(ctx, c, contract.ErrNotFound)
+			return
+		}
+		rows := []contract.Instance{}
+		for _, row := range v.Items {
+			if row.Zone == name {
+				rows = append(rows, row)
+			}
+		}
+		v.Items = rows
 	}
 	httpx.Success(c, 200, v)
 }
 
 func computeView(action string) string {
-	if action == "create" || action == "network" {
+	if action == "create" || action == "network" || action == "wavelength_opt_in" {
 		return action
 	}
 	return "manage"

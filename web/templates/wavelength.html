@@ -1,0 +1,13 @@
+{{define "wavelength"}}
+<div class="page-header"><div class="container-xl"><h1 class="page-title">Wavelength</h1><p class="text-secondary mt-2 mb-0">选择父区域，开通运营商边缘可用区，并管理网络、实例和 Carrier IP。</p></div></div><div class="page-body"><div class="container-xl">{{template "wavelength-form" .}}</div></div>{{end}}
+{{define "wavelength-form"}}
+<section id="wavelength-workspace" class="resource-workspace">
+{{if .Error}}<div class="alert alert-warning" role="alert" tabindex="-1">{{.Error}}</div>{{end}}
+<form data-wavelength-form data-wavelength-selected="{{range .ZoneSelection}}{{.}} {{end}}" data-cloud-region-picker method="post" action="/ec2/plans" hx-post="/ec2/plans" hx-target="#wavelength-workspace" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']">
+<input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="action" value="wavelength_opt_in">
+<div class="card scope-card"><div class="card-body"><div class="scope-fields"><label class="form-label">访问连接<select class="form-select" name="connection_id" required><option value="">选择账号连接</option>{{range .Options.Accounts}}<optgroup label="{{.Name}} · {{.AWSAccountID}}">{{range .Connections}}<option value="{{.ID}}" {{if eq $.Value.ConnectionID .ID}}selected{{end}}>{{.Name}} · {{connectionStatus .Status}}</option>{{end}}</optgroup>{{end}}</select></label><label class="form-label">父区域<select class="form-select" name="region" required><option value="{{.Value.Region}}">{{if .Value.Region}}{{.Value.Region}}{{else}}先选择连接{{end}}</option></select></label><button class="btn" type="button" data-wavelength-load>{{template "workspace-icon" "sync"}}<span class="ms-2">加载 Zones</span></button></div><div class="scope-status"><span role="status" data-wavelength-status>选择范围后加载开通状态。</span><span role="status" data-cloud-region-status></span></div></div></div>
+{{if not .Options.WritesEnabled}}<div class="mode-notice"><span class="badge">预览模式</span><span>云端写入未启用，可以查询与预览操作。</span></div>{{end}}
+<div class="resource-toolbar"><h2>Wavelength Zones</h2><button class="btn btn-primary" type="submit" data-wavelength-submit disabled>预览开通所选组</button></div>
+<div class="card"><div class="table-responsive" data-wavelength-table><div class="empty-state">{{template "workspace-icon" "region"}}<h3>选择一个父区域</h3><p>加载 AWS 当前提供的 Zones，已开通的 Zone 可直接管理。</p></div></div></div>
+<details class="supporting-details mt-3"><summary>开通与连接说明</summary><p>开通按 Zone Group 生效；同组 Zones 一并开通。退出需联系 AWS Support。实例规格按 Zone 实时查询，采用 gp2 根盘和 IPv4 网络。Carrier IP 的入站可达性取决于运营商；SSH 可使用父区域的私网管理路径。</p><a href="https://docs.aws.amazon.com/wavelength/latest/developerguide/get-started-wavelength.html" target="_blank" rel="noopener noreferrer">AWS Wavelength 使用说明</a></details>
+</form></section>{{end}}

@@ -36,7 +36,7 @@ func TestAddressesReplaceLostResponsesPreservesThenReleasesOld(t *testing.T) {
 		t.Fatal("replacement lost resource references")
 	}
 }
-func TestAddressesQuotaAndDefaultRetainOld(t *testing.T) {
+func TestAddressesQuotaAndDefaultReleaseOld(t *testing.T) {
 	h := newAddresses(t, true)
 	ctx := context.Background()
 	h.cloudAddresses.quota = 1
@@ -55,8 +55,8 @@ func TestAddressesQuotaAndDefaultRetainOld(t *testing.T) {
 	h.cloudAddresses.mu.Lock()
 	defer h.cloudAddresses.mu.Unlock()
 	old := h.cloudAddresses.ips[h.accountA.AWSAccountID+"/us-east-1/old-ip"]
-	if old == nil || old["isAttached"] != false || h.cloudAddresses.calls["ReleaseStaticIp"] != 0 {
-		t.Fatal("default replacement destroyed the old address")
+	if old != nil || h.cloudAddresses.calls["ReleaseStaticIp"] != 1 {
+		t.Fatal("default replacement did not release the old address")
 	}
 }
 func TestAddressesAsyncAttachFailureDoesNotReleaseOld(t *testing.T) {

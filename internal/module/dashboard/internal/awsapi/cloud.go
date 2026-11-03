@@ -128,7 +128,13 @@ func (c Cloud) resources(ctx context.Context, cfg aws.Config, account, kind stri
 					if string(v.State.Name) == "running" {
 						data.Running++
 					}
-					if e := addIP(ips, aws.ToString(v.PublicIpAddress)); e != nil {
+					publicIP := aws.ToString(v.PublicIpAddress)
+					for _, eni := range v.NetworkInterfaces {
+						if eni.Association != nil && aws.ToString(eni.Association.CarrierIp) == publicIP {
+							publicIP = ""
+						}
+					}
+					if e := addIP(ips, publicIP); e != nil {
 						return "", e
 					}
 				}
@@ -139,12 +145,17 @@ func (c Cloud) resources(ctx context.Context, cfg aws.Config, account, kind stri
 		out, e := ec2.NewFromConfig(cfg).DescribeAddresses(ctx, &ec2.DescribeAddressesInput{})
 		err = e
 		if e == nil {
+			data.CarrierKnown = true
 			for _, v := range out.Addresses {
 				id := aws.ToString(v.AllocationId)
 				if id == "" || ids[id] {
 					return data, contract.ErrResponse
 				}
 				ids[id] = true
+				if aws.ToString(v.CarrierIp) != "" {
+					data.CarrierCount++
+					continue
+				}
 				data.Count++
 				if e := addIP(ips, aws.ToString(v.PublicIp)); e != nil {
 					return data, e

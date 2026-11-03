@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	catalogmeta "github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
 	"strconv"
 	"time"
 
@@ -11,9 +13,11 @@ import (
 	"github.com/herta-network/aws-panel/internal/auth"
 	"github.com/herta-network/aws-panel/internal/infra/clock"
 	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
+	ad "github.com/herta-network/aws-panel/internal/module/addresses/contract"
 	"github.com/herta-network/aws-panel/internal/module/compute/contract"
 	"github.com/herta-network/aws-panel/internal/module/compute/internal/source"
 	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
+	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 type Access interface {
@@ -37,6 +41,8 @@ type Jobs interface {
 	Submit(context.Context, int64, oc.SubmitRequest, auth.RequestMeta) (oc.Job, error)
 }
 type Deps struct {
+	Cache         *catalogcache.Cache
+	Effects       repository.EffectStore
 	Accounts      Accounts
 	Access        Access
 	Jobs          Jobs
@@ -105,27 +111,35 @@ func (s *Service) config(ctx context.Context, actorID int64, id, region string) 
 	cfg, err := s.deps.Accounts.ConfigFor(ctx, actorID, id, region, true)
 	return cfg, info, publicError(err)
 }
-func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region string) (contract.Catalogue, error) {
+func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region string, refresh ...bool) (contract.Catalogue, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	cfg, _, err := s.config(ctx, actorID, id, region)
+	cfg, info, err := s.config(ctx, actorID, id, region)
 	if err != nil {
 		return contract.Catalogue{}, err
 	}
-	v, err := s.deps.Cloud.Catalogue(ctx, cfg)
+	v, err := s.displayCatalogue(ctx, cfg, info, "", forceRefresh(refresh))
 	v.ConnectionID = id
 	v.WritesEnabled = s.deps.WritesEnabled
 	return v, publicError(err)
 }
-func (s *Service) Instances(ctx context.Context, actorID int64, id, region string) (contract.Listing, error) {
+func (s *Service) Instances(ctx context.Context, actorID int64, id, region string, refresh ...bool) (contract.Listing, error) {
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 	cfg, info, err := s.config(ctx, actorID, id, region)
 	if err != nil {
 		return contract.Listing{}, err
 	}
-	rows, err := s.deps.Cloud.Instances(ctx, cfg, info.AWSAccountID)
-	return contract.Listing{ConnectionID: id, Region: region, Items: rows, CheckedAt: clock.Now()}, publicError(err)
+	result, fresh, err := catalogcache.Read(ctx, s.deps.Cache, catalogcache.Key("compute-instances", info.Partition, info.AccountID, id, info.Fingerprint, region), catalogcache.Resources, forceRefresh(refresh), func(ctx context.Context) (contract.Listing, error) {
+		rows, err := s.deps.Cloud.Instances(ctx, cfg, info.AWSAccountID)
+		if err == nil && s.deps.Effects != nil {
+			rows, err = pairInstances(ctx, s.deps.Effects, info.AccountID, region, rows)
+		}
+		return contract.Listing{ConnectionID: id, Region: region, Items: rows}, err
+	})
+	result.CheckedAt = clock.In(fresh.UpdatedAt)
+	result.Freshness = map[string]catalogmeta.Freshness{"resources": fresh}
+	return result, publicError(err)
 }
 func preview(plan oc.Plan) (contract.Preview, error) {
 	if plan.Operation != OperationID {
@@ -192,6 +206,10 @@ func publicError(err error) error {
 	var own *contract.Error
 	if errors.As(err, &own) {
 		return own
+	}
+	var address *ad.Error
+	if errors.As(err, &address) {
+		return &contract.Error{Code: address.Code, Message: address.Message}
 	}
 	var account *ac.Error
 	if errors.As(err, &account) {

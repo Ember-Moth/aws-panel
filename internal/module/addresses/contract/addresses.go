@@ -1,22 +1,15 @@
 package contract
 
-import "time"
+import (
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/herta-network/aws-panel/internal/instanceip"
+	"time"
+)
 
-type Address struct {
-	ID                 string            `json:"id"`
-	Name               string            `json:"name"`
-	ARN                string            `json:"arn"`
-	IP                 string            `json:"ip"`
-	InstanceID         string            `json:"instance_id,omitempty"`
-	NetworkInterfaceID string            `json:"network_interface_id,omitempty"`
-	PrivateIP          string            `json:"private_ip,omitempty"`
-	AssociationID      string            `json:"association_id,omitempty"`
-	BorderGroup        string            `json:"border_group,omitempty"`
-	Attached           bool              `json:"attached"`
-	CreatedAt          *time.Time        `json:"created_at,omitempty"`
-	Tags               map[string]string `json:"-"`
-}
+type Address = instanceip.Address
 type Instance struct {
+	Zone               string `json:"zone,omitempty"`
+	WavelengthZoneID   string `json:"wavelength_zone_id,omitempty"`
 	ID                 string `json:"id"`
 	Name               string `json:"name"`
 	ARN                string `json:"arn"`
@@ -28,44 +21,49 @@ type Instance struct {
 	AddressID          string `json:"address_id,omitempty"`
 	BorderGroup        string `json:"border_group,omitempty"`
 }
+type WavelengthZone struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	BorderGroup string `json:"border_group"`
+}
 type Catalogue struct {
-	ConnectionID  string     `json:"connection_id"`
-	AWSAccountID  string     `json:"aws_account_id"`
-	Region        string     `json:"region"`
-	Service       string     `json:"service"`
-	Addresses     []Address  `json:"addresses"`
-	Instances     []Instance `json:"instances"`
-	CheckedAt     time.Time  `json:"checked_at"`
-	WritesEnabled bool       `json:"writes_enabled"`
+	Freshness       map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	WavelengthZones []WavelengthZone               `json:"wavelength_zones,omitempty"`
+	ConnectionID    string                         `json:"connection_id"`
+	AWSAccountID    string                         `json:"aws_account_id"`
+	Region          string                         `json:"region"`
+	Service         string                         `json:"service"`
+	Addresses       []Address                      `json:"addresses"`
+	Instances       []Instance                     `json:"instances"`
+	CheckedAt       time.Time                      `json:"checked_at"`
+	WritesEnabled   bool                           `json:"writes_enabled"`
 }
 type Target struct {
-	ConnectionID    string `json:"connection_id"`
-	Region          string `json:"region"`
-	Service         string `json:"service"`
-	Action          string `json:"action"`
-	InstanceID      string `json:"instance_id,omitempty"`
-	AddressID       string `json:"address_id,omitempty"`
-	NamePrefix      string `json:"name_prefix,omitempty"`
-	ReleasePrevious bool   `json:"release_previous"`
+	WavelengthZoneID string `json:"wavelength_zone_id,omitempty"`
+	ConnectionID     string `json:"connection_id"`
+	Region           string `json:"region"`
+	Service          string `json:"service"`
+	Action           string `json:"action"`
+	InstanceID       string `json:"instance_id,omitempty"`
+	AddressID        string `json:"address_id,omitempty"`
+	NamePrefix       string `json:"name_prefix,omitempty"`
+	ReleasePrevious  bool   `json:"release_previous"`
 }
 type Request struct {
 	Targets []Target `json:"targets"`
 }
-type Quota struct {
-	Limit      float64 `json:"limit"`
-	Used       float64 `json:"used"`
-	LimitKnown bool    `json:"limit_known"`
-	UsageKnown bool    `json:"usage_known"`
-	Note       string  `json:"note,omitempty"`
-}
+type Quota = instanceip.Quota
+type Automatic = instanceip.Automatic
 type Spec struct {
-	Target    Target    `json:"target"`
-	NewName   string    `json:"new_name,omitempty"`
-	Instance  *Instance `json:"instance,omitempty"`
-	Address   *Address  `json:"address,omitempty"`
-	Previous  *Address  `json:"previous,omitempty"`
-	Quota     Quota     `json:"quota"`
-	CheckedAt time.Time `json:"checked_at"`
+	Managed     bool      `json:"managed,omitempty"`
+	BorderGroup string    `json:"border_group,omitempty"`
+	Target      Target    `json:"target"`
+	NewName     string    `json:"new_name,omitempty"`
+	Instance    *Instance `json:"instance,omitempty"`
+	Address     *Address  `json:"address,omitempty"`
+	Previous    *Address  `json:"previous,omitempty"`
+	Quota       Quota     `json:"quota"`
+	CheckedAt   time.Time `json:"checked_at"`
 }
 type PreviewTarget struct {
 	AWSAccountID string `json:"aws_account_id"`
@@ -108,3 +106,5 @@ var (
 	ErrQuota       = &Error{"QUOTA_INSUFFICIENT", "静态 IP 配额不足，不能先分配新的替换地址"}
 	ErrResponse    = &Error{"INVALID_AWS_RESPONSE", "AWS 地址数据无法完整核对"}
 )
+
+type ManagedIP = instanceip.ManagedIP

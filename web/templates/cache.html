@@ -1,0 +1,1 @@
+{{define "cache-freshness"}}{{if .RefreshFailed}}更新未完整完成{{if .Cached}}，保留上次数据{{end}}{{else if .Refreshing}}上次数据 · 后台更新中{{else if .Cached}}缓存快照{{else}}已从 AWS 更新{{end}} · {{beijing .UpdatedAt}}{{end}}

@@ -10,6 +10,7 @@ import (
 	"github.com/herta-network/aws-panel/internal/transport/http/view"
 	"github.com/herta-network/aws-panel/pkg/httpx"
 	"github.com/herta-network/aws-panel/web"
+	"net/url"
 	"strings"
 )
 
@@ -21,10 +22,11 @@ type Handler struct {
 func New(service quotas.Service, renderer *web.Renderer) *Handler { return &Handler{service, renderer} }
 
 type model struct {
-	Options contract.Options
-	Query   contract.Query
-	Report  *contract.Report
-	Error   string
+	Options    contract.Options
+	Query      contract.Query
+	Report     *contract.Report
+	Error      string
+	RefreshURL string
 }
 type ReportResponse struct {
 	Data      contract.Report `json:"data"`
@@ -73,8 +75,8 @@ func (h *Handler) Page(ctx context.Context, c *app.RequestContext) {
 		h.fail(ctx, c, err)
 		return
 	}
-	query := contract.Query{ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Service: c.DefaultQuery("service", "lightsail")}
-	data := model{Options: options, Query: query}
+	query := contract.Query{ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Service: c.DefaultQuery("service", "lightsail"), Refresh: c.Query("refresh") == "true"}
+	data := model{Options: options, Query: query, RefreshURL: "/quotas?" + url.Values{"connection_id": {query.ConnectionID}, "region": {query.Region}, "service": {query.Service}, "refresh": {"true"}}.Encode()}
 	if query.ConnectionID != "" && query.Region != "" {
 		report, err := h.service.Read(ctx, actor(ctx), query)
 		if err != nil {
@@ -96,11 +98,12 @@ func (h *Handler) Page(ctx context.Context, c *app.RequestContext) {
 // @Param connection_id query string true "Connection UUID"
 // @Param region query string true "AWS region"
 // @Param service query string true "lightsail, ec2, vpc or bedrock"
+// @Param refresh query boolean false "Refresh quota limits and usage from AWS"
 // @Success 200 {object} ReportResponse
 // @Failure 400,401,403,409,503 {object} httpx.Envelope
 // @Router /quotas [get]
 func (h *Handler) Read(ctx context.Context, c *app.RequestContext) {
-	result, err := h.service.Read(ctx, actor(ctx), contract.Query{ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Service: c.Query("service")})
+	result, err := h.service.Read(ctx, actor(ctx), contract.Query{ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Service: c.Query("service"), Refresh: c.Query("refresh") == "true"})
 	if err != nil {
 		h.fail(ctx, c, err)
 		return
@@ -131,11 +134,12 @@ func (h *Handler) Options(ctx context.Context, c *app.RequestContext) {
 // @Produce json
 // @Security SessionCookie
 // @Param connection_id query string true "Connection UUID"
+// @Param refresh query boolean false "Refresh directory data from AWS"
 // @Success 200 {object} RegionsResponse
 // @Failure 400,401,403,404,409,503 {object} httpx.Envelope
 // @Router /quotas/regions [get]
 func (h *Handler) Regions(ctx context.Context, c *app.RequestContext) {
-	result, err := h.service.Regions(ctx, actor(ctx), c.Query("connection_id"))
+	result, err := h.service.Regions(ctx, actor(ctx), c.Query("connection_id"), c.Query("refresh") == "true")
 	if err != nil {
 		h.fail(ctx, c, err)
 		return

@@ -26,6 +26,8 @@ type Quota struct {
 	UsageKnown bool    `json:"usage_known"`
 }
 type Data struct {
+	CarrierCount     int64    `json:"carrier_count,omitempty"`
+	CarrierKnown     bool     `json:"carrier_known,omitempty"`
 	Count            int64    `json:"count"`
 	Running          int64    `json:"running"`
 	IPv4             []string `json:"ipv4,omitempty"`

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
 	"time"
 
 	"github.com/herta-network/aws-panel/internal/auth"
@@ -30,6 +32,7 @@ type Jobs interface {
 	Submit(context.Context, int64, oc.SubmitRequest, auth.RequestMeta) (oc.Job, error)
 }
 type Deps struct {
+	Cache         *catalogcache.Cache
 	Accounts      Accounts
 	Access        Access
 	Jobs          Jobs
@@ -37,7 +40,7 @@ type Deps struct {
 	Cloud         source.Cloud
 }
 
-func (s *Service) Catalogue(ctx context.Context, actorID int64, id string) (contract.Catalogue, error) {
+func (s *Service) Catalogue(ctx context.Context, actorID int64, id string, refresh ...bool) (contract.Catalogue, error) {
 	if err := s.actor(ctx, actorID); err != nil {
 		return contract.Catalogue{}, err
 	}
@@ -54,13 +57,23 @@ func (s *Service) Catalogue(ctx context.Context, actorID int64, id string) (cont
 	if err != nil {
 		return contract.Catalogue{}, Translate(err)
 	}
-	rows, err := s.deps.Cloud.List(ctx, cfg)
+	rows, fresh, err := catalogcache.Read(ctx, s.deps.Cache, catalogcache.Key("account-regions", info.Partition, info.AccountID, id, info.Fingerprint), catalogcache.Regions, len(refresh) > 0 && refresh[0], func(ctx context.Context) ([]catalogue.RegionState, error) {
+		rows, err := s.deps.Cloud.List(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]catalogue.RegionState, 0, len(rows))
+		for _, v := range rows {
+			out = append(out, catalogue.RegionState{Code: v.Region, State: v.Status})
+		}
+		return out, nil
+	})
 	if err != nil {
 		return contract.Catalogue{}, contract.ErrUnavailable
 	}
-	result := contract.Catalogue{ConnectionID: id, Regions: []contract.Region{}, CheckedAt: clock.Now()}
+	result := contract.Catalogue{ConnectionID: id, Regions: []contract.Region{}, CheckedAt: clock.In(fresh.UpdatedAt), Freshness: map[string]catalogue.Freshness{"regions": fresh}}
 	for _, row := range rows {
-		result.Regions = append(result.Regions, contract.Region{Code: row.Region, State: row.Status, Selectable: row.Status == "DISABLED"})
+		result.Regions = append(result.Regions, contract.Region{Code: row.Code, State: row.State, Selectable: row.State == "DISABLED"})
 	}
 	return result, nil
 }

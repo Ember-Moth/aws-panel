@@ -1,5 +1,7 @@
 # Lightsail 批量创建
 
+创建表单自动复用套餐、镜像和规格目录，支持后台更新及手动刷新；预览和执行仍读取最新状态。缓存时间与边界见[创建目录缓存](catalogue-cache.md)。
+
 M5b 实现商业分区中的 Linux/Unix 系统实例创建、费用预览与逐项恢复。真实 AWS 资源生命周期尚未验收；云端写入开关默认关闭。开关与授权规则见 [区域操作](region-operations.md)。
 
 ## 使用流程
@@ -58,6 +60,10 @@ lightsail_creations 保存每次实际发送的计数、时间、操作 ID 和�
 
 取消停止尚未发出的工作，不会撤销已被 AWS 接受的请求。任务失败或取消后仍可能存在收费资源。按任务中的 ARN、标签和 AWS 控制台记录核对后再处理；当前面板没有自动删除功能。
 
+## 自动静态 IP
+
+新实例进入 running 后先通过 `PutInstancePublicPorts` 放开所用地址族的全部公网入站（`all`，0–65535，IPv4 `0.0.0.0/0` / IPv6 `::/0`），再自动分配并绑定静态 IP。Lightsail 云端出站默认全部允许。含 IPv4 的实例会取得一个静态 IPv4；仅 IPv6 套餐不分配 IPv4。预览汇总静态 IP 配额，分配和绑定复用持久化发送记录及 Lightsail 操作历史。实例页提供“更换 IP”，确认新绑定后自动释放旧静态地址；详情见 [实例地址流程](compute.md#静态-ip-与更换)。
+
 ## IAM 动作
 
 下列动作覆盖本模块。账号验证、AssumeRole 和资源同步需要的额外动作见 [凭据与代理](connections.md) 和 [资源同步](inventory.md)。部署时按所需区域、账号与标签条件进一步收窄授权。
@@ -77,6 +83,15 @@ lightsail_creations 保存每次实际发送的计数、时间、操作 ID 和�
         "lightsail:GetKeyPairs",
         "lightsail:GetInstances",
         "lightsail:GetInstance",
+        "lightsail:GetInstancePortStates",
+        "lightsail:PutInstancePublicPorts",
+        "lightsail:GetStaticIps",
+        "lightsail:GetStaticIp",
+        "lightsail:GetOperation",
+        "lightsail:AllocateStaticIp",
+        "lightsail:AttachStaticIp",
+        "lightsail:DetachStaticIp",
+        "lightsail:ReleaseStaticIp",
         "lightsail:GetOperationsForResource",
         "lightsail:CreateInstances",
         "lightsail:TagResource"
@@ -101,3 +116,5 @@ Service Quotas 查询是可选项；缺失时配额显示未知。创建携带�
 本地集成测试使用真实 SDK 签名、两个 SOCKS5 出口和真实 PostgreSQL，AWS 响应为本地模拟。覆盖目录分页与兼容性、批次配额、费用变化、重复提交、名称竞争、归属不符、响应丢失、持久记录提交故障、关闭写入后的只读恢复、租约失效和选择性重试。
 
 HTTP/浏览器使用明确的本地计划夹具，所有连接和云端写入均关闭；验证页面、金额汇总、错误表单、角色权限和提交拦截。这些检查不代替指定测试账号上的创建、查询、重试和清理验收。
+
+防火墙步骤保存独立发送记录，并核对规则与 `PutInstancePublicPorts` 操作最终状态；结果不确定时只读核对，不重复发送。系统内防火墙仍独立生效。IPv6-only 不发送 IPv4 入站来源，IPv4-only 不发送 IPv6 入站来源。旧任务未包含防火墙步骤时维持原任务定义。

@@ -1,6 +1,9 @@
 package contract
 
-import "time"
+import (
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	"time"
+)
 
 type Entry struct {
 	Global     bool    `json:"global"`
@@ -18,17 +21,21 @@ type Entry struct {
 	Note       string  `json:"note,omitempty"`
 }
 type Report struct {
-	LimitsRead   bool      `json:"limits_read"`
-	ConnectionID string    `json:"connection_id"`
-	AccountID    string    `json:"account_id"`
-	AWSAccountID string    `json:"aws_account_id"`
-	Region       string    `json:"region"`
-	Service      string    `json:"service"`
-	Entries      []Entry   `json:"entries"`
-	CheckedAt    time.Time `json:"checked_at"`
-	Warnings     []string  `json:"warnings"`
+	Freshness    map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	LimitsRead   bool                           `json:"limits_read"`
+	ConnectionID string                         `json:"connection_id"`
+	AccountID    string                         `json:"account_id"`
+	AWSAccountID string                         `json:"aws_account_id"`
+	Region       string                         `json:"region"`
+	Service      string                         `json:"service"`
+	Entries      []Entry                        `json:"entries"`
+	CheckedAt    time.Time                      `json:"checked_at"`
+	Warnings     []string                       `json:"warnings"`
 }
-type Query struct{ ConnectionID, Region, Service string }
+type Query struct {
+	ConnectionID, Region, Service string
+	Refresh                       bool
+}
 type Error struct{ Code, Message string }
 
 func (e *Error) Error() string       { return e.Message }
@@ -62,6 +69,7 @@ type Region struct {
 	Available bool   `json:"available"`
 }
 type Regions struct {
-	Items     []Region  `json:"items"`
-	CheckedAt time.Time `json:"checked_at"`
+	Freshness map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	Items     []Region                       `json:"items"`
+	CheckedAt time.Time                      `json:"checked_at"`
 }

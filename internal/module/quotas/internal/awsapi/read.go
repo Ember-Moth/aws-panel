@@ -2,6 +2,7 @@ package awsapi
 
 import (
 	"context"
+	reportdata "github.com/herta-network/aws-panel/internal/module/quotas/internal/report"
 	"math"
 	"sort"
 	"strings"
@@ -85,7 +86,7 @@ func definition(service string) []contract.Entry {
 		for _, class := range classes {
 			entries = append(entries, contract.Entry{Key: "ec2.ondemand." + class, Name: "按需 " + classLabels[class], Unit: "vCPU"})
 		}
-		entries = append(entries, contract.Entry{Key: "ec2.elastic_ips", Name: "EC2 弹性 IPv4 地址", Unit: "个"})
+		entries = append(entries, contract.Entry{Key: "ec2.elastic_ips", Name: "EC2 弹性 IPv4 地址", Unit: "个"}, contract.Entry{Key: "ec2.carrier_ips", Name: "Wavelength Carrier IP", Unit: "个", Note: "按父区域汇总已分配地址；适用上限需在 AWS 核对，不使用普通弹性 IP 配额。"})
 	case "vpc":
 		entries = []contract.Entry{{Key: "vpc.vpcs", Name: "VPC", Unit: "个"}, {Key: "vpc.internet_gateways", Name: "互联网网关", Unit: "个"}}
 	}
@@ -137,7 +138,18 @@ func quotaKey(service string, q qt.ServiceQuota) string {
 	}
 	return ""
 }
-func (Cloud) Read(ctx context.Context, cfg aws.Config, account, service string) (contract.Report, error) {
+func (c Cloud) Read(ctx context.Context, cfg aws.Config, account, service string) (contract.Report, error) {
+	limits, err := c.Limits(ctx, cfg, service)
+	if err != nil || service == "bedrock" {
+		return limits, err
+	}
+	usage, err := c.Usage(ctx, cfg, account, service)
+	if err != nil {
+		return limits, err
+	}
+	return reportdata.Merge(limits, usage), nil
+}
+func (Cloud) Limits(ctx context.Context, cfg aws.Config, service string) (contract.Report, error) {
 	if service == "bedrock" {
 		return bedrock(ctx, cfg)
 	}
@@ -153,7 +165,7 @@ func (Cloud) Read(ctx context.Context, cfg aws.Config, account, service string) 
 	}
 	client := servicequotas.NewFromConfig(cfg)
 	err := pages(ctx, func(token *string) (string, error) {
-		out, err := client.ListServiceQuotas(ctx, &servicequotas.ListServiceQuotasInput{ServiceCode: aws.String(service), NextToken: token})
+		out, err := client.ListServiceQuotas(ctx, &servicequotas.ListServiceQuotasInput{ServiceCode: aws.String(service), MaxResults: aws.Int32(100), NextToken: token})
 		if err != nil {
 			return "", err
 		}
@@ -183,6 +195,21 @@ func (Cloud) Read(ctx context.Context, cfg aws.Config, account, service string) 
 		}
 		report.Warnings = append(report.Warnings, "无法完整读取当前应用配额，未使用默认配额替代")
 	}
+
+	report.CheckedAt = clock.Now()
+	return report, nil
+}
+func (Cloud) Usage(ctx context.Context, cfg aws.Config, account, service string) (contract.Report, error) {
+	entries := definition(service)
+	if len(entries) == 0 {
+		return contract.Report{}, contract.ErrInvalid
+	}
+	report := contract.Report{Region: cfg.Region, Service: service, Entries: entries, Warnings: []string{}}
+	index := map[string]int{}
+	for i, v := range entries {
+		index[v.Key] = i
+	}
+	var err error
 	use := func(key string, value float64, err error) {
 		i, ok := index[key]
 		if !ok {
@@ -228,11 +255,19 @@ func (Cloud) Read(ctx context.Context, cfg aws.Config, account, service string) 
 		out, err := client.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{})
 		if err == nil {
 			count := float64(0)
+			carrierCount := float64(0)
 			var usageErr error
 			for _, address := range out.Addresses {
-				if aws.ToString(address.CustomerOwnedIp) != "" || aws.ToString(address.CarrierIp) != "" {
-					usageErr = contract.ErrResponse
-					break
+				if aws.ToString(address.CarrierIp) != "" {
+					if aws.ToString(address.AllocationId) == "" {
+						usageErr = contract.ErrResponse
+						break
+					}
+					carrierCount++
+					continue
+				}
+				if aws.ToString(address.CustomerOwnedIp) != "" {
+					continue
 				}
 				pool := aws.ToString(address.PublicIpv4Pool)
 				if pool != "" && pool != "amazon" {
@@ -245,8 +280,10 @@ func (Cloud) Read(ctx context.Context, cfg aws.Config, account, service string) 
 				count++
 			}
 			use("ec2.elastic_ips", count, usageErr)
+			use("ec2.carrier_ips", carrierCount, usageErr)
 		} else {
 			use("ec2.elastic_ips", 0, err)
+			use("ec2.carrier_ips", 0, err)
 		}
 		counts, err := ec2Usage(ctx, client, account)
 		for _, class := range classes {

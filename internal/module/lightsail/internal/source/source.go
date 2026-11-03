@@ -29,3 +29,15 @@ type Cloud interface {
 	Create(context.Context, aws.Config, contract.Target, map[string]string, string) (Created, error)
 	Operations(context.Context, aws.Config, string) ([]Operation, error)
 }
+
+// FirewallCloud changes the public ingress rules of the caller-owned instance.
+type FirewallCloud interface {
+	FirewallOpen(context.Context, aws.Config, string, string) (bool, error)
+	OpenFirewall(context.Context, aws.Config, string, string) (Created, error)
+}
+
+// CatalogueParts separates slow-changing products from account state for display.
+type CatalogueParts interface {
+	Products(context.Context, aws.Config) (contract.Catalogue, error)
+	Environment(context.Context, aws.Config) (contract.Catalogue, error)
+}

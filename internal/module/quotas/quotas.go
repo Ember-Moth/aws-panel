@@ -9,9 +9,10 @@ import (
 
 type Deps = service.Deps
 type Cloud = service.Cloud
+type Parts = service.Parts
 type Service interface {
 	Options(context.Context, int64) (contract.Options, error)
-	Regions(context.Context, int64, string) (contract.Regions, error)
+	Regions(context.Context, int64, string, ...bool) (contract.Regions, error)
 	Read(context.Context, int64, contract.Query) (contract.Report, error)
 }
 

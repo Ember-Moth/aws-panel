@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/url"
 	"strings"
 
 	"github.com/cloudwego/hertz/pkg/app"
@@ -44,6 +45,10 @@ type SubmitRequest struct {
 	IdempotencyKey string `json:"idempotency_key"`
 }
 type formView struct {
+	AccountID   string
+	RefreshURL  string
+	BackURL     string
+	Instance    *contract.Instance
 	View        string
 	Options     contract.Options
 	Value       contract.Target
@@ -51,6 +56,7 @@ type formView struct {
 	CSRF, Error string
 }
 type previewView struct {
+	BackURL   string
 	Preview   contract.Preview
 	CSRF, Key string
 }
@@ -92,7 +98,22 @@ func decode(c *app.RequestContext, value any) error {
 	return nil
 }
 func (h *Handler) render(ctx context.Context, c *app.RequestContext, code int, name string, model any) {
-	body, err := h.renderer.Page(name, view.Layout(ctx, "公网 IP", "addresses"), model)
+	active := "ec2"
+	if v, ok := model.(formView); ok {
+		if v.Value.Service == "lightsail" {
+			active = "lightsail"
+		} else if v.Value.Service == "wavelength" {
+			active = "wavelength"
+		}
+	}
+	if v, ok := model.(previewView); ok && len(v.Preview.Targets) > 0 {
+		if v.Preview.Targets[0].Spec.Target.Service == "lightsail" {
+			active = "lightsail"
+		} else if v.Preview.Targets[0].Spec.Target.Service == "wavelength" {
+			active = "wavelength"
+		}
+	}
+	body, err := h.renderer.Page(name, view.Layout(ctx, "更换实例 IP", active), model)
 	view.HTML(c, code, body, err)
 }
 func (h *Handler) fail(ctx context.Context, c *app.RequestContext, err error) {
@@ -103,23 +124,54 @@ func (h *Handler) fail(ctx context.Context, c *app.RequestContext, err error) {
 	}
 	h.render(ctx, c, code, "inventory-error", fault.Message)
 }
-func (h *Handler) Form(ctx context.Context, c *app.RequestContext) {
-	options, err := h.service.Options(ctx, actor(ctx))
+func instanceBack(v contract.Target) string {
+	if v.Service == "lightsail" {
+		return "/lightsail?" + url.Values{"region": {v.Region}}.Encode()
+	}
+	return "/ec2?" + url.Values{"connection_id": {v.ConnectionID}, "region": {v.Region}, "wavelength_zone_id": {v.WavelengthZoneID}}.Encode()
+}
+func (h *Handler) Form(ctx context.Context, c *app.RequestContext) { view.Redirect(c, "/ec2") }
+func (h *Handler) InstanceForm(ctx context.Context, c *app.RequestContext) {
+	service := "ec2"
+	if strings.HasPrefix(string(c.Path()), "/lightsail/") {
+		service = "lightsail"
+	} else if c.Query("service") == "wavelength" {
+		service = "wavelength"
+	}
+	value := contract.Target{ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Service: service, Action: "replace", InstanceID: c.Param("instance"), WavelengthZoneID: c.Query("wavelength_zone_id"), ReleasePrevious: true, NamePrefix: "panel-ip"}
+	catalogue, err := h.service.Catalogue(ctx, actor(ctx), value.ConnectionID, value.Region, service, c.Query("refresh") == "true")
 	if err != nil {
 		h.fail(ctx, c, err)
 		return
 	}
-	value := contract.Target{ConnectionID: c.Query("connection_id"), Region: c.Query("region"), Service: c.DefaultQuery("service", "lightsail"), Action: c.DefaultQuery("action", "allocate"), InstanceID: c.Query("instance_id"), AddressID: c.Query("address_id"), NamePrefix: "panel-ip"}
-	if value.Service != "lightsail" && value.Service != "ec2" {
-		value.Service = "lightsail"
+	var instance *contract.Instance
+	for _, v := range catalogue.Instances {
+		if v.ID == value.InstanceID {
+			copy := v
+			instance = &copy
+			break
+		}
 	}
-	mode := "list"
-	if c.Query("action") != "" {
-		mode = "editor"
+	if instance == nil && catalogue.Freshness["resources"].Cached {
+		catalogue, err = h.service.Catalogue(ctx, actor(ctx), value.ConnectionID, value.Region, service, true)
+		if err != nil {
+			h.fail(ctx, c, err)
+			return
+		}
+		for _, v := range catalogue.Instances {
+			if v.ID == value.InstanceID {
+				copy := v
+				instance = &copy
+				break
+			}
+		}
 	}
-	data := formView{View: mode, Options: options, Value: value, CSRF: auth.CSRF(ctx)}
 
-	h.render(ctx, c, 200, "addresses", data)
+	if instance == nil {
+		h.fail(ctx, c, contract.ErrNotFound)
+		return
+	}
+	h.render(ctx, c, 200, "addresses", formView{Catalogue: &catalogue, RefreshURL: string(c.Path()) + "?" + url.Values{"connection_id": {value.ConnectionID}, "region": {value.Region}, "service": {value.Service}, "wavelength_zone_id": {value.WavelengthZoneID}, "refresh": {"true"}}.Encode(), AccountID: catalogue.AWSAccountID, View: "editor", Value: value, Instance: instance, BackURL: instanceBack(value), Options: contract.Options{WritesEnabled: catalogue.WritesEnabled}, CSRF: auth.CSRF(ctx)})
 }
 
 // Options returns commercial-account connection choices for region operations.
@@ -156,7 +208,7 @@ func (h *Handler) Prepare(ctx context.Context, c *app.RequestContext) {
 	if api(c) {
 		err = decode(c, &req)
 	} else {
-		value = contract.Target{ConnectionID: c.PostForm("connection_id"), Region: c.PostForm("region"), Service: c.PostForm("service"), Action: c.PostForm("action"), InstanceID: c.PostForm("instance_id"), AddressID: c.PostForm("address_id"), NamePrefix: c.PostForm("name_prefix"), ReleasePrevious: c.PostForm("release_previous") == "true"}
+		value = contract.Target{WavelengthZoneID: c.PostForm("wavelength_zone_id"), ConnectionID: c.PostForm("connection_id"), Region: c.PostForm("region"), Service: c.PostForm("service"), Action: "replace", InstanceID: c.PostForm("instance_id"), NamePrefix: "panel-ip", ReleasePrevious: true}
 		req.Targets = []contract.Target{value}
 	}
 
@@ -167,7 +219,7 @@ func (h *Handler) Prepare(ctx context.Context, c *app.RequestContext) {
 			if api(c) {
 				httpx.Success(c, 201, result)
 			} else {
-				view.Redirect(c, "/addresses/plans/"+result.ID)
+				view.Redirect(c, "/instances/ip/plans/"+result.ID)
 			}
 			return
 		}
@@ -182,7 +234,7 @@ func (h *Handler) Prepare(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	code, fault := status(err)
-	body, renderErr := h.renderer.Render("address-form", formView{View: "editor", Options: options, Value: value, CSRF: auth.CSRF(ctx), Error: previewMessage(fault)})
+	body, renderErr := h.renderer.Render("address-form", formView{View: "editor", BackURL: instanceBack(value), Options: options, Value: value, CSRF: auth.CSRF(ctx), Error: previewMessage(fault)})
 	view.HTML(c, code, body, renderErr)
 }
 
@@ -205,7 +257,7 @@ func (h *Handler) Plan(ctx context.Context, c *app.RequestContext) {
 		httpx.Success(c, 200, result)
 		return
 	}
-	h.render(ctx, c, 200, "address-preview", previewView{Preview: result, CSRF: auth.CSRF(ctx), Key: uuid.NewString()})
+	h.render(ctx, c, 200, "address-preview", previewView{BackURL: instanceBack(result.Targets[0].Spec.Target), Preview: result, CSRF: auth.CSRF(ctx), Key: uuid.NewString()})
 }
 
 // Submit creates the durable addresses task when cloud writes are enabled.
@@ -260,12 +312,13 @@ type CatalogueResponse struct {
 // @Security SessionCookie
 // @Param connection_id query string true "Connection UUID"
 // @Param region query string true "AWS region"
-// @Param service query string true "lightsail or ec2"
+// @Param service query string true "lightsail, ec2 or wavelength"
+// @Param refresh query boolean false "Refresh address and instance state from AWS"
 // @Success 200 {object} CatalogueResponse
 // @Failure 400,401,403,409,503 {object} httpx.Envelope
 // @Router /addresses/catalogue [get]
 func (h *Handler) Catalogue(ctx context.Context, c *app.RequestContext) {
-	result, err := h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"), c.Query("service"))
+	result, err := h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"), c.Query("service"), c.Query("refresh") == "true")
 	if err != nil {
 		h.fail(ctx, c, err)
 		return

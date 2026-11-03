@@ -89,10 +89,16 @@ func convert(v types.Instance, region, account string) (contract.Instance, error
 	for _, eni := range v.NetworkInterfaces {
 		if eni.Attachment != nil && aws.ToInt32(eni.Attachment.DeviceIndex) == 0 {
 			out.PrimaryENI = aws.ToString(eni.NetworkInterfaceId)
+			if eni.Association != nil {
+				out.CarrierIP = aws.ToString(eni.Association.CarrierIp)
+			}
 			for _, ip := range eni.Ipv6Addresses {
 				out.IPv6 = append(out.IPv6, aws.ToString(ip.Ipv6Address))
 			}
 		}
+	}
+	if out.CarrierIP != "" && out.PublicIP == out.CarrierIP {
+		out.PublicIP = ""
 	}
 	for _, volume := range v.BlockDeviceMappings {
 		if aws.ToString(volume.DeviceName) == out.RootDevice && volume.Ebs != nil {
@@ -177,15 +183,30 @@ func (c Cloud) Quota(ctx context.Context, cfg aws.Config, account, instanceType 
 }
 func (c Cloud) Launch(ctx context.Context, cfg aws.Config, spec contract.Spec, token, userData string, labels map[string]string) (source.Accepted, error) {
 	v := spec.Target
+	if len(v.SecurityGroupIDs) == 0 {
+		v.SecurityGroupIDs = spec.BootstrapGroups
+	}
 	if spec.Image == nil {
 		return source.Accepted{}, contract.ErrInvalid
 	}
 	labels["Name"] = v.Name
 	ni := types.InstanceNetworkInterfaceSpecification{DeviceIndex: aws.Int32(0), DeleteOnTermination: aws.Bool(true), SubnetId: aws.String(v.SubnetID), Groups: v.SecurityGroupIDs, AssociatePublicIpAddress: aws.Bool(v.PublicIPv4)}
+	if spec.AutomaticIP != nil {
+		ni.AssociatePublicIpAddress = aws.Bool(false)
+	}
+	if v.WavelengthZoneID != "" {
+		if v.IPv6 || v.PublicIPv4 || spec.VolumeType != "gp2" || spec.WavelengthZone == nil || spec.WavelengthZone.ID != v.WavelengthZoneID {
+			return source.Accepted{}, contract.ErrNetwork
+		}
+		ni.AssociatePublicIpAddress = aws.Bool(false)
+	}
 	if v.IPv6 {
 		ni.Ipv6AddressCount = aws.Int32(1)
 	}
 	in := &ec2sdk.RunInstancesInput{ImageId: aws.String(v.ImageID), InstanceType: types.InstanceType(v.InstanceType), MinCount: aws.Int32(1), MaxCount: aws.Int32(1), ClientToken: aws.String(token), CapacityReservationSpecification: &types.CapacityReservationSpecification{CapacityReservationPreference: types.CapacityReservationPreferenceNone}, NetworkInterfaces: []types.InstanceNetworkInterfaceSpecification{ni}, Placement: &types.Placement{Tenancy: types.TenancyDefault}, MetadataOptions: &types.InstanceMetadataOptionsRequest{HttpTokens: types.HttpTokensStateRequired, HttpEndpoint: types.InstanceMetadataEndpointStateEnabled, HttpPutResponseHopLimit: aws.Int32(1)}, BlockDeviceMappings: []types.BlockDeviceMapping{{DeviceName: aws.String(spec.Image.RootDevice), Ebs: &types.EbsBlockDevice{VolumeType: types.VolumeTypeGp3, VolumeSize: aws.Int32(v.DiskGB), Encrypted: aws.Bool(true), DeleteOnTermination: aws.Bool(true)}}}, TagSpecifications: append(tagSpecs(types.ResourceTypeInstance, labels), tagSpecs(types.ResourceTypeVolume, labels)...)}
+	if v.WavelengthZoneID != "" {
+		in.BlockDeviceMappings[0].Ebs.VolumeType = types.VolumeTypeGp2
+	}
 	if v.LoginMethod == "ssh_key" {
 		in.KeyName = aws.String(v.KeyPairName)
 	}
@@ -245,20 +266,33 @@ func (c Cloud) Manage(ctx context.Context, cfg aws.Config, action string, instan
 }
 
 func (c Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogue, error) {
-	client := c.client(cfg, false)
-	result := contract.Catalogue{Region: cfg.Region, Images: []contract.Image{}, Types: []contract.InstanceType{}, Subnets: []contract.Subnet{}, SecurityGroups: []contract.SecurityGroup{}, KeyPairs: []string{}, Zones: []string{}, CheckedAt: clock.Now()}
-	zones, err := client.DescribeAvailabilityZones(ctx, &ec2sdk.DescribeAvailabilityZonesInput{Filters: []types.Filter{filter("zone-type", "availability-zone"), filter("state", "available")}})
+	return c.catalogue(ctx, cfg, nil)
+}
+func (c Cloud) catalogue(ctx context.Context, cfg aws.Config, wavelength *contract.WavelengthZone) (contract.Catalogue, error) {
+	result, err := c.environment(ctx, cfg, wavelength)
 	if err != nil {
 		return result, err
 	}
-	zoneSet := map[string]bool{}
-	for _, v := range zones.AvailabilityZones {
-		if aws.ToString(v.RegionName) == cfg.Region && aws.ToString(v.ZoneType) == "availability-zone" {
-			z := aws.ToString(v.ZoneName)
-			zoneSet[z] = true
-			result.Zones = append(result.Zones, z)
-		}
+	images, err := c.Images(ctx, cfg)
+	if err != nil {
+		return result, err
 	}
+	result.Images = images.Images
+	zone := ""
+	if wavelength != nil {
+		zone = wavelength.ID
+	}
+	kinds, err := c.InstanceTypes(ctx, cfg, zone)
+	if err != nil {
+		return result, err
+	}
+	result.Types = kinds.Types
+	result.CheckedAt = clock.Now()
+	return result, nil
+}
+func (c Cloud) Images(ctx context.Context, cfg aws.Config) (contract.Catalogue, error) {
+	client := c.client(cfg, false)
+	result := contract.Catalogue{Region: cfg.Region, Images: []contract.Image{}}
 	// Owner filtering is applied by EC2 and checked again for non-Amazon publishers.
 	latest := map[string]contract.Image{}
 	for _, publisher := range []struct {
@@ -323,8 +357,22 @@ func (c Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogu
 		result.Images = append(result.Images, v)
 	}
 	sort.Slice(result.Images, func(i, j int) bool { return result.Images[i].Name < result.Images[j].Name })
+	result.CheckedAt = clock.Now()
+	return result, nil
+}
+func (c Cloud) InstanceTypes(ctx context.Context, cfg aws.Config, zone string) (contract.Catalogue, error) {
+	client := c.client(cfg, false)
+	result := contract.Catalogue{Region: cfg.Region, Types: []contract.InstanceType{}}
+	var wavelength *contract.WavelengthZone
+	if zone != "" {
+		wavelength = &contract.WavelengthZone{ID: zone}
+	}
 	offered := map[string]bool{}
 	oi := &ec2sdk.DescribeInstanceTypeOfferingsInput{LocationType: types.LocationTypeRegion, MaxResults: aws.Int32(1000)}
+	if wavelength != nil {
+		oi.LocationType = types.LocationTypeAvailabilityZoneId
+		oi.Filters = []types.Filter{filter("location", wavelength.ID)}
+	}
 	seen := map[string]bool{}
 	for {
 		out, e := client.DescribeInstanceTypeOfferings(ctx, oi)
@@ -332,6 +380,9 @@ func (c Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogu
 			return result, e
 		}
 		for _, v := range out.InstanceTypeOfferings {
+			if wavelength != nil && (aws.ToString(v.Location) != wavelength.ID || v.LocationType != types.LocationTypeAvailabilityZoneId) {
+				return result, contract.ErrResponse
+			}
 			offered[string(v.InstanceType)] = true
 		}
 		if aws.ToString(out.NextToken) == "" {
@@ -370,6 +421,44 @@ func (c Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogu
 		ti.NextToken = out.NextToken
 	}
 	sort.Slice(result.Types, func(i, j int) bool { return result.Types[i].ID < result.Types[j].ID })
+	result.CheckedAt = clock.Now()
+	return result, nil
+}
+func (c Cloud) Environment(ctx context.Context, cfg aws.Config, zone string) (contract.Catalogue, error) {
+	if zone == "" {
+		return c.environment(ctx, cfg, nil)
+	}
+	zs, err := c.WavelengthZones(ctx, cfg)
+	if err != nil {
+		return contract.Catalogue{}, err
+	}
+	for _, z := range zs {
+		if z.ID == zone && z.State == "available" && z.OptInStatus == "opted-in" {
+			return c.environment(ctx, cfg, &z)
+		}
+	}
+	return contract.Catalogue{}, contract.ErrNetwork
+}
+func (c Cloud) environment(ctx context.Context, cfg aws.Config, wavelength *contract.WavelengthZone) (contract.Catalogue, error) {
+	client := c.client(cfg, false)
+	result := contract.Catalogue{Region: cfg.Region, Images: []contract.Image{}, Types: []contract.InstanceType{}, Subnets: []contract.Subnet{}, SecurityGroups: []contract.SecurityGroup{}, KeyPairs: []string{}, Zones: []string{}, CheckedAt: clock.Now()}
+	zones, err := client.DescribeAvailabilityZones(ctx, &ec2sdk.DescribeAvailabilityZonesInput{Filters: []types.Filter{filter("zone-type", "availability-zone"), filter("state", "available")}})
+	if err != nil {
+		return result, err
+	}
+	zoneSet := map[string]bool{}
+	for _, v := range zones.AvailabilityZones {
+		if aws.ToString(v.RegionName) == cfg.Region && aws.ToString(v.ZoneType) == "availability-zone" {
+			z := aws.ToString(v.ZoneName)
+			zoneSet[z] = true
+			result.Zones = append(result.Zones, z)
+		}
+	}
+	if wavelength != nil {
+		result.WavelengthZone = wavelength
+		result.Zones = []string{wavelength.Name}
+		zoneSet = map[string]bool{wavelength.Name: true}
+	}
 	keys, e := client.DescribeKeyPairs(ctx, &ec2sdk.DescribeKeyPairsInput{})
 	if e != nil {
 		return result, e
@@ -382,7 +471,7 @@ func (c Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogu
 	sort.Strings(result.KeyPairs)
 	ri := &ec2sdk.DescribeRouteTablesInput{MaxResults: aws.Int32(100)}
 	routes := []types.RouteTable{}
-	seen = map[string]bool{}
+	seen := map[string]bool{}
 	for {
 		out, e := client.DescribeRouteTables(ctx, ri)
 		if e != nil {
@@ -436,7 +525,7 @@ func (c Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogu
 			}
 			if chosen != nil {
 				for _, r := range chosen.Routes {
-					if r.State == types.RouteStateActive && strings.HasPrefix(aws.ToString(r.GatewayId), "igw-") {
+					if r.State == types.RouteStateActive && ((wavelength == nil && strings.HasPrefix(aws.ToString(r.GatewayId), "igw-")) || (wavelength != nil && strings.HasPrefix(aws.ToString(r.CarrierGatewayId), "cagw-"))) {
 						if aws.ToString(r.DestinationCidrBlock) == "0.0.0.0/0" {
 							row.PublicIPv4Route = true
 						}

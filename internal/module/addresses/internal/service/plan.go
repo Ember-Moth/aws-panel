@@ -47,7 +47,12 @@ func InstanceLocks(kind, id, name string) []string {
 	}
 	return result
 }
-func AddressLock(kind, id string) string { return kind + "/address/" + hash(id) }
+func AddressLock(kind, id string) string {
+	if kind == "wavelength" {
+		kind = "ec2"
+	}
+	return kind + "/address/" + hash(id)
+}
 func normalize(values []contract.Target) ([]contract.Target, error) {
 	if len(values) < 1 || len(values) > 50 {
 		return nil, contract.ErrInvalid
@@ -56,14 +61,24 @@ func normalize(values []contract.Target) ([]contract.Target, error) {
 	for i := range result {
 		v := &result[i]
 		id, err := uuid.Parse(v.ConnectionID)
-		if err != nil || !validRegion(v.Region) || (v.Service != "lightsail" && v.Service != "ec2") {
+		if err != nil || !validRegion(v.Region) || (v.Service != "lightsail" && v.Service != "ec2" && v.Service != "wavelength") {
 			return nil, contract.ErrInvalid
 		}
 		v.ConnectionID = id.String()
-		if v.InstanceID != "" && ((v.Service == "lightsail" && !lightName.MatchString(v.InstanceID)) || (v.Service == "ec2" && !ec2InstanceID.MatchString(v.InstanceID))) {
+		if v.Action == "replace" {
+			v.ReleasePrevious = true
+		}
+		if v.Service == "wavelength" {
+			if v.WavelengthZoneID != "" && !regexp.MustCompile(`^[a-z0-9-]{6,80}$`).MatchString(v.WavelengthZoneID) {
+				return nil, contract.ErrInvalid
+			}
+		} else if v.WavelengthZoneID != "" {
 			return nil, contract.ErrInvalid
 		}
-		if v.AddressID != "" && ((v.Service == "lightsail" && !lightName.MatchString(v.AddressID)) || (v.Service == "ec2" && !ec2AddressID.MatchString(v.AddressID))) {
+		if v.InstanceID != "" && ((v.Service == "lightsail" && !lightName.MatchString(v.InstanceID)) || (v.Service != "lightsail" && !ec2InstanceID.MatchString(v.InstanceID))) {
+			return nil, contract.ErrInvalid
+		}
+		if v.AddressID != "" && ((v.Service == "lightsail" && !lightName.MatchString(v.AddressID)) || (v.Service != "lightsail" && !ec2AddressID.MatchString(v.AddressID))) {
 			return nil, contract.ErrInvalid
 		}
 		switch v.Action {
@@ -96,7 +111,7 @@ func normalize(values []contract.Target) ([]contract.Target, error) {
 }
 func AddressLocks(kind string, address contract.Address) []string {
 	keys := []string{AddressLock(kind, address.ID)}
-	if kind == "ec2" && address.Name != "" && address.Name != address.ID {
+	if kind != "lightsail" && address.Name != "" && address.Name != address.ID {
 		keys = append(keys, AddressLock(kind, "name/"+address.Name))
 	}
 	return keys
@@ -166,7 +181,7 @@ func (e *Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.T
 			}
 			catalogues[group] = catalogue
 		}
-		spec := contract.Spec{Target: value, CheckedAt: catalogue.CheckedAt}
+		spec := contract.Spec{Target: value, Managed: value.Action == "replace", CheckedAt: catalogue.CheckedAt}
 		for _, v := range catalogue.Addresses {
 			if v.ID == value.AddressID {
 				copy := v
@@ -189,7 +204,7 @@ func (e *Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.T
 			if value.Service == "lightsail" && spec.Instance.IPType == "ipv6" {
 				return nil, contract.ErrUnsupported
 			}
-			if value.Service == "ec2" && (spec.Instance.NetworkInterfaceID == "" || spec.Instance.BorderGroup == "") {
+			if value.Service != "lightsail" && (spec.Instance.NetworkInterfaceID == "" || spec.Instance.BorderGroup == "") {
 				return nil, contract.ErrUnsupported
 			}
 			for _, v := range catalogue.Addresses {
@@ -216,11 +231,40 @@ func (e *Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.T
 				return nil, contract.ErrUnsupported
 			}
 		}
-		if value.Service == "ec2" && spec.Address != nil && spec.Address.Attached && spec.Instance != nil && (spec.Address.NetworkInterfaceID != spec.Instance.NetworkInterfaceID || spec.Address.PrivateIP != spec.Instance.PrivateIP) {
+		if value.Service != "lightsail" && spec.Address != nil && spec.Address.Attached && spec.Instance != nil && (spec.Address.NetworkInterfaceID != spec.Instance.NetworkInterfaceID || spec.Address.PrivateIP != spec.Instance.PrivateIP) {
 			return nil, contract.ErrUnsupported
 		}
-		if spec.Address != nil && spec.Instance != nil && value.Service == "ec2" && spec.Address.BorderGroup != spec.Instance.BorderGroup {
+		if spec.Address != nil && spec.Instance != nil && value.Service != "lightsail" && spec.Address.BorderGroup != spec.Instance.BorderGroup {
 			return nil, contract.ErrUnsupported
+		}
+		if value.Service == "wavelength" {
+			if spec.Instance != nil {
+				spec.BorderGroup = spec.Instance.BorderGroup
+				if value.WavelengthZoneID != "" && spec.Instance.WavelengthZoneID != value.WavelengthZoneID {
+					return nil, contract.ErrUnsupported
+				}
+			}
+			if spec.Address != nil {
+				if spec.BorderGroup != "" && spec.BorderGroup != spec.Address.BorderGroup {
+					return nil, contract.ErrUnsupported
+				}
+				spec.BorderGroup = spec.Address.BorderGroup
+			}
+			if value.Action == "allocate" || value.Action == "replace" {
+				found := false
+				for _, z := range catalogue.WavelengthZones {
+					if (value.WavelengthZoneID != "" && z.ID == value.WavelengthZoneID) || (value.WavelengthZoneID == "" && spec.Instance != nil && z.ID == spec.Instance.WavelengthZoneID) {
+						if spec.BorderGroup != "" && spec.BorderGroup != z.BorderGroup {
+							return nil, contract.ErrUnsupported
+						}
+						spec.BorderGroup = z.BorderGroup
+						found = true
+					}
+				}
+				if !found {
+					return nil, contract.ErrUnsupported
+				}
+			}
 		}
 		kinds := []string{}
 		if value.Action == "allocate" || value.Action == "replace" {
@@ -275,7 +319,7 @@ func (e *Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.T
 		}
 		if spec.NewName != "" {
 			name := spec.NewName
-			if value.Service == "ec2" {
+			if value.Service != "lightsail" {
 				name = "name/" + name
 			}
 			resourceLocks = append(resourceLocks, AddressLock(value.Service, name))

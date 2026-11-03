@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
 	"strings"
 	"time"
 
@@ -32,6 +34,7 @@ type Jobs interface {
 	Submit(context.Context, int64, oc.SubmitRequest, auth.RequestMeta) (oc.Job, error)
 }
 type Deps struct {
+	Cache         *catalogcache.Cache
 	Accounts      Accounts
 	Access        Access
 	Jobs          Jobs
@@ -41,7 +44,7 @@ type Deps struct {
 type Service struct{ deps Deps }
 
 func New(deps Deps) *Service { return &Service{deps: deps} }
-func (s *Service) Regions(ctx context.Context, actorID int64, id string) (contract.Regions, error) {
+func (s *Service) Regions(ctx context.Context, actorID int64, id string, refresh ...bool) (contract.Regions, error) {
 	if err := s.actor(ctx, actorID); err != nil {
 		return contract.Regions{}, err
 	}
@@ -58,11 +61,11 @@ func (s *Service) Regions(ctx context.Context, actorID int64, id string) (contra
 	if err != nil {
 		return contract.Regions{}, publicError(err)
 	}
-	rows, err := s.deps.Cloud.Regions(ctx, cfg)
+	rows, fresh, err := catalogcache.Read(ctx, s.deps.Cache, catalogcache.Key("lightsail-regions", info.Partition, info.AccountID, id, info.Fingerprint), catalogcache.Regions, forceRefresh(refresh), func(ctx context.Context) ([]contract.Region, error) { return s.deps.Cloud.Regions(ctx, cfg) })
 	if err != nil {
 		return contract.Regions{}, publicError(err)
 	}
-	return contract.Regions{ConnectionID: id, Items: rows, CheckedAt: clock.Now()}, nil
+	return contract.Regions{ConnectionID: id, Items: rows, CheckedAt: clock.In(fresh.UpdatedAt), Freshness: map[string]catalogue.Freshness{"regions": fresh}}, nil
 }
 func (s *Service) actor(ctx context.Context, id int64) error {
 	actor, err := s.deps.Access.Principal(ctx, id)
@@ -109,7 +112,7 @@ func (s *Service) Options(ctx context.Context, actorID int64) (contract.Options,
 	}
 	return result, nil
 }
-func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region string) (contract.Catalogue, error) {
+func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region string, refresh ...bool) (contract.Catalogue, error) {
 	if err := s.actor(ctx, actorID); err != nil {
 		return contract.Catalogue{}, err
 	}
@@ -127,7 +130,7 @@ func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region strin
 	if err != nil {
 		return contract.Catalogue{}, publicError(err)
 	}
-	result, err := s.deps.Cloud.Catalogue(ctx, cfg)
+	result, err := s.displayCatalogue(ctx, cfg, snapshot, forceRefresh(refresh))
 	if err != nil {
 		return contract.Catalogue{}, publicError(err)
 	}
@@ -142,7 +145,7 @@ func preview(plan oc.Plan) (contract.Preview, error) {
 	result := contract.Preview{ID: plan.ID, ExpiresAt: plan.ExpiresAt, CanSubmit: plan.CanSubmit, Targets: []contract.PreviewTarget{}}
 	for _, item := range plan.Items {
 		var spec contract.StepSpec
-		if len(item.Steps) != 2 || json.Unmarshal(item.Steps[0].Input, &spec) != nil {
+		if len(item.Steps) < 2 || json.Unmarshal(item.Steps[0].Input, &spec) != nil {
 			return contract.Preview{}, contract.ErrUnavailable
 		}
 		spec.CheckedAt = clock.In(spec.CheckedAt)

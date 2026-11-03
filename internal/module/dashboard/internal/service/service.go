@@ -182,6 +182,13 @@ func (s *Service) Read(ctx context.Context, actor int64, q contract.Query) (cont
 			continue
 		}
 		data := contract.Data{Count: row.Count, Running: row.Running, IPv4: row.IPv4}
+		if kind == contract.EC2IPs {
+			data.CarrierCount = row.CarrierCount
+			data.CarrierKnown = row.CarrierKnown
+			if row.CarrierKnown {
+				data.Count -= row.CarrierCount
+			}
+		}
 		if kind == contract.Catalog {
 			data.Regions = row.Regions
 			if ls, ok := lsRegions[row.AccountID]; ok {

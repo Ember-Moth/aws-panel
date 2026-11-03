@@ -1,6 +1,10 @@
 package contract
 
-import "time"
+import (
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	ip "github.com/herta-network/aws-panel/internal/instanceip"
+	"time"
+)
 
 type Blueprint struct {
 	ID                    string `json:"id"`
@@ -27,15 +31,16 @@ type Quota struct {
 	Code      string `json:"code,omitempty"`
 }
 type Catalogue struct {
-	ConnectionID  string      `json:"connection_id"`
-	Region        string      `json:"region"`
-	Zones         []string    `json:"zones"`
-	Blueprints    []Blueprint `json:"blueprints"`
-	Bundles       []Bundle    `json:"bundles"`
-	KeyPairs      []string    `json:"key_pairs"`
-	Quota         Quota       `json:"quota"`
-	CheckedAt     time.Time   `json:"checked_at"`
-	WritesEnabled bool        `json:"writes_enabled"`
+	Freshness     map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	ConnectionID  string                         `json:"connection_id"`
+	Region        string                         `json:"region"`
+	Zones         []string                       `json:"zones"`
+	Blueprints    []Blueprint                    `json:"blueprints"`
+	Bundles       []Bundle                       `json:"bundles"`
+	KeyPairs      []string                       `json:"key_pairs"`
+	Quota         Quota                          `json:"quota"`
+	CheckedAt     time.Time                      `json:"checked_at"`
+	WritesEnabled bool                           `json:"writes_enabled"`
 }
 type Region struct {
 	Code      string `json:"code"`
@@ -44,9 +49,10 @@ type Region struct {
 	Available bool   `json:"available"`
 }
 type Regions struct {
-	ConnectionID string    `json:"connection_id"`
-	Items        []Region  `json:"items"`
-	CheckedAt    time.Time `json:"checked_at"`
+	Freshness    map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	ConnectionID string                         `json:"connection_id"`
+	Items        []Region                       `json:"items"`
+	CheckedAt    time.Time                      `json:"checked_at"`
 }
 type Target struct {
 	ConnectionID   string `json:"connection_id"`
@@ -71,11 +77,13 @@ type PlanInput struct {
 	Targets []Target `json:"targets"`
 }
 type StepSpec struct {
-	Target    Target    `json:"target"`
-	Blueprint Blueprint `json:"blueprint"`
-	Bundle    Bundle    `json:"bundle"`
-	Quota     Quota     `json:"quota"`
-	CheckedAt time.Time `json:"checked_at"`
+	AllowAllFirewall bool          `json:"allow_all_firewall,omitempty"`
+	AutomaticIP      *ip.Automatic `json:"automatic_ip,omitempty"`
+	Target           Target        `json:"target"`
+	Blueprint        Blueprint     `json:"blueprint"`
+	Bundle           Bundle        `json:"bundle"`
+	Quota            Quota         `json:"quota"`
+	CheckedAt        time.Time     `json:"checked_at"`
 }
 type PreviewTarget struct {
 	AccountID    string   `json:"account_id"`

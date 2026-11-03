@@ -16,7 +16,7 @@ type ExecutorDeps = service.ExecutorDeps
 type Cloud = source.Cloud
 type State = source.State
 type Service interface {
-	Catalogue(context.Context, int64, string) (contract.Catalogue, error)
+	Catalogue(context.Context, int64, string, ...bool) (contract.Catalogue, error)
 	Options(context.Context, int64) (contract.Options, error)
 	Prepare(context.Context, int64, contract.EnableRequest) (contract.Preview, error)
 	Plan(context.Context, int64, string) (contract.Preview, error)

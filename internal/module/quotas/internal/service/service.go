@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
 	"regexp"
 	"strings"
 	"time"
@@ -28,6 +30,7 @@ type Cloud interface {
 	Read(context.Context, aws.Config, string, string) (contract.Report, error)
 }
 type Deps struct {
+	Cache    *catalogcache.Cache
 	Accounts Accounts
 	Access   Access
 	Cloud    Cloud
@@ -45,7 +48,7 @@ func (s *Service) Read(ctx context.Context, actorID int64, query contract.Query)
 	if !regionPattern.MatchString(query.Region) || strings.HasPrefix(query.Region, "cn-") || strings.HasPrefix(query.Region, "us-gov-") || (query.Service != "lightsail" && query.Service != "ec2" && query.Service != "vpc" && query.Service != "bedrock") {
 		return contract.Report{}, contract.ErrInvalid
 	}
-	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	snapshot, err := s.deps.Accounts.Inspect(ctx, actorID, query.ConnectionID, query.Region, false)
 	if err != nil {
@@ -58,7 +61,7 @@ func (s *Service) Read(ctx context.Context, actorID int64, query contract.Query)
 	if err != nil {
 		return contract.Report{}, translate(err)
 	}
-	report, err := s.deps.Cloud.Read(ctx, cfg, snapshot.AWSAccountID, query.Service)
+	report, err := s.readCached(ctx, cfg, snapshot, query.Service, query.Refresh)
 	if err != nil {
 		return contract.Report{}, translate(err)
 	}
@@ -104,7 +107,7 @@ func (s *Service) Options(ctx context.Context, actorID int64) (contract.Options,
 	}
 	return result, nil
 }
-func (s *Service) Regions(ctx context.Context, actorID int64, id string) (contract.Regions, error) {
+func (s *Service) Regions(ctx context.Context, actorID int64, id string, refresh ...bool) (contract.Regions, error) {
 	if _, err := s.deps.Access.Principal(ctx, actorID); err != nil {
 		return contract.Regions{}, contract.ErrForbidden
 	}
@@ -121,9 +124,23 @@ func (s *Service) Regions(ctx context.Context, actorID int64, id string) (contra
 	if err != nil {
 		return contract.Regions{}, translate(err)
 	}
-	rows, err := s.deps.Cloud.Regions(ctx, cfg)
+	rows, fresh, err := catalogcache.Read(ctx, s.deps.Cache, catalogcache.Key("account-regions", info.Partition, info.AccountID, id, info.Fingerprint), catalogcache.Regions, len(refresh) > 0 && refresh[0], func(ctx context.Context) ([]catalogue.RegionState, error) {
+		rows, err := s.deps.Cloud.Regions(ctx, cfg)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]catalogue.RegionState, 0, len(rows))
+		for _, v := range rows {
+			out = append(out, catalogue.RegionState{Code: v.Code, State: v.State})
+		}
+		return out, nil
+	})
 	if err != nil {
 		return contract.Regions{}, translate(err)
 	}
-	return contract.Regions{Items: rows, CheckedAt: clock.Now()}, nil
+	items := make([]contract.Region, 0, len(rows))
+	for _, v := range rows {
+		items = append(items, contract.Region{Code: v.Code, State: v.State, Available: v.State == "ENABLED" || v.State == "ENABLED_BY_DEFAULT"})
+	}
+	return contract.Regions{Items: items, CheckedAt: clock.In(fresh.UpdatedAt), Freshness: map[string]catalogue.Freshness{"regions": fresh}}, nil
 }

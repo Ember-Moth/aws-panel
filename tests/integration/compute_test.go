@@ -158,8 +158,15 @@ func TestComputeElasticIPReplacementLostResponses(t *testing.T) {
 	id := listing.Items[0].ID
 	scope := h.accountA.AWSAccountID + "/us-east-1"
 	h.cloudCompute.mu.Lock()
-	h.cloudCompute.ips[scope+"/eipalloc-00000001"] = &computeIP{id: "eipalloc-00000001", scope: scope, ip: "127.0.3.1", instance: id, association: "eipassoc-00000001", labels: map[string]string{"Name": "old-ip"}}
-	h.cloudCompute.instances[scope+"/"+id].publicIP = "127.0.3.1"
+	oldID := ""
+	for _, ip := range h.cloudCompute.ips {
+		if ip.scope == scope && ip.instance == id {
+			oldID = ip.id
+		}
+	}
+	if oldID == "" {
+		t.Fatal("create did not attach automatic IP")
+	}
 	h.cloudCompute.mode = "lost_addresses"
 	h.cloudCompute.mu.Unlock()
 	plan, err := h.serviceAddresses.Prepare(context.Background(), h.op.admin, ad.Request{Targets: []ad.Target{{ConnectionID: h.connectionA.ID, Region: "us-east-1", Service: "ec2", Action: "replace", InstanceID: id, ReleasePrevious: true}}})
@@ -176,12 +183,12 @@ func TestComputeElasticIPReplacementLostResponses(t *testing.T) {
 	}
 	h.cloudCompute.mu.Lock()
 	defer h.cloudCompute.mu.Unlock()
-	for _, action := range []string{"AllocateAddress", "AssociateAddress", "ReleaseAddress"} {
-		if h.cloudCompute.calls[action] != 1 {
+	for action, want := range map[string]int{"AllocateAddress": 2, "AssociateAddress": 2, "ReleaseAddress": 1} {
+		if h.cloudCompute.calls[action] != want {
 			t.Fatal("EIP repeated", action, h.cloudCompute.calls[action])
 		}
 	}
-	if h.cloudCompute.ips[scope+"/eipalloc-00000001"] != nil {
+	if h.cloudCompute.ips[scope+"/"+oldID] != nil {
 		t.Fatal("old EIP retained despite choice")
 	}
 }
@@ -265,8 +272,8 @@ func TestComputeTerminateLostResponseAfterNetworkRemoval(t *testing.T) {
 	}
 	h.cloudCompute.mu.Lock()
 	defer h.cloudCompute.mu.Unlock()
-	if h.cloudCompute.calls["TerminateInstances"] != 1 {
-		t.Fatal("terminate repeated")
+	if h.cloudCompute.calls["TerminateInstances"] != 1 || h.cloudCompute.calls["ReleaseAddress"] != 1 || len(h.cloudCompute.ips) != 0 {
+		t.Fatal("terminate repeated or managed IP retained", h.cloudCompute.calls)
 	}
 }
 func TestComputeElasticIPAttachFailureRetainsBothAddresses(t *testing.T) {
@@ -282,8 +289,15 @@ func TestComputeElasticIPAttachFailureRetainsBothAddresses(t *testing.T) {
 	scope := h.accountA.AWSAccountID + "/us-east-1"
 	id := rows.Items[0].ID
 	h.cloudCompute.mu.Lock()
-	h.cloudCompute.ips[scope+"/eipalloc-00000001"] = &computeIP{id: "eipalloc-00000001", scope: scope, ip: "127.0.3.1", instance: id, association: "eipassoc-00000001", labels: map[string]string{"Name": "old-ip"}}
-	h.cloudCompute.instances[scope+"/"+id].publicIP = "127.0.3.1"
+	oldID := ""
+	for _, ip := range h.cloudCompute.ips {
+		if ip.scope == scope && ip.instance == id {
+			oldID = ip.id
+		}
+	}
+	if oldID == "" {
+		t.Fatal("create did not attach automatic IP")
+	}
 	h.cloudCompute.mode = "attach_rejected"
 	h.cloudCompute.mu.Unlock()
 	p, err := h.serviceAddresses.Prepare(context.Background(), h.op.admin, ad.Request{Targets: []ad.Target{{ConnectionID: h.connectionA.ID, Region: "us-east-1", Service: "ec2", Action: "replace", InstanceID: id, ReleasePrevious: true}}})
@@ -300,7 +314,7 @@ func TestComputeElasticIPAttachFailureRetainsBothAddresses(t *testing.T) {
 	}
 	h.cloudCompute.mu.Lock()
 	defer h.cloudCompute.mu.Unlock()
-	if len(h.cloudCompute.ips) != 2 || h.cloudCompute.ips[scope+"/eipalloc-00000001"].instance != id || h.cloudCompute.calls["ReleaseAddress"] != 0 || d.Items[0].Steps[0].Output.ResourceID == "" {
+	if len(h.cloudCompute.ips) != 2 || h.cloudCompute.ips[scope+"/"+oldID].instance != id || h.cloudCompute.calls["ReleaseAddress"] != 0 || d.Items[0].Steps[0].Output.ResourceID == "" {
 		t.Fatal("attachment failure lost resource ownership or released old address")
 	}
 }

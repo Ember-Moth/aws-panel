@@ -71,7 +71,7 @@ API 与后台服务通过各自的 goroutine 并发运行，共享依赖和配�
 
 数据库只使用 PostgreSQL，这是项目约束，不是首版的临时范围。不提供数据库类型切换、其他数据库驱动、多方言迁移或兼容层；仓储接口用于模块隔离。开发、集成测试和生产使用同一种数据库，数据库测试也不使用 SQLite 替代 PostgreSQL。
 
-GORM PostgreSQL 驱动使用 pgx，业务不再同时维护一套独立 pgx 仓储。golang-migrate 执行一套按版本维护的 PostgreSQL SQL，不用 GORM AutoMigrate 替代生产迁移。迁移通过独立命令执行，服务启动只检查版本兼容性。Redis 继续承担队列、缓存和限流，业务数据与任务状态以 PostgreSQL 为准。
+GORM PostgreSQL 驱动使用 pgx，业务不再同时维护一套独立 pgx 仓储。golang-migrate 执行一套按版本维护的 PostgreSQL SQL，不用 GORM AutoMigrate 替代生产迁移。迁移通过独立命令执行，服务启动只检查版本兼容性。Redis 继续承担队列、缓存和限流，业务数据与任务状态以 PostgreSQL 为准。展示数据使用按账号/连接版本/区域隔离的有界缓存；套餐、镜像、配额上限、用量与短期账号状态分别更新，区域管理与创建表单共享区域状态；具体时效见[创建目录缓存](catalogue-cache.md)。
 
 ## 模块与依赖边界
 
@@ -84,7 +84,7 @@ GORM PostgreSQL 驱动使用 pgx，业务不再同时维护一套独立 pgx 仓�
 | platform | 系统设置、审计读取与事务内追加审计的公共能力 |
 | lightsail / regions | Lightsail 创建、区域启用及结果核对 |
 | dashboard | 按授权账号聚合资源与配额，持有聚合快照和分区域采集进度 |
-| compute / addresses / quotas | EC2 与双栈网络、静态 IP 工作流、适用配额和用量查询 |
+| compute / addresses / quotas | EC2 / Wavelength 与网络、实例固定 IP 工作流、适用配额和用量查询 |
 
 模块按数据和事务归属划分：凭据生命周期归 accounts，任务执行、通用云请求记录和多资源锁归 operations，审计与设置归 platform。platform 作为共享内核不依赖其他业务模块。模块内部再按需要拆包，避免每个辅助能力都变成必须跨事务协作的独立模块。
 
@@ -422,3 +422,5 @@ pkg/logger 用 log/slog 承载结构化输出，统一字段脱敏与上下文�
 代理集成检查使用可控 SOCKS5 服务和测试端点，覆盖两个账号并发隔离、用户名密码认证、代理侧目标域名解析、环境代理不干扰、STS 刷新和后台重试路径、配置更新后的连接池失效、代理不可用时无直连以及日志脱敏。真实 AWS 出口验证在指定测试账号进行，不把本地代理测试视为已验证 AWS 风控结果。
 
 后续功能设计需要明确支持的 AWS 服务与分区、操作输入和权限、成功判据、不可逆步骤、模板共享方式及界面交互。每项功能在这些通用边界内实现，再根据真实需求调整基础设施。
+
+`internal/instanceip` 仅定义固定地址、自动分配策略和归属快照值类型，供各模块自己的 contract 引用；不依赖模块、AWS 或数据库。地址执行由 addresses facade 提供，compute 和 lightsail 组合为实例任务。

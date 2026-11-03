@@ -66,5 +66,7 @@ type Schedule struct {
 type Overview struct {
 	Scope
 	ObservedCount, RunningCount int64
+	CarrierCount                int64
+	CarrierKnown                bool
 	IPJSON, RegionJSON          string
 }

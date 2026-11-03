@@ -288,11 +288,12 @@ func (h *Handler) Submit(ctx context.Context, c *app.RequestContext) {
 // @Security SessionCookie
 // @Param connection_id query string true "Connection UUID"
 // @Param region query string true "AWS region"
+// @Param refresh query boolean false "Refresh directory data from AWS"
 // @Success 200 {object} CatalogueResponse
 // @Failure 400,401,403,409,503 {object} httpx.Envelope
 // @Router /lightsail/catalogue [get]
 func (h *Handler) Catalogue(ctx context.Context, c *app.RequestContext) {
-	result, err := h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"))
+	result, err := h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("region"), c.Query("refresh") == "true")
 	if err != nil {
 		h.fail(ctx, c, err)
 		return
@@ -311,11 +312,12 @@ type RegionsResponse struct {
 // @Produce json
 // @Security SessionCookie
 // @Param connection_id query string true "Connection UUID"
+// @Param refresh query boolean false "Refresh directory data from AWS"
 // @Success 200 {object} RegionsResponse
 // @Failure 400,401,403,409,503 {object} httpx.Envelope
 // @Router /lightsail/regions [get]
 func (h *Handler) Regions(ctx context.Context, c *app.RequestContext) {
-	result, err := h.service.Regions(ctx, actor(ctx), c.Query("connection_id"))
+	result, err := h.service.Regions(ctx, actor(ctx), c.Query("connection_id"), c.Query("refresh") == "true")
 	if err != nil {
 		h.fail(ctx, c, err)
 		return

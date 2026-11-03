@@ -1,6 +1,9 @@
 package contract
 
-import "time"
+import (
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	"time"
+)
 
 type Target struct {
 	ConnectionID string `json:"connection_id"`
@@ -48,9 +51,10 @@ type Region struct {
 	Selectable bool   `json:"selectable"`
 }
 type Catalogue struct {
-	ConnectionID string    `json:"connection_id"`
-	Regions      []Region  `json:"regions"`
-	CheckedAt    time.Time `json:"checked_at"`
+	Freshness    map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	ConnectionID string                         `json:"connection_id"`
+	Regions      []Region                       `json:"regions"`
+	CheckedAt    time.Time                      `json:"checked_at"`
 }
 type Error struct{ Code, Message string }
 

@@ -62,6 +62,7 @@ type RefreshResponse struct {
 	RequestID string `json:"request_id"`
 }
 type listView struct {
+	IPLinks        map[string]string
 	List           contract.ResourceList
 	Options        contract.Options
 	Filter         contract.Filter
@@ -240,6 +241,29 @@ func (h *Handler) Resources(ctx context.Context, c *app.RequestContext) {
 	principal, _ := auth.Current(ctx)
 	model.CanOperate = principal.Role == "admin" || principal.Role == "operator"
 	model.Lightsail = string(c.Path()) == "/lightsail"
+	model.IPLinks = map[string]string{}
+	if model.CanOperate {
+		for _, r := range result.Items {
+			if r.Kind != "lightsail_instance" || !r.Present || r.Details.Instance == nil || r.Details.Instance.IPType == "ipv6" {
+				continue
+			}
+			connection := ""
+			for _, a := range options.Accounts {
+				if a.ID == r.AccountID {
+					for _, v := range a.Connections {
+						if v.Status == "verified" {
+							connection = v.ID
+							break
+						}
+					}
+				}
+			}
+			if connection != "" {
+				model.IPLinks[r.ID] = "/lightsail/instances/" + url.PathEscape(r.Name) + "/ip?" + url.Values{"connection_id": {connection}, "region": {r.Region}}.Encode()
+			}
+		}
+	}
+
 	if model.Lightsail {
 		model.Previous = pageURL("/lightsail", f, result.Previous)
 		model.Next = pageURL("/lightsail", f, result.Next)

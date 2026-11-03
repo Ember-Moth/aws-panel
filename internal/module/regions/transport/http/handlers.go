@@ -259,11 +259,12 @@ type CatalogueResponse struct {
 // @Produce json
 // @Security SessionCookie
 // @Param connection_id query string true "Connection UUID"
+// @Param refresh query boolean false "Refresh region status from AWS"
 // @Success 200 {object} CatalogueResponse
 // @Failure 400,401,403,409,503 {object} httpx.Envelope
 // @Router /regions/catalogue [get]
 func (h *Handler) Catalogue(ctx context.Context, c *app.RequestContext) {
-	result, err := h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"))
+	result, err := h.service.Catalogue(ctx, actor(ctx), c.Query("connection_id"), c.Query("refresh") == "true")
 	if err != nil {
 		h.fail(ctx, c, err)
 		return

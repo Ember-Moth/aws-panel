@@ -115,7 +115,8 @@ func (h *operationHarness) expedite(t *testing.T, id string) {
 func (h *operationHarness) drive(t *testing.T, id string) oc.Detail {
 	t.Helper()
 	ctx := context.Background()
-	for range 30 {
+	// A full 16-step cloud workflow may need a send and observation tick per step.
+	for range 64 {
 		detail, err := h.service.Detail(ctx, h.admin, id)
 		if err != nil {
 			t.Fatal(err)

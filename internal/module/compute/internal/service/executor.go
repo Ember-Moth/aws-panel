@@ -28,7 +28,18 @@ func sameEffect(v *oc.Effect, c oc.Call) bool {
 	return v.StepID == e.StepID && v.JobID == e.JobID && v.AccountID == e.AccountID && v.Region == e.Region && v.Purpose == e.Purpose && v.SpecHash == e.SpecHash && v.Token == e.Token
 }
 func labels(c oc.Call) map[string]string {
-	return map[string]string{"aws-panel:step": c.StepID, "aws-panel:token": c.Token, "aws-panel:spec": hash(string(c.Input))}
+	v := map[string]string{"aws-panel:step": c.StepID, "aws-panel:token": c.Token, "aws-panel:spec": hash(string(c.Input))}
+	var s contract.Spec
+	if json.Unmarshal(c.Input, &s) == nil && s.Target.Action == "create" && (s.Ingress != nil || s.IngressPeer != nil) {
+		v["aws-panel:bundle"] = c.ItemID
+		if s.IngressPeer != nil {
+			v["aws-panel:role"] = "ingress"
+			v["aws-panel:primary"] = s.IngressPeer.ID
+		} else if s.Ingress != nil {
+			v["aws-panel:role"] = "wavelength"
+		}
+	}
+	return v
 }
 func parse(c oc.Call) (contract.Spec, error) {
 	var s contract.Spec
@@ -38,13 +49,25 @@ func parse(c oc.Call) (contract.Spec, error) {
 	if _, err := normalize([]contract.Target{s.Target}); err != nil {
 		return s, err
 	}
-	if s.Target.Action == "network" {
-		if s.Network == nil || !slices.Contains(networkSteps, c.Kind) || s.Target.ConnectionID != c.Target.Binding.ConnectionID || s.Target.Region != c.Target.Binding.Region || c.Target.Binding.Partition != "aws" {
+	if s.Target.Action == "wavelength_opt_in" {
+		if c.Kind != s.Target.Action || s.WavelengthZone == nil || s.WavelengthZone.ID != s.Target.WavelengthZoneID || s.Target.ConnectionID != c.Target.Binding.ConnectionID || s.Target.Region != c.Target.Binding.Region || c.Target.Binding.Partition != "aws" {
 			return s, contract.ErrInvalid
 		}
 		return s, nil
 	}
-	if s.Target.ConnectionID != c.Target.Binding.ConnectionID || s.Target.Region != c.Target.Binding.Region || c.Target.Binding.Partition != "aws" || (c.Kind != s.Target.Action && !(s.Target.Action == "create" && c.Kind == "ready")) {
+	if s.Target.Action == "network" {
+		if s.Network == nil || !slices.Contains(stepsForSpec(s), c.Kind) || s.Target.ConnectionID != c.Target.Binding.ConnectionID || s.Target.Region != c.Target.Binding.Region || c.Target.Binding.Partition != "aws" {
+			return s, contract.ErrInvalid
+		}
+		return s, nil
+	}
+	if s.Target.Action == "terminate" && ((c.Kind == "companion_terminate" && s.CompanionInstance != nil) || (strings.HasPrefix(c.Kind, "cleanup_ip_") && len(s.CleanupIPs) > 0)) {
+		if s.Instance == nil || s.Target.ConnectionID != c.Target.Binding.ConnectionID || s.Target.Region != c.Target.Binding.Region || c.Target.Binding.Partition != "aws" {
+			return s, contract.ErrInvalid
+		}
+		return s, nil
+	}
+	if s.Target.ConnectionID != c.Target.Binding.ConnectionID || s.Target.Region != c.Target.Binding.Region || c.Target.Binding.Partition != "aws" || (c.Kind != s.Target.Action && !(s.Target.Action == "create" && (c.Kind == "ready" || (s.Ingress != nil && slices.Contains(ingressStepsFor(s), c.Kind)) || (s.Firewall != nil && slices.Contains(firewallSteps, c.Kind)) || (s.AutomaticIP != nil && (c.Kind == "ip_allocate" || c.Kind == "ip_attach"))))) {
 		return s, contract.ErrInvalid
 	}
 	if s.Target.Action == "create" && (s.Image == nil || s.Type == nil || s.Subnet == nil) || s.Target.Action != "create" && s.Instance == nil {
@@ -156,8 +179,23 @@ func (e *Executor) Execute(ctx context.Context, c oc.Call) oc.Result {
 	if err != nil {
 		return before(err)
 	}
+	if c.Kind == "companion_terminate" || strings.HasPrefix(c.Kind, "cleanup_ip_") {
+		return e.cleanup(ctx, cfg, c, s, false)
+	}
+	if c.Kind == "wavelength_opt_in" {
+		return e.wavelengthOptIn(ctx, cfg, c, s)
+	}
 	if strings.HasPrefix(c.Kind, "net_") {
 		return e.network(ctx, cfg, c, s, false)
+	}
+	if strings.HasPrefix(c.Kind, "ingress_") || strings.HasPrefix(c.Kind, "relay_") {
+		return e.ingress(ctx, cfg, c, s, false)
+	}
+	if strings.HasPrefix(c.Kind, "firewall_") {
+		return e.firewall(ctx, cfg, c, s, false)
+	}
+	if strings.HasPrefix(c.Kind, "ip_") {
+		return e.automaticIP(ctx, cfg, c, s, false)
 	}
 	if c.Kind == "ready" {
 		return e.ready(ctx, cfg, c, s)
@@ -175,15 +213,25 @@ func (e *Executor) Execute(ctx context.Context, c oc.Call) oc.Result {
 	var current *contract.Instance
 	userData := ""
 	if c.Kind == "create" {
-		cat, err := e.deps.Cloud.Catalogue(ctx, cfg)
+		cat, err := catalogue(ctx, e.deps.Cloud, cfg, s.Target.WavelengthZoneID)
 		if err != nil {
 			return before(err)
 		}
-		fresh, err := selectCreate(s.Target, cat)
+		fresh, err := selectCreateWithFirewall(s.Target, cat, s.Firewall)
 		if err != nil {
 			return before(err)
 		}
-		if fresh.Image.ID != s.Image.ID || fresh.Image.RootDevice != s.Image.RootDevice || fresh.Image.Owner != s.Image.Owner || fresh.Type.VCPU != s.Type.VCPU || fresh.Subnet.VPCID != s.Subnet.VPCID || fresh.Subnet.Zone != s.Subnet.Zone {
+		if s.AutomaticIP != nil {
+			if err := e.checkAutomaticIP(ctx, cfg, c.Target.Binding.AWSAccountID, &fresh); err != nil {
+				return before(err)
+			}
+		}
+		if s.Ingress != nil {
+			if err := e.checkIngressPlan(ctx, cfg, c.Target.Binding.AWSAccountID, cat, s); err != nil {
+				return before(err)
+			}
+		}
+		if fresh.Image.ID != s.Image.ID || fresh.Image.RootDevice != s.Image.RootDevice || fresh.Image.Owner != s.Image.Owner || fresh.Type.VCPU != s.Type.VCPU || fresh.Subnet.VPCID != s.Subnet.VPCID || fresh.Subnet.Zone != s.Subnet.Zone || !slices.Equal(fresh.BootstrapGroups, s.BootstrapGroups) {
 			return before(contract.ErrCatalogue)
 		}
 		instances, err := e.deps.Cloud.Instances(ctx, cfg, c.Target.Binding.AWSAccountID)
@@ -202,7 +250,12 @@ func (e *Executor) Execute(ctx context.Context, c oc.Call) oc.Result {
 		if quota.LimitKnown && quota.UsageKnown && quota.Used+float64(s.Type.VCPU) > quota.Limit {
 			return before(contract.ErrQuota)
 		}
-		if s.Target.LoginMethod == "root_password" {
+		if s.IngressPeer != nil {
+			userData, err = ingressUserData(s.IngressPeer.PrivateIP)
+			if err != nil {
+				return before(err)
+			}
+		} else if s.Target.LoginMethod == "root_password" {
 			if e.deps.LaunchSecrets == nil {
 				return before(contract.ErrUnavailable)
 			}
@@ -223,7 +276,7 @@ func (e *Executor) Execute(ctx context.Context, c oc.Call) oc.Result {
 		if c.Kind == "terminate" && current != nil && current.State == "terminated" && stableIdentity(current, s.Instance) {
 			return e.complete(ctx, c, nil, current)
 		}
-		if !identity(current, s.Instance) {
+		if !identity(current, s.Instance) || (s.WavelengthZone != nil && current != nil && current.Zone != s.WavelengthZone.Name) {
 			return before(contract.ErrConflict)
 		}
 		if done(c.Kind, current) {
@@ -233,7 +286,7 @@ func (e *Executor) Execute(ctx context.Context, c oc.Call) oc.Result {
 			return before(contract.ErrConflict)
 		}
 		if c.Kind == "enable_ipv6" || c.Kind == "start" {
-			cat, err := e.deps.Cloud.Catalogue(ctx, cfg)
+			cat, err := catalogue(ctx, e.deps.Cloud, cfg, s.Target.WavelengthZoneID)
 			if err != nil {
 				return before(err)
 			}
@@ -313,8 +366,23 @@ func (e *Executor) Reconcile(ctx context.Context, c oc.Call) oc.Result {
 	if err != nil {
 		return observing(err)
 	}
+	if c.Kind == "companion_terminate" || strings.HasPrefix(c.Kind, "cleanup_ip_") {
+		return e.cleanup(ctx, cfg, c, s, true)
+	}
+	if c.Kind == "wavelength_opt_in" {
+		return e.wavelengthOptIn(ctx, cfg, c, s)
+	}
 	if strings.HasPrefix(c.Kind, "net_") {
 		return e.network(ctx, cfg, c, s, true)
+	}
+	if strings.HasPrefix(c.Kind, "ingress_") || strings.HasPrefix(c.Kind, "relay_") {
+		return e.ingress(ctx, cfg, c, s, true)
+	}
+	if strings.HasPrefix(c.Kind, "firewall_") {
+		return e.firewall(ctx, cfg, c, s, true)
+	}
+	if strings.HasPrefix(c.Kind, "ip_") {
+		return e.automaticIP(ctx, cfg, c, s, true)
 	}
 	if c.Kind == "ready" {
 		return e.ready(ctx, cfg, c, s)
@@ -352,18 +420,21 @@ func (e *Executor) reconcile(ctx context.Context, cfg aws.Config, c oc.Call, s c
 				return attention("EC2_OWNERSHIP_UNCONFIRMED", v.ARN)
 			}
 		}
-		if v.ClientToken != c.Token || v.Name != s.Target.Name || v.ImageID != s.Target.ImageID || v.Type != s.Target.InstanceType || v.SubnetID != s.Target.SubnetID || !slices.Equal(v.SecurityGroupIDs, s.Target.SecurityGroupIDs) || v.RootDevice != s.Image.RootDevice || row.FirstSentAt == nil || v.LaunchTime.Before(row.FirstSentAt.Add(-30*time.Second)) {
+		if v.ClientToken != c.Token || v.Name != s.Target.Name || v.ImageID != s.Target.ImageID || v.Type != s.Target.InstanceType || v.SubnetID != s.Target.SubnetID || !slices.Equal(v.SecurityGroupIDs, launchGroups(s)) || v.RootDevice != s.Image.RootDevice || row.FirstSentAt == nil || v.LaunchTime.Before(row.FirstSentAt.Add(-30*time.Second)) {
 			return attention("EC2_SPEC_UNCONFIRMED", v.ARN)
 		}
 		row.State = "confirmed"
 		row.ResourceID = v.ID
 		row.ResourceLocks = addresses.InstanceLocks("ec2", v.ID, v.Name)
+		if s.IngressPeer != nil {
+			v.IngressFor = s.IngressPeer.ID
+		}
 		row.Proof = string(raw(v))
 		row.Code = "EC2_CREATED"
 		if err := e.deps.Effects.RecordEffect(ctx, *row, lease(c)); err != nil {
 			return observing(err)
 		}
-		if s.Target.LaunchSecretID != "" {
+		if s.Target.LaunchSecretID != "" && s.IngressPeer == nil {
 			if err := e.deps.LaunchSecrets.DeleteLaunchSecret(ctx, c.ActorID, s.Target.LaunchSecretID, launchBinding(s.Target, c.Target.Binding.AccountID)); err != nil {
 				return observing(err)
 			}
@@ -383,7 +454,7 @@ func (e *Executor) reconcile(ctx context.Context, cfg aws.Config, c oc.Call, s c
 	if c.Kind == "terminate" && current != nil && current.State == "terminated" && stableIdentity(current, s.Instance) {
 		return e.complete(ctx, c, row, current)
 	}
-	if !identity(current, s.Instance) {
+	if !identity(current, s.Instance) || (s.WavelengthZone != nil && current != nil && current.Zone != s.WavelengthZone.Name) {
 		return attention("EC2_INSTANCE_CHANGED", s.Instance.ARN)
 	}
 	if done(c.Kind, current) {

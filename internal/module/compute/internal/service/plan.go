@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -29,6 +30,7 @@ const OperationID = "ec2.manage"
 var regionPattern = regexp.MustCompile(`^[a-z]{2}(?:-[a-z0-9]+)+-[0-9]+$`)
 var namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$`)
 var resourcePattern = regexp.MustCompile(`^(?:i|ami|subnet|sg)-[a-f0-9]{8,32}$`)
+var wavelengthZonePattern = regexp.MustCompile(`^[a-z0-9-]{6,80}$`)
 var typePattern = regexp.MustCompile(`^[a-z][a-z0-9-]*\.[a-z0-9]+$`)
 
 func validRegion(v string) bool {
@@ -51,24 +53,49 @@ func normalize(values []contract.Target) ([]contract.Target, error) {
 			return nil, contract.ErrInvalid
 		}
 		v.ConnectionID = id.String()
-		if v.Action == "network" {
-			if !namePattern.MatchString(v.Name) || !strings.HasPrefix(v.Zone, v.Region) || len(v.Zone) != len(v.Region)+1 || v.InstanceID != "" || v.ImageID != "" || v.InstanceType != "" || v.SubnetID != "" || len(v.SecurityGroupIDs) > 0 || v.DiskGB != 0 || v.PublicIPv4 || v.IPv6 || v.LoginMethod != "" || v.KeyPairName != "" || v.LaunchSecretID != "" {
+		if (v.IngressSubnetID != "" || v.IngressType != "") && (v.Action != "create" || v.WavelengthZoneID == "" || !resource(v.IngressSubnetID, "subnet") || !typePattern.MatchString(v.IngressType)) {
+			return nil, contract.ErrInvalid
+		}
+		if v.WavelengthZoneID != "" && (!wavelengthZonePattern.MatchString(v.WavelengthZoneID) || v.IPv6 || v.PublicIPv4 || v.SSHIPv6CIDR != "" || v.Action == "enable_ipv6") {
+			return nil, contract.ErrNetwork
+		}
+		if v.Action == "wavelength_opt_in" {
+			copy := *v
+			copy.ConnectionID = ""
+			copy.Region = ""
+			copy.Action = ""
+			copy.WavelengthZoneID = ""
+			if v.WavelengthZoneID == "" || !bytes.Equal(raw(copy), raw(contract.Target{})) {
 				return nil, contract.ErrInvalid
+			}
+			continue
+		}
+		if v.Action == "network" {
+			if !namePattern.MatchString(v.Name) || (v.WavelengthZoneID == "" && (!strings.HasPrefix(v.Zone, v.Region) || len(v.Zone) != len(v.Region)+1)) || (v.WavelengthZoneID != "" && v.Zone != "") || v.InstanceID != "" || v.ImageID != "" || v.InstanceType != "" || v.SubnetID != "" || len(v.SecurityGroupIDs) > 0 || v.DiskGB != 0 || v.PublicIPv4 || v.IPv6 || v.LoginMethod != "" || v.KeyPairName != "" || v.LaunchSecretID != "" {
+				return nil, contract.ErrInvalid
+			}
+			if v.SSHIPv4CIDR == "" {
+				v.SSHIPv4CIDR = "0.0.0.0/0"
+			}
+			if v.WavelengthZoneID == "" && v.SSHIPv6CIDR == "" {
+				v.SSHIPv6CIDR = "::/0"
 			}
 			ipv4, e4 := netip.ParsePrefix(v.SSHIPv4CIDR)
 			ipv6, e6 := netip.ParsePrefix(v.SSHIPv6CIDR)
-			if e4 != nil || e6 != nil || !ipv4.Addr().Is4() || !ipv6.Addr().Is6() || ipv6.Addr().Is4In6() {
+			if e4 != nil || !ipv4.Addr().Is4() || (v.WavelengthZoneID == "" && (e6 != nil || !ipv6.Addr().Is6() || ipv6.Addr().Is4In6())) {
 				return nil, contract.ErrNetwork
 			}
 			v.SSHIPv4CIDR = ipv4.Masked().String()
-			v.SSHIPv6CIDR = ipv6.Masked().String()
+			if v.WavelengthZoneID == "" {
+				v.SSHIPv6CIDR = ipv6.Masked().String()
+			}
 			continue
 		}
 		if v.Zone != "" || v.SSHIPv4CIDR != "" || v.SSHIPv6CIDR != "" {
 			return nil, contract.ErrInvalid
 		}
 		if v.Action == "create" {
-			if !namePattern.MatchString(v.Name) || !resource(v.ImageID, "ami") || !typePattern.MatchString(v.InstanceType) || !resource(v.SubnetID, "subnet") || v.InstanceID != "" || v.DiskGB < 8 || v.DiskGB > 16384 || len(v.SecurityGroupIDs) < 1 || len(v.SecurityGroupIDs) > 5 {
+			if !namePattern.MatchString(v.Name) || !resource(v.ImageID, "ami") || !typePattern.MatchString(v.InstanceType) || !resource(v.SubnetID, "subnet") || v.InstanceID != "" || v.DiskGB < 8 || v.DiskGB > 16384 || len(v.SecurityGroupIDs) > 5 {
 				return nil, contract.ErrInvalid
 			}
 			v.SecurityGroupIDs = append([]string{}, v.SecurityGroupIDs...)
@@ -108,6 +135,7 @@ func normalize(values []contract.Target) ([]contract.Target, error) {
 }
 
 type ExecutorDeps struct {
+	AddressCloud  addresses.Cloud
 	Clients       Clients
 	LaunchSecrets LaunchSecrets
 	Cloud         source.Cloud
@@ -138,7 +166,17 @@ func (*Executor) Validate(input json.RawMessage) (json.RawMessage, error) {
 	return json.Marshal(v)
 }
 func selectCreate(v contract.Target, c contract.Catalogue) (contract.Spec, error) {
-	s := contract.Spec{Target: v, CheckedAt: c.CheckedAt, Warnings: []string{"价格未锁定：按需实例、gp3 磁盘、公网 IPv4 与流量分别计费；提交前请核对 AWS 区域价格。", "网络 ACL、系统防火墙与真实 SSH/IPv6 连通性仍需启动后验证。"}}
+	return selectCreateWithFirewall(v, c, nil)
+}
+func selectCreateWithFirewall(v contract.Target, c contract.Catalogue, firewall *contract.FirewallPlan) (contract.Spec, error) {
+	s := contract.Spec{Target: v, Firewall: firewall, WavelengthZone: c.WavelengthZone, CheckedAt: c.CheckedAt, Warnings: []string{"价格未锁定：按需实例、gp3 磁盘、公网 IPv4 与流量分别计费；提交前请核对 AWS 区域价格。", "网络 ACL、系统防火墙与真实 SSH/IPv6 连通性仍需启动后验证。"}}
+	if v.WavelengthZoneID != "" {
+		if c.WavelengthZone == nil || c.WavelengthZone.ID != v.WavelengthZoneID || c.WavelengthZone.OptInStatus != "opted-in" || v.IPv6 || v.PublicIPv4 {
+			return s, contract.ErrNetwork
+		}
+		s.VolumeType = "gp2"
+		s.Warnings = []string{"Wavelength 使用加密 gp2 根盘和 IPv4 私网；实例、磁盘、Carrier IP 和流量按 AWS 价格计费。", "自动配置父区域入口 EC2 与弹性 IP 承接公网入站，Wavelength 实例默认出站走 Carrier IP。"}
+	}
 	for _, a := range c.Images {
 		if a.ID == v.ImageID {
 			s.Image = &a
@@ -157,11 +195,28 @@ func selectCreate(v contract.Target, c contract.Catalogue) (contract.Spec, error
 	if s.Image == nil || s.Type == nil || s.Subnet == nil || !slices.Contains(s.Type.Architectures, s.Image.Architecture) || v.DiskGB < s.Image.MinDiskGB {
 		return s, contract.ErrCatalogue
 	}
-	if s.Subnet.AvailableIPs < 1 || v.IPv6 && (!s.Type.IPv6 || s.Subnet.IPv6CIDR == "" || !s.Subnet.PublicIPv6Route) || v.PublicIPv4 && !s.Subnet.PublicIPv4Route {
+	if s.Subnet.AvailableIPs < 1 || (v.WavelengthZoneID != "" && s.Subnet.Zone != c.WavelengthZone.Name) || v.IPv6 && (!s.Type.IPv6 || s.Subnet.IPv6CIDR == "" || !s.Subnet.PublicIPv6Route) || v.PublicIPv4 && !s.Subnet.PublicIPv4Route {
 		return s, contract.ErrNetwork
 	}
+	groups := append([]string{}, v.SecurityGroupIDs...)
+	if len(groups) == 0 && firewall != nil {
+		for _, g := range c.SecurityGroups {
+			if g.VPCID == s.Subnet.VPCID && (len(groups) == 0 || g.Name == "default") {
+				groups = []string{g.ID}
+				if g.Name == "default" {
+					break
+				}
+			}
+		}
+	}
+	if len(groups) == 0 {
+		return s, contract.ErrNetwork
+	}
+	if len(v.SecurityGroupIDs) == 0 {
+		s.BootstrapGroups = groups
+	}
 	ipv4, ipv6 := false, false
-	for _, id := range v.SecurityGroupIDs {
+	for _, id := range groups {
 		found := false
 		for _, g := range c.SecurityGroups {
 			if g.ID == id && g.VPCID == s.Subnet.VPCID {
@@ -175,17 +230,18 @@ func selectCreate(v contract.Target, c contract.Catalogue) (contract.Spec, error
 			return s, contract.ErrNetwork
 		}
 	}
-	if v.IPv6 && !ipv6 || v.PublicIPv4 && !ipv4 {
+	if firewall == nil && (v.IPv6 && !ipv6 || v.PublicIPv4 && !ipv4) {
 		return s, contract.ErrNetwork
 	}
-	if !v.IPv6 && !v.PublicIPv4 {
-		s.Warnings = append(s.Warnings, "未分配公网地址，登录需要私网路径或后续绑定弹性 IP。")
-	}
+
 	if v.LoginMethod == "ssh_key" && !slices.Contains(c.KeyPairs, v.KeyPairName) {
 		return s, contract.ErrLogin
 	}
 	if v.LoginMethod == "root_password" {
-		s.Warnings = append(s.Warnings, "初始化将启用 root 密码 SSH 登录；请确保所选安全组来源仅覆盖可信管理网络。初始化状态需在系统内核对。")
+		s.Warnings = append(s.Warnings, "初始化将启用 root 密码 SSH 登录；初始化状态需在系统内核对。")
+	}
+	if firewall != nil {
+		s.Warnings = append(s.Warnings, "自动创建并绑定实例专用安全组，所有来源、协议和端口的入站与出站全部放行；系统防火墙和网络 ACL 独立生效。")
 	}
 	return s, nil
 }
@@ -246,7 +302,7 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 		if b.Binding.Partition != "aws" || b.Binding.ConnectionID != v.ConnectionID || b.Binding.Region != v.Region {
 			return nil, contract.ErrInvalid
 		}
-		group := v.ConnectionID + "/" + v.Region
+		group := v.ConnectionID + "/" + v.Region + "/" + v.WavelengthZoneID
 		physical := b.Binding.AWSAccountID + "/" + v.Region
 		cfg, ok := configs[group]
 		if !ok {
@@ -256,6 +312,19 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 				return nil, publicError(err)
 			}
 			configs[group] = cfg
+		}
+		if v.Action == "wavelength_opt_in" {
+			item, err := e.planWavelengthOptIn(ctx, cfg, b, v)
+			if err != nil {
+				return nil, err
+			}
+			key := physical + "/" + item.Target.LockKey
+			if locks[key] {
+				return nil, contract.ErrConflict
+			}
+			locks[key] = true
+			result = append(result, item)
+			continue
 		}
 		if v.Action == "network" {
 			spec, err := e.planNetwork(ctx, cfg, b, v)
@@ -282,11 +351,11 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 				}
 			}
 			b.Key = physical + "/network/" + hash(string(raw(spec)))
-			b.Label = b.Binding.AWSAccountID + " · " + v.Region + " · 准备双栈网络"
+			b.Label = b.Binding.AWSAccountID + " · " + v.Region + " · 准备网络"
 			b.LockKey = lock
 			item := oc.ItemPlan{Target: b, Steps: []oc.StepPlan{}}
-			for _, kind := range networkSteps {
-				item.Steps = append(item.Steps, oc.StepPlan{Kind: kind, Label: networkStepLabel(kind), Input: raw(spec), WritesCloud: true})
+			for _, kind := range stepsForSpec(spec) {
+				item.Steps = append(item.Steps, oc.StepPlan{Kind: kind, Label: networkStepLabelFor(kind, v.WavelengthZoneID), Input: raw(spec), WritesCloud: true})
 			}
 			result = append(result, item)
 			continue
@@ -297,7 +366,7 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 		var err error
 		if v.Action == "create" || v.Action == "enable_ipv6" {
 			if _, ok := cats[group]; !ok {
-				c, e := e.deps.Cloud.Catalogue(ctx, cfg)
+				c, e := catalogue(ctx, e.deps.Cloud, cfg, v.WavelengthZoneID)
 				if e != nil {
 					return nil, publicError(e)
 				}
@@ -305,7 +374,11 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 			}
 		}
 		if v.Action == "create" {
-			spec, err = selectCreate(v, cats[group])
+			if _, ok := e.deps.Cloud.(source.FirewallCloud); !ok {
+				return nil, contract.ErrUnavailable
+			}
+			policy := &contract.FirewallPlan{Name: "panel-open-" + strings.ReplaceAll(uuid.NewString(), "-", "")[:24], IPv6: v.WavelengthZoneID == ""}
+			spec, err = selectCreateWithFirewall(v, cats[group], policy)
 			if err != nil {
 				return nil, err
 			}
@@ -321,7 +394,56 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 				}
 			}
 			keys = []string{"ec2/instance-name/" + hash(v.Name)}
+			if err := e.planAutomaticIP(ctx, cfg, b.Binding.AWSAccountID, &spec); err != nil {
+				return nil, err
+			}
+			ipKey := "ec2.elastic_ips"
+			if v.WavelengthZoneID != "" {
+				ipKey = "ec2.carrier_ips"
+			}
+			required[physical+"/"+ipKey]++
+			aq := addressQuota(ipKey, spec.AutomaticIP.Quota)
+			if aq.LimitKnown && aq.UsageKnown {
+				old, ok := budgets[physical+"/"+ipKey]
+				if !ok {
+					budgets[physical+"/"+ipKey] = aq
+				} else {
+					old.Limit = min(old.Limit, aq.Limit)
+					old.Used = max(old.Used, aq.Used)
+					budgets[physical+"/"+ipKey] = old
+				}
+			}
 			kinds = append(kinds, "ready")
+			kinds = append(kinds, firewallSteps...)
+			kinds = append(kinds, "ip_allocate", "ip_attach")
+			if v.WavelengthZoneID != "" {
+				if err := e.planIngress(ctx, cfg, b.Binding.AWSAccountID, cats[group], &spec); err != nil {
+					return nil, err
+				}
+				for _, existing := range lists[group] {
+					if existing.Name == spec.Ingress.Target.Name && existing.State != "terminated" {
+						return nil, contract.ErrConflict
+					}
+				}
+				keys = append(keys, "ec2/instance-name/"+hash(spec.Ingress.Target.Name))
+				for _, q := range []contract.Quota{spec.Ingress.Quota, addressQuota("ec2.elastic_ips", spec.Ingress.AutomaticIP.Quota)} {
+					key := physical + "/" + q.Key
+					n := float64(1)
+					if q.Key == spec.Ingress.Quota.Key {
+						n = float64(spec.Ingress.Type.VCPU)
+					}
+					required[key] += n
+					if q.LimitKnown && q.UsageKnown {
+						old, ok := budgets[key]
+						if ok {
+							q.Limit = min(q.Limit, old.Limit)
+							q.Used = max(q.Used, old.Used)
+						}
+						budgets[key] = q
+					}
+				}
+				kinds = append(kinds, ingressStepsFor(spec)...)
+			}
 			if v.LoginMethod == "root_password" {
 				if e.deps.LaunchSecrets == nil {
 					return nil, contract.ErrUnavailable
@@ -342,11 +464,25 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 				return nil, contract.ErrConflict
 			}
 			spec = contract.Spec{Target: v, Instance: a, CheckedAt: clock.Now(), Warnings: []string{}}
+			if v.WavelengthZoneID != "" {
+				zs, err := wavelengthZones(ctx, e.deps.Cloud, cfg)
+				if err != nil {
+					return nil, publicError(err)
+				}
+				for _, z := range zs {
+					if z.ID == v.WavelengthZoneID && z.Name == a.Zone {
+						spec.WavelengthZone = &z
+					}
+				}
+				if spec.WavelengthZone == nil {
+					return nil, contract.ErrConflict
+				}
+			}
 			if v.Action == "enable_ipv6" && !ipv6Ready(*a, cats[group]) {
 				return nil, contract.ErrNetwork
 			}
 			if v.Action == "terminate" {
-				spec.Warnings = append(spec.Warnings, "终止不可撤销；标记为随实例删除的卷会被删除，弹性 IP 不会自动释放。")
+				spec.Warnings = append(spec.Warnings, "终止不可撤销；随实例删除的卷、经创建记录验证的入口实例与固定 IP 会一并清理。其他地址及共享网络保留。")
 			}
 			if v.Action == "stop" {
 				spec.Warnings = append(spec.Warnings, "停止会中断服务；磁盘和保留的公网 IPv4 仍可能计费。")
@@ -355,6 +491,21 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 				spec.Warnings = append(spec.Warnings, "成功仅代表 AWS 接受重启请求，操作系统恢复情况需另行检查。")
 			}
 			keys = addresses.InstanceLocks("ec2", a.ID, a.Name)
+			if v.Action == "terminate" {
+				var cleanupKeys []string
+				cleanupKeys, err = e.planCleanup(ctx, cfg, b, &spec)
+				if err != nil {
+					return nil, err
+				}
+				keys = append(keys, cleanupKeys...)
+				if spec.CompanionInstance != nil {
+					kinds = append(kinds, "companion_terminate")
+				}
+				for i := range spec.CleanupIPs {
+					kinds = append(kinds, "cleanup_ip_"+strconv.Itoa(i))
+				}
+			}
+
 		}
 		if v.Action == "create" || (v.Action == "start" && spec.Instance.State == "stopped") {
 			kind := v.InstanceType
@@ -365,7 +516,7 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 				kind = spec.Instance.Type
 				c, ok := cats[group]
 				if !ok {
-					c, err = e.deps.Cloud.Catalogue(ctx, cfg)
+					c, err = catalogue(ctx, e.deps.Cloud, cfg, v.WavelengthZoneID)
 					if err != nil {
 						return nil, publicError(err)
 					}
@@ -412,7 +563,7 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 		b.LockKeys = keys[1:]
 		item := oc.ItemPlan{Target: b, Steps: []oc.StepPlan{}}
 		for _, kind := range kinds {
-			item.Steps = append(item.Steps, oc.StepPlan{Kind: kind, Label: actionLabel(kind), Input: raw(spec), WritesCloud: kind != "ready"})
+			item.Steps = append(item.Steps, oc.StepPlan{Kind: kind, Label: actionLabel(kind), Input: raw(spec), WritesCloud: kind != "ready" && kind != "ingress_ready"})
 		}
 		result = append(result, item)
 	}
@@ -424,5 +575,14 @@ func (e *Executor) Plan(ctx context.Context, input json.RawMessage, bindings []o
 	return result, nil
 }
 func actionLabel(v string) string {
-	return map[string]string{"network": "准备双栈网络", "create": "创建 EC2 实例", "ready": "检查实例运行状态", "start": "启动实例", "stop": "停止实例", "reboot": "重启实例", "terminate": "终止实例", "enable_ipv6": "启用 IPv6"}[v]
+	if label := firewallLabel(v); label != "" {
+		return label
+	}
+	if strings.HasPrefix(v, "cleanup_ip_") {
+		return "释放实例固定 IP"
+	}
+	if v == "companion_terminate" {
+		return "终止配套入口 EC2"
+	}
+	return map[string]string{"network": "准备双栈网络", "create": "创建 EC2 实例", "ip_allocate": "自动分配固定 IP", "ip_attach": "自动绑定固定 IP", "ready": "检查实例运行状态", "start": "启动实例", "stop": "停止实例", "reboot": "重启实例", "terminate": "终止实例", "enable_ipv6": "启用 IPv6", "wavelength_opt_in": "开通 Wavelength Zone Group", "ingress_create": "创建父区域入口 EC2", "ingress_ready": "等待入口实例运行", "ingress_ip_allocate": "分配入口弹性 IP", "ingress_ip_attach": "绑定入口弹性 IP", "relay_forwarding": "允许入口转发流量", "relay_group": "创建实例专用转发安全组", "relay_ingress": "允许入口私网转发", "relay_egress": "移除转发安全组默认出站", "relay_attach": "关联实例转发安全组"}[v]
 }

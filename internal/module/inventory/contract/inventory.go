@@ -103,6 +103,7 @@ type InstanceDetails struct {
 	Ports            []Port     `json:"ports,omitempty"`
 }
 type EC2Details struct {
+	CarrierIP               string    `json:"carrier_ip,omitempty"`
 	ID                      string    `json:"id"`
 	ImageID                 string    `json:"image_id"`
 	InstanceType            string    `json:"instance_type"`
@@ -119,6 +120,7 @@ type EC2Details struct {
 	CreatedAt               time.Time `json:"created_at"`
 }
 type AddressDetails struct {
+	Kind               string `json:"kind,omitempty"`
 	ID                 string `json:"id"`
 	IP                 string `json:"ip"`
 	InstanceID         string `json:"instance_id"`
@@ -216,6 +218,8 @@ var (
 
 // Observation is a permission-scoped aggregate of a previously completed snapshot.
 type Observation struct {
+	CarrierCount  int64      `json:"carrier_count,omitempty"`
+	CarrierKnown  bool       `json:"carrier_known,omitempty"`
 	AccountID     string     `json:"account_id"`
 	Kind          string     `json:"kind"`
 	Region        string     `json:"region"`

@@ -36,8 +36,20 @@ func TestComputeInventorySnapshotsPreserveOnFailure(t *testing.T) {
 	}
 	observed := rows.Items[0].ObservedAt
 	addresses, err := h.service.Resources(ctx, h.op.admin, iv.Filter{Page: 1, Kind: iv.EC2Address})
-	if err != nil || len(addresses.Items) != 1 || addresses.Items[0].Details.Address == nil {
+	if err != nil || len(addresses.Items) != 2 || addresses.Items[0].Details.Address == nil {
 		t.Fatal("missing address snapshot", err)
+	}
+	attached := 0
+	for _, row := range addresses.Items {
+		if row.Details.Address == nil {
+			t.Fatal("missing address details")
+		}
+		if row.Details.Address.Attached {
+			attached++
+		}
+	}
+	if attached != 1 {
+		t.Fatal("automatic instance IP and spare address not distinguished")
 	}
 	h.cloudCompute.mu.Lock()
 	h.cloudCompute.mode = "read_denied"

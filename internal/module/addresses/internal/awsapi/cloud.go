@@ -76,7 +76,13 @@ func staticIP(value lt.StaticIp, region, account string) (contract.Address, erro
 }
 func elasticIP(value et.Address, region, account string) (contract.Address, error) {
 	id := aws.ToString(value.AllocationId)
-	ip, err := netip.ParseAddr(aws.ToString(value.PublicIp))
+	addressIP := aws.ToString(value.PublicIp)
+	kind := "ec2"
+	if aws.ToString(value.CarrierIp) != "" {
+		addressIP = aws.ToString(value.CarrierIp)
+		kind = "wavelength"
+	}
+	ip, err := netip.ParseAddr(addressIP)
 	if id == "" || !strings.HasPrefix(id, "eipalloc-") || err != nil || !ip.Is4() || value.Domain != et.DomainTypeVpc {
 		return contract.Address{}, contract.ErrResponse
 	}
@@ -91,7 +97,7 @@ func elasticIP(value et.Address, region, account string) (contract.Address, erro
 			tags[k] = v
 		}
 	}
-	return contract.Address{ID: id, Name: name, ARN: fmt.Sprintf("arn:aws:ec2:%s:%s:elastic-ip/%s", region, account, id), IP: ip.String(), InstanceID: aws.ToString(value.InstanceId), NetworkInterfaceID: aws.ToString(value.NetworkInterfaceId), PrivateIP: aws.ToString(value.PrivateIpAddress), AssociationID: aws.ToString(value.AssociationId), BorderGroup: aws.ToString(value.NetworkBorderGroup), Attached: aws.ToString(value.AssociationId) != "" || aws.ToString(value.NetworkInterfaceId) != "", Tags: tags}, nil
+	return contract.Address{Kind: kind, ID: id, Name: name, ARN: fmt.Sprintf("arn:aws:ec2:%s:%s:elastic-ip/%s", region, account, id), IP: ip.String(), InstanceID: aws.ToString(value.InstanceId), NetworkInterfaceID: aws.ToString(value.NetworkInterfaceId), PrivateIP: aws.ToString(value.PrivateIpAddress), AssociationID: aws.ToString(value.AssociationId), BorderGroup: aws.ToString(value.NetworkBorderGroup), Attached: aws.ToString(value.AssociationId) != "" || aws.ToString(value.NetworkInterfaceId) != "", Tags: tags}, nil
 }
 func lsInstance(value lt.Instance, region, account string) (contract.Instance, error) {
 	parsed, err := arn.Parse(aws.ToString(value.Arn))
@@ -115,6 +121,9 @@ func ec2Instance(value et.Instance, region, account string) (contract.Instance, 
 	for _, nic := range value.NetworkInterfaces {
 		if nic.Attachment != nil && aws.ToInt32(nic.Attachment.DeviceIndex) == 0 {
 			result.NetworkInterfaceID = aws.ToString(nic.NetworkInterfaceId)
+			if nic.Association != nil && aws.ToString(nic.Association.CarrierIp) != "" {
+				result.PublicIP = aws.ToString(nic.Association.CarrierIp)
+			}
 			if len(nic.Ipv6Addresses) > 0 {
 				result.IPType = "dualstack"
 			}
@@ -123,6 +132,7 @@ func ec2Instance(value et.Instance, region, account string) (contract.Instance, 
 	}
 	if value.Placement != nil && aws.ToString(value.Placement.AvailabilityZone) != "" {
 		zone := aws.ToString(value.Placement.AvailabilityZone)
+		result.Zone = zone
 		if len(zone) != len(region)+1 || !strings.HasPrefix(zone, region) {
 			result.BorderGroup = ""
 		}
@@ -168,14 +178,31 @@ func (Cloud) Catalogue(ctx context.Context, cfg aws.Config, kind, account string
 		if err != nil {
 			return result, err
 		}
-	case "ec2":
+	case "ec2", "wavelength":
 		client := ec2.NewFromConfig(cfg)
+		zoneMap := map[string]contract.WavelengthZone{}
+		if kind == "wavelength" {
+			zones, err := client.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{AllAvailabilityZones: aws.Bool(true), Filters: []et.Filter{{Name: aws.String("zone-type"), Values: []string{"wavelength-zone"}}}})
+			if err != nil {
+				return result, err
+			}
+			for _, z := range zones.AvailabilityZones {
+				if aws.ToString(z.ZoneType) != "wavelength-zone" || aws.ToString(z.RegionName) != cfg.Region || aws.ToString(z.ZoneId) == "" || aws.ToString(z.NetworkBorderGroup) == "" || aws.ToString(z.ZoneName) == "" {
+					return result, contract.ErrResponse
+				}
+				value := contract.WavelengthZone{ID: aws.ToString(z.ZoneId), Name: aws.ToString(z.ZoneName), BorderGroup: aws.ToString(z.NetworkBorderGroup)}
+				zoneMap[value.Name] = value
+				if z.OptInStatus == et.AvailabilityZoneOptInStatusOptedIn && z.State == et.AvailabilityZoneStateAvailable {
+					result.WavelengthZones = append(result.WavelengthZones, value)
+				}
+			}
+		}
 		out, err := client.DescribeAddresses(ctx, &ec2.DescribeAddressesInput{})
 		if err != nil {
 			return result, err
 		}
 		for _, row := range out.Addresses {
-			if row.Domain != et.DomainTypeVpc {
+			if row.Domain != et.DomainTypeVpc || (kind == "wavelength") != (aws.ToString(row.CarrierIp) != "") || aws.ToString(row.CustomerOwnedIp) != "" {
 				continue
 			}
 			value, err := elasticIP(row, cfg.Region, account)
@@ -197,6 +224,16 @@ func (Cloud) Catalogue(ctx context.Context, cfg aws.Config, kind, account string
 					value, err := ec2Instance(row, cfg.Region, account)
 					if err != nil {
 						return "", err
+					}
+					if kind == "wavelength" {
+						z, ok := zoneMap[value.Zone]
+						if !ok {
+							continue
+						}
+						value.WavelengthZoneID = z.ID
+						value.BorderGroup = z.BorderGroup
+					} else if value.BorderGroup == "" {
+						continue
 					}
 					if value.State != "terminated" {
 						result.Instances = append(result.Instances, value)
@@ -252,6 +289,9 @@ func (Cloud) Address(ctx context.Context, cfg aws.Config, kind, account, id stri
 		return nil, contract.ErrResponse
 	}
 	value, err := elasticIP(out.Addresses[0], cfg.Region, account)
+	if err == nil && value.Kind != kind {
+		return nil, contract.ErrUnsupported
+	}
 	return &value, err
 }
 func (c Cloud) Instance(ctx context.Context, cfg aws.Config, kind, account, id string) (*contract.Instance, error) {
@@ -290,6 +330,9 @@ func (c Cloud) FindAllocated(ctx context.Context, cfg aws.Config, kind, account,
 		value, err := elasticIP(row, cfg.Region, account)
 		if err != nil {
 			return nil, err
+		}
+		if value.Kind != kind {
+			return nil, contract.ErrUnsupported
 		}
 		result = append(result, value)
 	}
@@ -356,9 +399,10 @@ func (Cloud) Allocate(ctx context.Context, cfg aws.Config, kind, name, border st
 		return lsAccepted(out.Operations, id), nil
 	}
 	values := []et.Tag{{Key: aws.String("Name"), Value: aws.String(name)}}
-	for _, key := range []string{"aws-panel:step", "aws-panel:token", "aws-panel:spec"} {
-		values = append(values, et.Tag{Key: aws.String(key), Value: aws.String(tags[key])})
+	for key, value := range tags {
+		values = append(values, et.Tag{Key: aws.String(key), Value: aws.String(value)})
 	}
+	sort.Slice(values, func(i, j int) bool { return aws.ToString(values[i].Key) < aws.ToString(values[j].Key) })
 	out, err := ec2.NewFromConfig(cfg).AllocateAddress(ctx, &ec2.AllocateAddressInput{Domain: et.DomainTypeVpc, NetworkBorderGroup: aws.String(border), TagSpecifications: []et.TagSpecification{{ResourceType: et.ResourceTypeElasticIp, Tags: values}}})
 	if err != nil {
 		return source.Accepted{}, err
@@ -375,6 +419,9 @@ func (Cloud) Attach(ctx context.Context, cfg aws.Config, kind string, address co
 		}
 		id, _ := middleware.GetRequestIDMetadata(out.ResultMetadata)
 		return lsAccepted(out.Operations, id), nil
+	}
+	if address.Kind != kind || address.BorderGroup != instance.BorderGroup || address.BorderGroup == "" {
+		return source.Accepted{}, contract.ErrUnsupported
 	}
 	out, err := ec2.NewFromConfig(cfg).AssociateAddress(ctx, &ec2.AssociateAddressInput{AllocationId: aws.String(address.ID), NetworkInterfaceId: aws.String(instance.NetworkInterfaceID), PrivateIpAddress: aws.String(instance.PrivateIP), AllowReassociation: aws.Bool(false)})
 	if err != nil {
@@ -393,6 +440,9 @@ func (Cloud) Detach(ctx context.Context, cfg aws.Config, kind string, address co
 		id, _ := middleware.GetRequestIDMetadata(out.ResultMetadata)
 		return lsAccepted(out.Operations, id), nil
 	}
+	if address.Kind != kind {
+		return source.Accepted{}, contract.ErrUnsupported
+	}
 	out, err := ec2.NewFromConfig(cfg).DisassociateAddress(ctx, &ec2.DisassociateAddressInput{AssociationId: aws.String(address.AssociationID)})
 	if err != nil {
 		return source.Accepted{}, err
@@ -410,6 +460,9 @@ func (Cloud) Release(ctx context.Context, cfg aws.Config, kind string, address c
 		id, _ := middleware.GetRequestIDMetadata(out.ResultMetadata)
 		return lsAccepted(out.Operations, id), nil
 	}
+	if address.Kind != kind {
+		return source.Accepted{}, contract.ErrUnsupported
+	}
 	out, err := ec2.NewFromConfig(cfg).ReleaseAddress(ctx, &ec2.ReleaseAddressInput{AllocationId: aws.String(address.ID)})
 	if err != nil {
 		return source.Accepted{}, err
@@ -418,7 +471,11 @@ func (Cloud) Release(ctx context.Context, cfg aws.Config, kind string, address c
 	return source.Accepted{ResourceID: address.ID, RequestID: id}, nil
 }
 func (Cloud) Quota(ctx context.Context, cfg aws.Config, kind, account string) (contract.Quota, error) {
-	report, err := quotas.NewCloud().Read(ctx, cfg, account, kind)
+	quotaKind := kind
+	if kind == "wavelength" {
+		quotaKind = "ec2"
+	}
+	report, err := quotas.NewCloud().Read(ctx, cfg, account, quotaKind)
 	if err != nil {
 		return contract.Quota{}, err
 	}
@@ -426,10 +483,37 @@ func (Cloud) Quota(ctx context.Context, cfg aws.Config, kind, account string) (c
 	if kind == "ec2" {
 		key = "ec2.elastic_ips"
 	}
+	if kind == "wavelength" {
+		key = "ec2.carrier_ips"
+	}
 	for _, row := range report.Entries {
 		if row.Key == key {
 			return contract.Quota{Limit: row.Limit, Used: row.Used, LimitKnown: row.LimitKnown, UsageKnown: row.UsageKnown, Note: row.Note}, nil
 		}
 	}
 	return contract.Quota{Note: "配额不可查询"}, nil
+}
+
+func (Cloud) AllocatedEC2Addresses(ctx context.Context, cfg aws.Config, account string) ([]contract.Address, error) {
+	out, err := ec2.NewFromConfig(cfg).DescribeAddresses(ctx, &ec2.DescribeAddressesInput{})
+	if err != nil {
+		return nil, err
+	}
+	rows := []contract.Address{}
+	seen := map[string]bool{}
+	for _, v := range out.Addresses {
+		if v.Domain != et.DomainTypeVpc || aws.ToString(v.CustomerOwnedIp) != "" {
+			continue
+		}
+		row, err := elasticIP(v, cfg.Region, account)
+		if err != nil {
+			return nil, err
+		}
+		if seen[row.ID] {
+			return nil, contract.ErrResponse
+		}
+		seen[row.ID] = true
+		rows = append(rows, row)
+	}
+	return rows, nil
 }

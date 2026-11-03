@@ -3,7 +3,7 @@
 <div class="page-body"><div class="container-xl"><div class="alert alert-info">权限同时受成员角色和账号授权限制。只读成员即使获得“可操作”授权也不能写入；管理员可访问全部账号。</div>
 <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>成员</th><th>角色</th><th>账号授权</th></tr></thead><tbody>
 {{range .Page.Items}}<tr><td class="text-nowrap"><div>{{.Member.DisplayName}}</div><span class="text-secondary small">{{.Member.Username}}{{if not .Member.Active}} · 已禁用{{end}}</span></td><td class="text-nowrap">{{roleLabel .Member.Role}}</td><td>
-  {{if eq .Member.Role "admin"}}全部账号{{else}}<form method="post" action="/accounts/{{$.Page.AccountID}}/access" hx-post="/accounts/{{$.Page.AccountID}}/access" hx-target="#grant-result-{{.Member.ID}}" hx-swap="innerHTML" class="d-flex gap-2">
+  {{if eq .Member.Role "admin"}}全部账号{{else}}<form method="post" action="/accounts/{{$.Page.AccountID}}/access" hx-post="/accounts/{{$.Page.AccountID}}/access" hx-target="#grant-result-{{.Member.ID}}" hx-swap="innerHTML" class="account-access-form">
     <input type="hidden" name="_csrf" value="{{$.CSRF}}"><input type="hidden" name="member_id" value="{{.Member.ID}}">
     <select class="form-select form-select-sm" name="access" aria-label="{{.Member.Username}} 的账号权限"><option value="none" {{if eq .Access "none"}}selected{{end}}>无权限</option><option value="read" {{if eq .Access "read"}}selected{{end}}>仅查看</option><option value="operate" {{if eq .Access "operate"}}selected{{end}}>可操作（需操作员角色）</option></select><button class="btn btn-sm" type="submit">保存</button>
   </form><div id="grant-result-{{.Member.ID}}" class="mt-1"></div>{{end}}

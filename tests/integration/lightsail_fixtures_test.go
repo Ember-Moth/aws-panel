@@ -26,20 +26,25 @@ import (
 )
 
 type launchAWS struct {
-	mu          sync.Mutex
-	instances   map[string]map[string]any
-	operations  map[string]map[string]any
-	modes       map[string]string
-	creates     map[string]int
-	polls       map[string]int
-	price       float64
-	quota       float64
-	quotaDenied bool
-	userData    map[string]string
+	ports          map[string][]any
+	firewallOps    map[string][]any
+	firewallCalls  map[string]int
+	firewallInputs map[string]map[string]any
+	addresses      *addressAWS
+	mu             sync.Mutex
+	instances      map[string]map[string]any
+	operations     map[string]map[string]any
+	modes          map[string]string
+	creates        map[string]int
+	polls          map[string]int
+	price          float64
+	quota          float64
+	quotaDenied    bool
+	userData       map[string]string
 }
 
 func newLaunchAWS() *launchAWS {
-	return &launchAWS{instances: map[string]map[string]any{}, operations: map[string]map[string]any{}, modes: map[string]string{}, creates: map[string]int{}, polls: map[string]int{}, userData: map[string]string{}, price: 5, quota: 100}
+	return &launchAWS{ports: map[string][]any{}, firewallOps: map[string][]any{}, firewallCalls: map[string]int{}, firewallInputs: map[string]map[string]any{}, addresses: newAddressAWS(), instances: map[string]map[string]any{}, operations: map[string]map[string]any{}, modes: map[string]string{}, creates: map[string]int{}, polls: map[string]int{}, userData: map[string]string{}, price: 5, quota: 100}
 }
 func (f *launchAWS) Regions(ctx context.Context, cfg aws.Config) ([]lc.Region, error) {
 	cfg.BaseEndpoint = aws.String("http://aws-fixture.invalid")
@@ -67,6 +72,16 @@ func (f *launchAWS) handle(w http.ResponseWriter, r *http.Request, account, regi
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if service == "lightsail" {
+		_, action, _ := strings.Cut(r.Header.Get("X-Amz-Target"), ".")
+		name, _ := input["resourceName"].(string)
+		opID, _ := input["operationId"].(string)
+		if strings.Contains(action, "StaticIp") || action == "GetOperation" && f.addresses.operations[opID] != nil || action == "GetOperationsForResource" && strings.HasPrefix(name, "panel-ip-") {
+			f.addresses.initialized[account+"/"+region+"/"] = true
+			f.addresses.instances = f.instances
+			return f.addresses.handle(w, r, account, region, service, input)
+		}
+	}
 	write := func(value any) { json.NewEncoder(w).Encode(value) }
 	if service == "servicequotas" {
 		if input["ServiceCode"] != "lightsail" {
@@ -78,11 +93,48 @@ func (f *launchAWS) handle(w http.ResponseWriter, r *http.Request, account, regi
 			write(map[string]any{"__type": "AccessDeniedException", "Message": "fixture permission denied"})
 			return true
 		}
-		write(map[string]any{"Quotas": []any{map[string]any{"QuotaName": "Instances", "Description": "Maximum vCPUs per Region for Lightsail instances", "ServiceCode": "lightsail", "Value": f.quota, "GlobalQuota": false, "Unit": "None"}}})
+		write(map[string]any{"Quotas": []any{map[string]any{"QuotaName": "Instances", "Description": "Maximum vCPUs per Region for Lightsail instances", "ServiceCode": "lightsail", "Value": f.quota, "GlobalQuota": false, "Unit": "None"}, map[string]any{"QuotaName": "Static IPs", "Value": 50, "GlobalQuota": false}}})
 		return true
 	}
 	action := r.Header.Get("X-Amz-Target")
 	switch {
+	case strings.HasSuffix(action, ".GetInstancePortStates"):
+		name, _ := input["instanceName"].(string)
+		key := account + "/" + region + "/" + name
+		values := f.ports[key]
+		if values == nil {
+			values = []any{}
+		}
+		write(map[string]any{"portStates": values})
+	case strings.HasSuffix(action, ".PutInstancePublicPorts"):
+		name, _ := input["instanceName"].(string)
+		key := account + "/" + region + "/" + name
+		f.firewallCalls[name]++
+		f.firewallInputs[name] = input
+		if f.modes[name] == "reject_firewall" {
+			w.WriteHeader(400)
+			write(map[string]any{"__type": "AccessDeniedException"})
+			return true
+		}
+		values, _ := input["portInfos"].([]any)
+		ports := []any{}
+		for _, v := range values {
+			m := v.(map[string]any)
+			m["state"] = "open"
+			ports = append(ports, m)
+		}
+		f.ports[key] = ports
+		op := map[string]any{"id": uuid.NewString(), "resourceName": name, "resourceType": "Instance", "operationType": "PutInstancePublicPorts", "status": "Succeeded", "isTerminal": true, "createdAt": float64(time.Now().UnixNano()) / 1e9, "location": map[string]any{"regionName": region}}
+		if f.modes[name] == "pending_firewall" {
+			op["status"] = "Started"
+			op["isTerminal"] = false
+		}
+		f.firewallOps[key] = append(f.firewallOps[key], op)
+		if f.modes[name] == "lost_firewall" {
+			w.WriteHeader(502)
+			return true
+		}
+		write(map[string]any{"operation": op})
 	case strings.HasSuffix(action, ".GetBlueprints"):
 		write(map[string]any{"blueprints": []any{map[string]any{"blueprintId": "debian_12", "name": "Debian 12", "version": "12.9", "isActive": true, "platform": "LINUX_UNIX", "type": "os", "minPower": 100}, map[string]any{"blueprintId": "old_os", "name": "Old", "isActive": false, "platform": "LINUX_UNIX", "type": "os"}, map[string]any{"blueprintId": "app_fixture", "name": "App", "isActive": true, "platform": "LINUX_UNIX", "type": "app"}}})
 	case strings.HasSuffix(action, ".GetBundles"):
@@ -121,6 +173,7 @@ func (f *launchAWS) handle(w http.ResponseWriter, r *http.Request, account, regi
 		}
 		if f.polls[key] >= 2 {
 			copy["state"] = map[string]any{"name": "running", "code": 16}
+			value["state"] = copy["state"]
 		}
 		if f.modes[name] == "wrong_spec" {
 			copy["blueprintId"] = "unexpected_blueprint"
@@ -194,6 +247,7 @@ func (f *launchAWS) handle(w http.ResponseWriter, r *http.Request, account, regi
 				values = append(values, other)
 			}
 		}
+		values = append(values, f.firewallOps[account+"/"+region+"/"+name]...)
 		write(map[string]any{"operations": values})
 	default:
 		return false
@@ -237,7 +291,7 @@ func newLaunch(t *testing.T, enabled bool) *launchHarness {
 func (h *launchHarness) services(t *testing.T, store repository.LightsailStore, enabled bool) {
 	t.Helper()
 	cloud := h.cloudLaunch
-	jobs, err := operations.New(operations.Deps{Store: h.op.store, Access: h.op.members, Connections: inventoryBindings{h.accounts}, Publisher: h.op.queue, CloudWritesEnabled: enabled, Executors: []oc.Executor{lightsail.NewExecutor(lightsail.ExecutorDeps{Store: store, Clients: h.accounts, Cloud: cloud, LaunchSecrets: h.accounts})}, RedeliveryAfter: 100 * time.Millisecond})
+	jobs, err := operations.New(operations.Deps{Store: h.op.store, Access: h.op.members, Connections: inventoryBindings{h.accounts}, Publisher: h.op.queue, CloudWritesEnabled: enabled, Executors: []oc.Executor{lightsail.NewExecutor(lightsail.ExecutorDeps{AddressCloud: newAddressAWS(), Effects: operations.NewEffectStore(h.runtime), Store: store, Clients: h.accounts, Cloud: cloud, LaunchSecrets: h.accounts})}, RedeliveryAfter: 100 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)
 	}

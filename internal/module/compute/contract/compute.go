@@ -1,7 +1,27 @@
 package contract
 
-import "time"
+import (
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	ip "github.com/herta-network/aws-panel/internal/instanceip"
+	"time"
+)
 
+type WavelengthZone struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Group       string `json:"group"`
+	Region      string `json:"region"`
+	BorderGroup string `json:"border_group"`
+	State       string `json:"state"`
+	OptInStatus string `json:"opt_in_status"`
+}
+type WavelengthListing struct {
+	Freshness    map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	ConnectionID string                         `json:"connection_id"`
+	Region       string                         `json:"region"`
+	Zones        []WavelengthZone               `json:"zones"`
+	CheckedAt    time.Time                      `json:"checked_at"`
+}
 type Image struct {
 	ID           string `json:"id"`
 	Name         string `json:"name"`
@@ -37,7 +57,39 @@ type SecurityGroup struct {
 	SSHIPv4 []string `json:"ssh_ipv4"`
 	SSHIPv6 []string `json:"ssh_ipv6"`
 }
+type IngressPlan struct {
+	Target         Target          `json:"target"`
+	Image          Image           `json:"image"`
+	Type           InstanceType    `json:"type"`
+	Subnet         Subnet          `json:"subnet"`
+	SecurityGroups []SecurityGroup `json:"security_groups"`
+	AutomaticIP    ip.Automatic    `json:"automatic_ip"`
+	Quota          Quota           `json:"quota"`
+}
+type IngressPeer struct {
+	ID        string `json:"id"`
+	PrivateIP string `json:"private_ip"`
+}
+type IngressState struct {
+	PrimaryID        string   `json:"primary_id"`
+	PrimaryENI       string   `json:"primary_eni"`
+	PrimaryPrivateIP string   `json:"primary_private_ip"`
+	GatewayID        string   `json:"gateway_id"`
+	GatewayPrivateIP string   `json:"gateway_private_ip"`
+	VPCID            string   `json:"vpc_id"`
+	SecurityGroupIDs []string `json:"security_group_ids"`
+	GroupID          string   `json:"group_id"`
+}
+type Companion struct {
+	ID       string `json:"id"`
+	PublicIP string `json:"public_ip"`
+	State    string `json:"state"`
+}
 type Instance struct {
+	Ingress    *Companion `json:"ingress,omitempty"`
+	IngressFor string     `json:"ingress_for,omitempty"`
+
+	CarrierIP               string            `json:"carrier_ip,omitempty"`
 	ID                      string            `json:"id"`
 	ARN                     string            `json:"arn"`
 	Name                    string            `json:"name"`
@@ -61,6 +113,12 @@ type Instance struct {
 	Tags                    map[string]string `json:"-"`
 }
 type Catalogue struct {
+	Freshness     map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	ParentSubnets []Subnet                       `json:"parent_subnets,omitempty"`
+	ParentTypes   []InstanceType                 `json:"parent_types,omitempty"`
+	ParentZones   []string                       `json:"parent_zones,omitempty"`
+
+	WavelengthZone *WavelengthZone `json:"wavelength_zone,omitempty"`
 	ConnectionID   string          `json:"connection_id"`
 	Region         string          `json:"region"`
 	Images         []Image         `json:"images"`
@@ -73,10 +131,11 @@ type Catalogue struct {
 	WritesEnabled  bool            `json:"writes_enabled"`
 }
 type Listing struct {
-	ConnectionID string     `json:"connection_id"`
-	Region       string     `json:"region"`
-	Items        []Instance `json:"items"`
-	CheckedAt    time.Time  `json:"checked_at"`
+	Freshness    map[string]catalogue.Freshness `json:"freshness,omitempty"`
+	ConnectionID string                         `json:"connection_id"`
+	Region       string                         `json:"region"`
+	Items        []Instance                     `json:"items"`
+	CheckedAt    time.Time                      `json:"checked_at"`
 }
 type Quota struct {
 	Key        string  `json:"key"`
@@ -87,23 +146,35 @@ type Quota struct {
 	Note       string  `json:"note,omitempty"`
 }
 type Network struct {
-	VPCID           string `json:"vpc_id"`
-	SubnetID        string `json:"subnet_id"`
-	GatewayID       string `json:"gateway_id"`
-	RouteTableID    string `json:"route_table_id"`
-	SecurityGroupID string `json:"security_group_id"`
-	Zone            string `json:"zone"`
-	IPv4CIDR        string `json:"ipv4_cidr"`
-	SubnetIPv4CIDR  string `json:"subnet_ipv4_cidr"`
-	IPv6CIDR        string `json:"ipv6_cidr"`
-	SubnetIPv6CIDR  string `json:"subnet_ipv6_cidr"`
-	SSHIPv4CIDR     string `json:"ssh_ipv4_cidr"`
-	SSHIPv6CIDR     string `json:"ssh_ipv6_cidr"`
+	AllowAll           bool   `json:"allow_all,omitempty"`
+	IPv4Only           bool   `json:"ipv4_only,omitempty"`
+	ParentZone         string `json:"parent_zone,omitempty"`
+	ParentSubnetID     string `json:"parent_subnet_id,omitempty"`
+	ParentGatewayID    string `json:"parent_gateway_id,omitempty"`
+	ParentRouteTableID string `json:"parent_route_table_id,omitempty"`
+
+	WavelengthZoneID string `json:"wavelength_zone_id,omitempty"`
+	VPCID            string `json:"vpc_id"`
+	SubnetID         string `json:"subnet_id"`
+	GatewayID        string `json:"gateway_id"`
+	RouteTableID     string `json:"route_table_id"`
+	SecurityGroupID  string `json:"security_group_id"`
+	Zone             string `json:"zone"`
+	IPv4CIDR         string `json:"ipv4_cidr"`
+	SubnetIPv4CIDR   string `json:"subnet_ipv4_cidr"`
+	IPv6CIDR         string `json:"ipv6_cidr"`
+	SubnetIPv6CIDR   string `json:"subnet_ipv6_cidr"`
+	SSHIPv4CIDR      string `json:"ssh_ipv4_cidr"`
+	SSHIPv6CIDR      string `json:"ssh_ipv6_cidr"`
 }
 type Target struct {
-	Zone        string `json:"zone,omitempty"`
-	SSHIPv4CIDR string `json:"ssh_ipv4_cidr,omitempty"`
-	SSHIPv6CIDR string `json:"ssh_ipv6_cidr,omitempty"`
+	IngressSubnetID string `json:"ingress_subnet_id,omitempty"`
+	IngressType     string `json:"ingress_type,omitempty"`
+
+	WavelengthZoneID string `json:"wavelength_zone_id,omitempty"`
+	Zone             string `json:"zone,omitempty"`
+	SSHIPv4CIDR      string `json:"ssh_ipv4_cidr,omitempty"`
+	SSHIPv6CIDR      string `json:"ssh_ipv6_cidr,omitempty"`
 
 	ConnectionID     string   `json:"connection_id"`
 	Region           string   `json:"region"`
@@ -131,18 +202,44 @@ type Request struct {
 type PlanInput struct {
 	Targets []Target `json:"targets"`
 }
+type FirewallPlan struct {
+	Name string `json:"name"`
+	IPv6 bool   `json:"ipv6"`
+}
+type FirewallState struct {
+	InstanceID     string   `json:"instance_id"`
+	ENI            string   `json:"eni"`
+	VPCID          string   `json:"vpc_id"`
+	PrivateIP      string   `json:"private_ip"`
+	GroupID        string   `json:"group_id"`
+	OriginalGroups []string `json:"original_groups"`
+	Name           string   `json:"name"`
+	IPv6           bool     `json:"ipv6"`
+}
 type Spec struct {
-	Network        *Network        `json:"network,omitempty"`
-	NetworkQuotas  []Quota         `json:"network_quotas,omitempty"`
-	Target         Target          `json:"target"`
-	Image          *Image          `json:"image,omitempty"`
-	Type           *InstanceType   `json:"type,omitempty"`
-	Subnet         *Subnet         `json:"subnet,omitempty"`
-	SecurityGroups []SecurityGroup `json:"security_groups,omitempty"`
-	Instance       *Instance       `json:"instance,omitempty"`
-	Quota          Quota           `json:"quota"`
-	Warnings       []string        `json:"warnings"`
-	CheckedAt      time.Time       `json:"checked_at"`
+	Firewall        *FirewallPlan `json:"firewall,omitempty"`
+	BootstrapGroups []string      `json:"bootstrap_groups,omitempty"`
+
+	CompanionInstance *Instance      `json:"companion_instance,omitempty"`
+	CleanupIPs        []ip.ManagedIP `json:"cleanup_ips,omitempty"`
+	Ingress           *IngressPlan   `json:"ingress,omitempty"`
+	IngressPeer       *IngressPeer   `json:"ingress_peer,omitempty"`
+
+	AutomaticIP    *ip.Automatic    `json:"automatic_ip,omitempty"`
+	WavelengthZone *WavelengthZone  `json:"wavelength_zone,omitempty"`
+	GroupZones     []WavelengthZone `json:"group_zones,omitempty"`
+	VolumeType     string           `json:"volume_type,omitempty"`
+	Network        *Network         `json:"network,omitempty"`
+	NetworkQuotas  []Quota          `json:"network_quotas,omitempty"`
+	Target         Target           `json:"target"`
+	Image          *Image           `json:"image,omitempty"`
+	Type           *InstanceType    `json:"type,omitempty"`
+	Subnet         *Subnet          `json:"subnet,omitempty"`
+	SecurityGroups []SecurityGroup  `json:"security_groups,omitempty"`
+	Instance       *Instance        `json:"instance,omitempty"`
+	Quota          Quota            `json:"quota"`
+	Warnings       []string         `json:"warnings"`
+	CheckedAt      time.Time        `json:"checked_at"`
 }
 type PreviewTarget struct {
 	AWSAccountID string `json:"aws_account_id"`

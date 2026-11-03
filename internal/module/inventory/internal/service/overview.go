@@ -17,7 +17,7 @@ func (s *Service) Overview(ctx context.Context, actorID int64) ([]contract.Obser
 	}
 	result := []contract.Observation{}
 	for _, row := range rows {
-		value := contract.Observation{AccountID: row.AccountID, Kind: row.Kind, Region: row.Region, Count: row.ObservedCount, Running: row.RunningCount, Status: row.Status, Code: row.LastErrorCode, LastAttemptAt: timeView(row.LastAttemptAt), LastSuccessAt: timeView(row.LastSuccessAt)}
+		value := contract.Observation{CarrierCount: row.CarrierCount, CarrierKnown: row.CarrierKnown, AccountID: row.AccountID, Kind: row.Kind, Region: row.Region, Count: row.ObservedCount, Running: row.RunningCount, Status: row.Status, Code: row.LastErrorCode, LastAttemptAt: timeView(row.LastAttemptAt), LastSuccessAt: timeView(row.LastSuccessAt)}
 		if json.Unmarshal([]byte(row.IPJSON), &value.IPv4) != nil || json.Unmarshal([]byte(row.RegionJSON), &value.Regions) != nil {
 			return nil, contract.ErrResponse
 		}

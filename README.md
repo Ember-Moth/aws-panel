@@ -74,3 +74,7 @@ make build
 基础检查使用 `make check` 和 `make test-race`；安装本地 PostgreSQL/Redis 工具后可运行 `make smoke`，它只使用自动创建的临时实例。
 
 Docker 环境可运行 `make compose-smoke`，验证隔离容器初始化、升级、备份恢复和任务恢复；不使用真实 AWS。
+
+实例创建时自动配置全放行的云端流量规则并绑定固定 IP，换址后自动释放旧地址，不设独立公网 IP 页面。Wavelength 的开通、双子网网络准备、gp2 业务实例、父区域 EIP 入口与 Carrier IP 出站见 [Wavelength 使用说明](docs/wavelength.md)。
+
+创建选项自动复用服务端目录，并支持后台更新和手动刷新；详见[创建目录缓存](docs/catalogue-cache.md)。

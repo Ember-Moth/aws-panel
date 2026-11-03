@@ -63,12 +63,31 @@ func matchingPermission(values []types.IpPermission, protocol string, port int32
 	return false
 }
 func networkRules(n contract.Network) []types.IpPermission {
+	if n.AllowAll {
+		r := types.IpPermission{IpProtocol: aws.String("-1"), IpRanges: []types.IpRange{{CidrIp: aws.String("0.0.0.0/0")}}}
+		if n.WavelengthZoneID == "" {
+			r.Ipv6Ranges = []types.Ipv6Range{{CidrIpv6: aws.String("::/0")}}
+		}
+		return []types.IpPermission{r}
+	}
+
+	if n.WavelengthZoneID != "" {
+		return []types.IpPermission{{IpProtocol: aws.String("tcp"), FromPort: aws.Int32(22), ToPort: aws.Int32(22), IpRanges: []types.IpRange{{CidrIp: aws.String(n.SSHIPv4CIDR)}}}}
+	}
 	return []types.IpPermission{{IpProtocol: aws.String("tcp"), FromPort: aws.Int32(22), ToPort: aws.Int32(22), IpRanges: []types.IpRange{{CidrIp: aws.String(n.SSHIPv4CIDR)}}, Ipv6Ranges: []types.Ipv6Range{{CidrIpv6: aws.String(n.SSHIPv6CIDR)}}}, {IpProtocol: aws.String("icmpv6"), FromPort: aws.Int32(-1), ToPort: aws.Int32(-1), Ipv6Ranges: []types.Ipv6Range{{CidrIpv6: aws.String("::/0")}}}}
 }
 
 // Network reads only resources tagged for this exact task and specification.
 // A fresh observation is required before every mutation and on every recovery.
 func (c Cloud) Network(ctx context.Context, cfg aws.Config, phase string, expected contract.Network, labels map[string]string) (contract.Network, bool, error) {
+	if strings.HasPrefix(phase, "net_parent_") {
+		parent := parentNetwork(expected)
+		v, done, err := c.Network(ctx, cfg, "net_"+strings.TrimPrefix(phase, "net_parent_"), parent, labels)
+		expected.ParentSubnetID = v.SubnetID
+		expected.ParentGatewayID = v.GatewayID
+		expected.ParentRouteTableID = v.RouteTableID
+		return expected, done, err
+	}
 	n := expected
 	client := c.client(cfg, false)
 	filters := ownedFilters(labels)
@@ -109,12 +128,12 @@ func (c Cloud) Network(ctx context.Context, cfg aws.Config, phase string, expect
 		n.SubnetIPv6CIDR = netip.PrefixFrom(prefix.Masked().Addr(), 64).String()
 	}
 	if phase == "net_vpc" {
-		return n, vpc.State == types.VpcStateAvailable && n.SubnetIPv6CIDR != "", nil
+		return n, vpc.State == types.VpcStateAvailable && (n.WavelengthZoneID != "" || n.IPv4Only || n.SubnetIPv6CIDR != ""), nil
 	}
-	if vpc.State != types.VpcStateAvailable || n.SubnetIPv6CIDR == "" {
+	if vpc.State != types.VpcStateAvailable || (n.WavelengthZoneID == "" && !n.IPv4Only && n.SubnetIPv6CIDR == "") {
 		return n, false, contract.ErrConflict
 	}
-	subnets, err := client.DescribeSubnets(ctx, &ec2sdk.DescribeSubnetsInput{Filters: filters})
+	subnets, err := client.DescribeSubnets(ctx, &ec2sdk.DescribeSubnetsInput{Filters: append(append([]types.Filter{}, filters...), filter("cidr-block", n.SubnetIPv4CIDR))})
 	if err != nil {
 		return n, false, err
 	}
@@ -131,6 +150,15 @@ func (c Cloud) Network(ctx context.Context, cfg aws.Config, phase string, expect
 			return n, false, contract.ErrConflict
 		}
 		n.SubnetID = aws.ToString(s.SubnetId)
+		if n.IPv4Only {
+			subnetReady = s.State == types.SubnetStateAvailable
+		}
+		if n.WavelengthZoneID != "" {
+			if aws.ToString(s.AvailabilityZoneId) != n.WavelengthZoneID {
+				return n, false, contract.ErrConflict
+			}
+			subnetReady = s.State == types.SubnetStateAvailable
+		}
 		for _, cidr := range s.Ipv6CidrBlockAssociationSet {
 			if aws.ToString(cidr.Ipv6CidrBlock) == n.SubnetIPv6CIDR && cidr.Ipv6CidrBlockState != nil && cidr.Ipv6CidrBlockState.State == types.SubnetCidrBlockStateCodeAssociated {
 				subnetReady = s.State == types.SubnetStateAvailable
@@ -143,43 +171,75 @@ func (c Cloud) Network(ctx context.Context, cfg aws.Config, phase string, expect
 	if !subnetReady {
 		return n, false, contract.ErrConflict
 	}
-	gateways, err := client.DescribeInternetGateways(ctx, &ec2sdk.DescribeInternetGatewaysInput{Filters: filters})
-	if err != nil {
-		return n, false, err
-	}
-	if len(gateways.InternetGateways) > 1 || aws.ToString(gateways.NextToken) != "" {
-		return n, false, contract.ErrResponse
-	}
-	if len(gateways.InternetGateways) == 0 && expected.GatewayID != "" {
-		return n, false, contract.ErrConflict
-	}
 	attached := false
-	if len(gateways.InternetGateways) == 1 {
-		g := gateways.InternetGateways[0]
-		if !ownedNetwork(g.Tags, labels) || expected.GatewayID != "" && expected.GatewayID != aws.ToString(g.InternetGatewayId) {
+	if n.WavelengthZoneID != "" {
+		out, err := client.DescribeCarrierGateways(ctx, &ec2sdk.DescribeCarrierGatewaysInput{Filters: filters})
+		if err != nil {
+			return n, false, err
+		}
+		if len(out.CarrierGateways) > 1 || aws.ToString(out.NextToken) != "" {
+			return n, false, contract.ErrResponse
+		}
+		if len(out.CarrierGateways) == 0 && expected.GatewayID != "" {
 			return n, false, contract.ErrConflict
 		}
-		n.GatewayID = aws.ToString(g.InternetGatewayId)
-		for _, a := range g.Attachments {
-			if aws.ToString(a.VpcId) != n.VPCID {
+		if len(out.CarrierGateways) == 1 {
+			g := out.CarrierGateways[0]
+			if !ownedNetwork(g.Tags, labels) || aws.ToString(g.VpcId) != n.VPCID || aws.ToString(g.OwnerId) != labels["aws-panel:account"] || expected.GatewayID != "" && expected.GatewayID != aws.ToString(g.CarrierGatewayId) {
 				return n, false, contract.ErrConflict
 			}
-			attached = string(a.State) == "available"
+			n.GatewayID = aws.ToString(g.CarrierGatewayId)
+			attached = string(g.State) == "available"
 		}
+		if phase == "net_gateway" {
+			return n, attached, nil
+		}
+		if !attached {
+			return n, false, contract.ErrConflict
+		}
+	} else {
+		gateways, err := client.DescribeInternetGateways(ctx, &ec2sdk.DescribeInternetGatewaysInput{Filters: filters})
+		if err != nil {
+			return n, false, err
+		}
+		if len(gateways.InternetGateways) > 1 || aws.ToString(gateways.NextToken) != "" {
+			return n, false, contract.ErrResponse
+		}
+		if len(gateways.InternetGateways) == 0 && expected.GatewayID != "" {
+			return n, false, contract.ErrConflict
+		}
+		if len(gateways.InternetGateways) == 1 {
+			g := gateways.InternetGateways[0]
+			if !ownedNetwork(g.Tags, labels) || expected.GatewayID != "" && expected.GatewayID != aws.ToString(g.InternetGatewayId) {
+				return n, false, contract.ErrConflict
+			}
+			n.GatewayID = aws.ToString(g.InternetGatewayId)
+			for _, a := range g.Attachments {
+				if aws.ToString(a.VpcId) != n.VPCID {
+					return n, false, contract.ErrConflict
+				}
+				attached = string(a.State) == "available"
+			}
+		}
+		if phase == "net_gateway" {
+			return n, n.GatewayID != "", nil
+		}
+		if n.GatewayID == "" {
+			return n, false, contract.ErrConflict
+		}
+		if phase == "net_attach_gateway" {
+			return n, attached, nil
+		}
+		if !attached {
+			return n, false, contract.ErrConflict
+		}
+
 	}
-	if phase == "net_gateway" {
-		return n, n.GatewayID != "", nil
+	tableFilters := append([]types.Filter{}, filters...)
+	if n.IPv4Only {
+		tableFilters = append(tableFilters, filter("tag:aws-panel:network-part", "parent"))
 	}
-	if n.GatewayID == "" {
-		return n, false, contract.ErrConflict
-	}
-	if phase == "net_attach_gateway" {
-		return n, attached, nil
-	}
-	if !attached {
-		return n, false, contract.ErrConflict
-	}
-	tables, err := client.DescribeRouteTables(ctx, &ec2sdk.DescribeRouteTablesInput{Filters: filters})
+	tables, err := client.DescribeRouteTables(ctx, &ec2sdk.DescribeRouteTablesInput{Filters: tableFilters})
 	if err != nil {
 		return n, false, err
 	}
@@ -199,7 +259,11 @@ func (c Cloud) Network(ctx context.Context, cfg aws.Config, phase string, expect
 		for _, r := range rt.Routes {
 			ipv4 := aws.ToString(r.DestinationCidrBlock) == "0.0.0.0/0"
 			ipv6 := aws.ToString(r.DestinationIpv6CidrBlock) == "::/0"
-			if (ipv4 || ipv6) && aws.ToString(r.GatewayId) != n.GatewayID {
+			gateway := aws.ToString(r.GatewayId)
+			if n.WavelengthZoneID != "" {
+				gateway = aws.ToString(r.CarrierGatewayId)
+			}
+			if (ipv4 || ipv6) && gateway != n.GatewayID {
 				return n, false, contract.ErrConflict
 			}
 			if r.State == types.RouteStateActive {
@@ -228,7 +292,7 @@ func (c Cloud) Network(ctx context.Context, cfg aws.Config, phase string, expect
 	if phase == "net_associate_route" {
 		return n, associated, nil
 	}
-	if !route4 || !route6 || !associated {
+	if !route4 || (n.WavelengthZoneID == "" && !n.IPv4Only && !route6) || !associated {
 		return n, false, contract.ErrConflict
 	}
 	groups, err := client.DescribeSecurityGroups(ctx, &ec2sdk.DescribeSecurityGroupsInput{Filters: filters})
@@ -257,19 +321,25 @@ func (c Cloud) Network(ctx context.Context, cfg aws.Config, phase string, expect
 	}
 	switch phase {
 	case "net_ingress":
-		return n, matchingPermission(group.IpPermissions, "tcp", 22, n.SSHIPv4CIDR, false) && matchingPermission(group.IpPermissions, "tcp", 22, n.SSHIPv6CIDR, true) && matchingPermission(group.IpPermissions, "icmpv6", -1, "::/0", true), nil
+		if n.AllowAll {
+			return n, matchingPermission(group.IpPermissions, "-1", 0, "0.0.0.0/0", false) && (n.WavelengthZoneID != "" || matchingPermission(group.IpPermissions, "-1", 0, "::/0", true)), nil
+		}
+		return n, matchingPermission(group.IpPermissions, "tcp", 22, n.SSHIPv4CIDR, false) && (n.WavelengthZoneID != "" || (matchingPermission(group.IpPermissions, "tcp", 22, n.SSHIPv6CIDR, true) && matchingPermission(group.IpPermissions, "icmpv6", -1, "::/0", true))), nil
 	case "net_egress":
-		return n, matchingPermission(group.IpPermissionsEgress, "-1", 0, "0.0.0.0/0", false) && matchingPermission(group.IpPermissionsEgress, "-1", 0, "::/0", true), nil
+		return n, matchingPermission(group.IpPermissionsEgress, "-1", 0, "0.0.0.0/0", false) && (n.WavelengthZoneID != "" || matchingPermission(group.IpPermissionsEgress, "-1", 0, "::/0", true)), nil
 	}
 	return n, false, contract.ErrInvalid
 }
 func (c Cloud) Provision(ctx context.Context, cfg aws.Config, phase string, n contract.Network, labels map[string]string) (source.Accepted, error) {
+	if strings.HasPrefix(phase, "net_parent_") {
+		return c.Provision(ctx, cfg, "net_"+strings.TrimPrefix(phase, "net_parent_"), parentNetwork(n), labels)
+	}
 	client := c.client(cfg, true)
 	result := source.Accepted{}
 	var err error
 	switch phase {
 	case "net_vpc":
-		out, e := client.CreateVpc(ctx, &ec2sdk.CreateVpcInput{CidrBlock: aws.String(n.IPv4CIDR), AmazonProvidedIpv6CidrBlock: aws.Bool(true), InstanceTenancy: types.TenancyDefault, TagSpecifications: tagSpecs(types.ResourceTypeVpc, labels)})
+		out, e := client.CreateVpc(ctx, &ec2sdk.CreateVpcInput{CidrBlock: aws.String(n.IPv4CIDR), AmazonProvidedIpv6CidrBlock: aws.Bool(n.WavelengthZoneID == ""), InstanceTenancy: types.TenancyDefault, TagSpecifications: tagSpecs(types.ResourceTypeVpc, labels)})
 		err = e
 		if e == nil {
 			if out.Vpc != nil {
@@ -278,7 +348,7 @@ func (c Cloud) Provision(ctx context.Context, cfg aws.Config, phase string, n co
 			result.RequestID, _ = middleware.GetRequestIDMetadata(out.ResultMetadata)
 		}
 	case "net_subnet":
-		out, e := client.CreateSubnet(ctx, &ec2sdk.CreateSubnetInput{VpcId: aws.String(n.VPCID), CidrBlock: aws.String(n.SubnetIPv4CIDR), Ipv6CidrBlock: aws.String(n.SubnetIPv6CIDR), AvailabilityZone: aws.String(n.Zone), TagSpecifications: tagSpecs(types.ResourceTypeSubnet, labels)})
+		out, e := client.CreateSubnet(ctx, &ec2sdk.CreateSubnetInput{VpcId: aws.String(n.VPCID), CidrBlock: aws.String(n.SubnetIPv4CIDR), Ipv6CidrBlock: optionalString(n.SubnetIPv6CIDR), AvailabilityZone: aws.String(n.Zone), TagSpecifications: tagSpecs(types.ResourceTypeSubnet, labels)})
 		err = e
 		if e == nil {
 			if out.Subnet != nil {
@@ -287,6 +357,17 @@ func (c Cloud) Provision(ctx context.Context, cfg aws.Config, phase string, n co
 			result.RequestID, _ = middleware.GetRequestIDMetadata(out.ResultMetadata)
 		}
 	case "net_gateway":
+		if n.WavelengthZoneID != "" {
+			out, e := client.CreateCarrierGateway(ctx, &ec2sdk.CreateCarrierGatewayInput{VpcId: aws.String(n.VPCID), TagSpecifications: tagSpecs(types.ResourceTypeCarrierGateway, labels)})
+			err = e
+			if e == nil {
+				if out.CarrierGateway != nil {
+					result.ResourceID = aws.ToString(out.CarrierGateway.CarrierGatewayId)
+				}
+				result.RequestID, _ = middleware.GetRequestIDMetadata(out.ResultMetadata)
+			}
+			break
+		}
 		out, e := client.CreateInternetGateway(ctx, &ec2sdk.CreateInternetGatewayInput{TagSpecifications: tagSpecs(types.ResourceTypeInternetGateway, labels)})
 		err = e
 		if e == nil {
@@ -313,6 +394,10 @@ func (c Cloud) Provision(ctx context.Context, cfg aws.Config, phase string, n co
 		}
 	case "net_route_ipv4", "net_route_ipv6":
 		in := &ec2sdk.CreateRouteInput{RouteTableId: aws.String(n.RouteTableID), GatewayId: aws.String(n.GatewayID)}
+		if n.WavelengthZoneID != "" {
+			in.GatewayId = nil
+			in.CarrierGatewayId = aws.String(n.GatewayID)
+		}
 		if phase == "net_route_ipv4" {
 			in.DestinationCidrBlock = aws.String("0.0.0.0/0")
 		} else {
@@ -332,7 +417,7 @@ func (c Cloud) Provision(ctx context.Context, cfg aws.Config, phase string, n co
 			result.RequestID, _ = middleware.GetRequestIDMetadata(out.ResultMetadata)
 		}
 	case "net_security_group":
-		out, e := client.CreateSecurityGroup(ctx, &ec2sdk.CreateSecurityGroupInput{VpcId: aws.String(n.VPCID), GroupName: aws.String("aws-panel-" + labels["aws-panel:network"]), Description: aws.String("AWS Panel managed SSH and IPv6"), TagSpecifications: tagSpecs(types.ResourceTypeSecurityGroup, labels)})
+		out, e := client.CreateSecurityGroup(ctx, &ec2sdk.CreateSecurityGroupInput{VpcId: aws.String(n.VPCID), GroupName: aws.String("aws-panel-" + labels["aws-panel:network"]), Description: aws.String("AWS Panel managed instance network"), TagSpecifications: tagSpecs(types.ResourceTypeSecurityGroup, labels)})
 		err = e
 		if e == nil {
 			result.ResourceID = aws.ToString(out.GroupId)
@@ -381,7 +466,7 @@ func (c Cloud) Provision(ctx context.Context, cfg aws.Config, phase string, n co
 			if !matchingPermission(group.IpPermissionsEgress, "-1", 0, "0.0.0.0/0", false) {
 				rule.IpRanges = []types.IpRange{{CidrIp: aws.String("0.0.0.0/0")}}
 			}
-			if !matchingPermission(group.IpPermissionsEgress, "-1", 0, "::/0", true) {
+			if n.WavelengthZoneID == "" && !matchingPermission(group.IpPermissionsEgress, "-1", 0, "::/0", true) {
 				rule.Ipv6Ranges = []types.Ipv6Range{{CidrIpv6: aws.String("::/0")}}
 			}
 			if len(rule.IpRanges)+len(rule.Ipv6Ranges) == 0 {
@@ -404,4 +489,24 @@ func (c Cloud) Provision(ctx context.Context, cfg aws.Config, phase string, n co
 		return result, contract.ErrResponse
 	}
 	return result, nil
+}
+
+func optionalString(v string) *string {
+	if v == "" {
+		return nil
+	}
+	return aws.String(v)
+}
+
+func parentNetwork(n contract.Network) contract.Network {
+	n.IPv4Only = true
+	n.WavelengthZoneID = ""
+	n.Zone = n.ParentZone
+	n.SubnetID = n.ParentSubnetID
+	n.SubnetIPv4CIDR = "10.42.1.0/24"
+	n.IPv6CIDR = ""
+	n.SubnetIPv6CIDR = ""
+	n.GatewayID = n.ParentGatewayID
+	n.RouteTableID = n.ParentRouteTableID
+	return n
 }

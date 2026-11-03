@@ -116,7 +116,7 @@ func TestLightsailCreateReconcilesLostResponsesAndSubmissionDuplicates(t *testin
 		t.Fatal(string(raw))
 	}
 	for _, item := range detail.Items {
-		if len(item.Steps) != 2 || item.Steps[0].Output.ResourceID == "" || item.Steps[1].Code != "INSTANCE_RUNNING" || item.Steps[1].Output.ResourceID != item.Steps[0].Output.ResourceID {
+		if len(item.Steps) != 5 || item.Steps[2].Code != "FIREWALL_STATE_CONFIRMED" || item.Steps[3].Output.ResourceID == "" || item.Steps[4].Code != "ADDRESS_STATE_CONFIRMED" || item.Steps[0].Output.ResourceID == "" || item.Steps[1].Code != "INSTANCE_RUNNING" || item.Steps[1].Output.ResourceID != item.Steps[0].Output.ResourceID {
 			t.Fatal("existence and running states not preserved")
 		}
 		row, err := h.creationStore.Creation(ctx, item.Steps[0].ID)
@@ -273,8 +273,23 @@ func TestLightsailDurableDispatchAndReceiptRecoveryWithWritesOff(t *testing.T) {
 	// operation history must suffice when saving the accepted response failed.
 	h.services(t, h.creationStore, false)
 	detail := h.op.drive(t, job.ID)
+	if detail.Job.Status != oc.Attention || h.count("receipt-lost") != 1 || detail.Items[0].Steps[0].Status != oc.Succeeded || detail.Items[0].Steps[1].Status != oc.Succeeded || detail.Items[0].Steps[2].Code != "CLOUD_WRITES_DISABLED" {
+		t.Fatal("accepted creation must reconcile read-only, while new firewall/IP writes stay blocked", detail.Job.Status, detail.Items[0].Steps)
+	}
+	h.cloudLaunch.mu.Lock()
+	writes := h.cloudLaunch.addresses.calls["AllocateStaticIp"]
+	h.cloudLaunch.mu.Unlock()
+	if writes != 0 {
+		t.Fatal("disabled writes allocated an IP")
+	}
+	// Restore writes and explicitly resume only the blocked firewall phase.
+	h.services(t, h.creationStore, true)
+	if err := h.op.service.Retry(ctx, h.op.admin, job.ID, oc.RetryRequest{Version: detail.Job.Version, StepIDs: []string{detail.Items[0].Steps[2].ID}}, auth.RequestMeta{}); err != nil {
+		t.Fatal(err)
+	}
+	detail = h.op.drive(t, job.ID)
 	if detail.Job.Status != oc.Succeeded || h.count("receipt-lost") != 1 {
-		t.Fatal("read-only receipt recovery failed", detail.Job.Status)
+		t.Fatal("IP recovery recreated the instance", detail.Job.Status, detail.Items)
 	}
 	row, err := h.creationStore.Creation(ctx, detail.Items[0].Steps[0].ID)
 	if err != nil {

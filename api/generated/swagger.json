@@ -451,10 +451,16 @@
                     },
                     {
                         "type": "string",
-                        "description": "lightsail or ec2",
+                        "description": "lightsail, ec2 or wavelength",
                         "name": "service",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh address and instance state from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1489,6 +1495,18 @@
                         "name": "region",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Wavelength Zone ID for gp2 IPv4 creation",
+                        "name": "wavelength_zone_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh directory data from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1559,6 +1577,12 @@
                         "name": "region",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh instance status from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2695,6 +2719,12 @@
                         "name": "region",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh directory data from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3014,6 +3044,12 @@
                         "name": "connection_id",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh directory data from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3956,6 +3992,12 @@
                         "name": "service",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh quota limits and usage from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4061,6 +4103,12 @@
                         "name": "connection_id",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh directory data from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4130,6 +4178,12 @@
                         "name": "connection_id",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh region status from AWS",
+                        "name": "refresh",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4809,9 +4863,102 @@
                     }
                 }
             }
+        },
+        "/wavelength/zones": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wavelength"
+                ],
+                "summary": "List Wavelength Zones and opt-in states",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Connection UUID",
+                        "name": "connection_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Parent AWS region",
+                        "name": "region",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Refresh zone status from AWS",
+                        "name": "refresh",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.WavelengthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "catalogue.Freshness": {
+            "type": "object",
+            "properties": {
+                "cached": {
+                    "type": "boolean"
+                },
+                "refresh_after": {
+                    "type": "string"
+                },
+                "refresh_failed": {
+                    "type": "boolean"
+                },
+                "refreshing": {
+                    "type": "boolean"
+                },
+                "stale": {
+                    "type": "boolean"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "contract.AccountChoice": {
             "type": "object",
             "properties": {
@@ -4925,6 +5072,9 @@
                 "ip": {
                     "type": "string"
                 },
+                "kind": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -4955,6 +5105,9 @@
                     "type": "string"
                 },
                 "ip": {
+                    "type": "string"
+                },
+                "kind": {
                     "type": "string"
                 },
                 "network_interface_id": {
@@ -5128,6 +5281,20 @@
                     "type": "string"
                 },
                 "new_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.Companion": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "public_ip": {
+                    "type": "string"
+                },
+                "state": {
                     "type": "string"
                 }
             }
@@ -5336,6 +5503,9 @@
                 "availability_zone": {
                     "type": "string"
                 },
+                "carrier_ip": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -5481,6 +5651,17 @@
                 }
             }
         },
+        "contract.FirewallPlan": {
+            "type": "object",
+            "properties": {
+                "ipv6": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "contract.GrantRequest": {
             "type": "object",
             "properties": {
@@ -5521,6 +5702,46 @@
                 }
             }
         },
+        "contract.IngressPeer": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "private_ip": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.IngressPlan": {
+            "type": "object",
+            "properties": {
+                "automatic_ip": {
+                    "$ref": "#/definitions/instanceip.Automatic"
+                },
+                "image": {
+                    "$ref": "#/definitions/contract.Image"
+                },
+                "quota": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Quota"
+                },
+                "security_groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.SecurityGroup"
+                    }
+                },
+                "subnet": {
+                    "$ref": "#/definitions/contract.Subnet"
+                },
+                "target": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Target"
+                },
+                "type": {
+                    "$ref": "#/definitions/contract.InstanceType"
+                }
+            }
+        },
         "contract.InputTarget": {
             "type": "object",
             "properties": {
@@ -5534,6 +5755,12 @@
                     "type": "integer"
                 },
                 "image_id": {
+                    "type": "string"
+                },
+                "ingress_subnet_id": {
+                    "type": "string"
+                },
+                "ingress_type": {
                     "type": "string"
                 },
                 "instance_id": {
@@ -5580,6 +5807,9 @@
                     "type": "string"
                 },
                 "subnet_id": {
+                    "type": "string"
+                },
+                "wavelength_zone_id": {
                     "type": "string"
                 },
                 "zone": {
@@ -5788,6 +6018,12 @@
                 "connection_id": {
                     "type": "string"
                 },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
+                },
                 "items": {
                     "type": "array",
                     "items": {
@@ -5900,13 +6136,31 @@
         "contract.Network": {
             "type": "object",
             "properties": {
+                "allow_all": {
+                    "type": "boolean"
+                },
                 "gateway_id": {
                     "type": "string"
                 },
                 "ipv4_cidr": {
                     "type": "string"
                 },
+                "ipv4_only": {
+                    "type": "boolean"
+                },
                 "ipv6_cidr": {
+                    "type": "string"
+                },
+                "parent_gateway_id": {
+                    "type": "string"
+                },
+                "parent_route_table_id": {
+                    "type": "string"
+                },
+                "parent_subnet_id": {
+                    "type": "string"
+                },
+                "parent_zone": {
                     "type": "string"
                 },
                 "route_table_id": {
@@ -5931,6 +6185,9 @@
                     "type": "string"
                 },
                 "vpc_id": {
+                    "type": "string"
+                },
+                "wavelength_zone_id": {
                     "type": "string"
                 },
                 "zone": {
@@ -6311,6 +6568,12 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/contract.Entry"
+                    }
+                },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
                     }
                 },
                 "limits_read": {
@@ -6798,6 +7061,32 @@
                 }
             }
         },
+        "contract.WavelengthListing": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
+                },
+                "region": {
+                    "type": "string"
+                },
+                "zones": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
+                    }
+                }
+            }
+        },
         "contract.Zone": {
             "type": "object",
             "properties": {
@@ -6952,6 +7241,12 @@
                 "connection_id": {
                     "type": "string"
                 },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
+                },
                 "instances": {
                     "type": "array",
                     "items": {
@@ -6963,6 +7258,12 @@
                 },
                 "service": {
                     "type": "string"
+                },
+                "wavelength_zones": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.WavelengthZone"
+                    }
                 },
                 "writes_enabled": {
                     "type": "boolean"
@@ -7014,6 +7315,12 @@
                     "type": "string"
                 },
                 "state": {
+                    "type": "string"
+                },
+                "wavelength_zone_id": {
+                    "type": "string"
+                },
+                "zone": {
                     "type": "string"
                 }
             }
@@ -7100,11 +7407,17 @@
                 "address": {
                     "$ref": "#/definitions/contract.Address"
                 },
+                "border_group": {
+                    "type": "string"
+                },
                 "checked_at": {
                     "type": "string"
                 },
                 "instance": {
                     "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Instance"
+                },
+                "managed": {
+                    "type": "boolean"
                 },
                 "new_name": {
                     "type": "string"
@@ -7145,6 +7458,23 @@
                     "type": "boolean"
                 },
                 "service": {
+                    "type": "string"
+                },
+                "wavelength_zone_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.WavelengthZone": {
+            "type": "object",
+            "properties": {
+                "border_group": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -7230,6 +7560,12 @@
                 "connection_id": {
                     "type": "string"
                 },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
+                },
                 "images": {
                     "type": "array",
                     "items": {
@@ -7237,6 +7573,24 @@
                     }
                 },
                 "key_pairs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "parent_subnets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.Subnet"
+                    }
+                },
+                "parent_types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.InstanceType"
+                    }
+                },
+                "parent_zones": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -7262,6 +7616,9 @@
                     "items": {
                         "$ref": "#/definitions/contract.InstanceType"
                     }
+                },
+                "wavelength_zone": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
                 },
                 "writes_enabled": {
                     "type": "boolean"
@@ -7294,6 +7651,9 @@
                 "arn": {
                     "type": "string"
                 },
+                "carrier_ip": {
+                    "type": "string"
+                },
                 "delete_root_on_termination": {
                     "type": "boolean"
                 },
@@ -7301,6 +7661,12 @@
                     "type": "string"
                 },
                 "image_id": {
+                    "type": "string"
+                },
+                "ingress": {
+                    "$ref": "#/definitions/contract.Companion"
+                },
+                "ingress_for": {
                     "type": "string"
                 },
                 "ipv6": {
@@ -7438,11 +7804,44 @@
         "github_com_herta-network_aws-panel_internal_module_compute_contract.Spec": {
             "type": "object",
             "properties": {
+                "automatic_ip": {
+                    "$ref": "#/definitions/instanceip.Automatic"
+                },
+                "bootstrap_groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "checked_at": {
                     "type": "string"
                 },
+                "cleanup_ips": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/instanceip.ManagedIP"
+                    }
+                },
+                "companion_instance": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Instance"
+                },
+                "firewall": {
+                    "$ref": "#/definitions/contract.FirewallPlan"
+                },
+                "group_zones": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
+                    }
+                },
                 "image": {
                     "$ref": "#/definitions/contract.Image"
+                },
+                "ingress": {
+                    "$ref": "#/definitions/contract.IngressPlan"
+                },
+                "ingress_peer": {
+                    "$ref": "#/definitions/contract.IngressPeer"
                 },
                 "instance": {
                     "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Instance"
@@ -7474,11 +7873,17 @@
                 "type": {
                     "$ref": "#/definitions/contract.InstanceType"
                 },
+                "volume_type": {
+                    "type": "string"
+                },
                 "warnings": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "wavelength_zone": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
                 }
             }
         },
@@ -7495,6 +7900,12 @@
                     "type": "integer"
                 },
                 "image_id": {
+                    "type": "string"
+                },
+                "ingress_subnet_id": {
+                    "type": "string"
+                },
+                "ingress_type": {
                     "type": "string"
                 },
                 "instance_id": {
@@ -7539,7 +7950,36 @@
                 "subnet_id": {
                     "type": "string"
                 },
+                "wavelength_zone_id": {
+                    "type": "string"
+                },
                 "zone": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone": {
+            "type": "object",
+            "properties": {
+                "border_group": {
+                    "type": "string"
+                },
+                "group": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "opt_in_status": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "state": {
                     "type": "string"
                 }
             }
@@ -7789,6 +8229,12 @@
                 "connection_id": {
                     "type": "string"
                 },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
+                },
                 "key_pairs": {
                     "type": "array",
                     "items": {
@@ -7920,6 +8366,12 @@
                 "connection_id": {
                     "type": "string"
                 },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
+                },
                 "items": {
                     "type": "array",
                     "items": {
@@ -7931,6 +8383,12 @@
         "github_com_herta-network_aws-panel_internal_module_lightsail_contract.StepSpec": {
             "type": "object",
             "properties": {
+                "allow_all_firewall": {
+                    "type": "boolean"
+                },
+                "automatic_ip": {
+                    "$ref": "#/definitions/instanceip.Automatic"
+                },
                 "blueprint": {
                     "$ref": "#/definitions/contract.Blueprint"
                 },
@@ -8175,6 +8633,12 @@
                 "checked_at": {
                     "type": "string"
                 },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
+                },
                 "items": {
                     "type": "array",
                     "items": {
@@ -8233,6 +8697,12 @@
                 },
                 "connection_id": {
                     "type": "string"
+                },
+                "freshness": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/catalogue.Freshness"
+                    }
                 },
                 "regions": {
                     "type": "array",
@@ -8682,6 +9152,17 @@
                 }
             }
         },
+        "http.WavelengthResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.WavelengthListing"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
         "httpx.Envelope": {
             "type": "object",
             "properties": {
@@ -8702,6 +9183,110 @@
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "instanceip.Address": {
+            "type": "object",
+            "properties": {
+                "arn": {
+                    "type": "string"
+                },
+                "association_id": {
+                    "type": "string"
+                },
+                "attached": {
+                    "type": "boolean"
+                },
+                "border_group": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "network_interface_id": {
+                    "type": "string"
+                },
+                "private_ip": {
+                    "type": "string"
+                }
+            }
+        },
+        "instanceip.Automatic": {
+            "type": "object",
+            "properties": {
+                "border_group": {
+                    "type": "string"
+                },
+                "new_name": {
+                    "type": "string"
+                },
+                "quota": {
+                    "$ref": "#/definitions/instanceip.Quota"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "wavelength_zone_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "instanceip.ManagedIP": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "$ref": "#/definitions/instanceip.Address"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "owner_spec_hash": {
+                    "type": "string"
+                },
+                "owner_step_id": {
+                    "type": "string"
+                },
+                "owner_token": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                }
+            }
+        },
+        "instanceip.Quota": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "number"
+                },
+                "limit_known": {
+                    "type": "boolean"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "usage_known": {
+                    "type": "boolean"
+                },
+                "used": {
+                    "type": "number"
                 }
             }
         }

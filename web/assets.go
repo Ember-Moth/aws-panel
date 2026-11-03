@@ -251,7 +251,7 @@ func NewRenderer() (*Renderer, error) {
 			return []string{"create", "network", "start", "stop", "reboot", "terminate", "enable_ipv6"}
 		},
 		"ec2Action": func(v string) string {
-			return map[string]string{"network": "准备双栈网络", "create": "创建实例", "start": "启动实例", "stop": "停止实例", "reboot": "重启实例", "terminate": "终止实例", "enable_ipv6": "启用 IPv6"}[v]
+			return map[string]string{"network": "准备双栈网络", "create": "创建实例", "start": "启动实例", "stop": "停止实例", "reboot": "重启实例", "terminate": "终止实例", "enable_ipv6": "启用 IPv6", "wavelength_opt_in": "开通 Wavelength"}[v]
 		},
 		"addressAction": func(value string) string {
 			return map[string]string{"allocate": "创建静态 IP", "replace": "更换实例 IP", "attach": "绑定地址", "detach": "解绑地址", "release": "释放地址"}[value]

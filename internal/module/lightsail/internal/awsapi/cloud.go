@@ -91,35 +91,24 @@ func pages(ctx context.Context, fetch func(*string) (string, error)) error {
 	}
 	return contract.ErrResponse
 }
-func (Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogue, error) {
-	result := contract.Catalogue{Region: cfg.Region, Zones: []string{}, Blueprints: []contract.Blueprint{}, Bundles: []contract.Bundle{}, KeyPairs: []string{}}
-	// Account Management uses the commercial partition's global endpoint.
-	accountCfg := cfg
-	accountCfg.Region = "us-east-1"
-	status, err := account.NewFromConfig(accountCfg).GetRegionOptStatus(ctx, &account.GetRegionOptStatusInput{RegionName: aws.String(cfg.Region)})
+func (c Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogue, error) {
+	result, err := c.Environment(ctx, cfg)
 	if err != nil {
 		return result, err
 	}
-	if aws.ToString(status.RegionName) != cfg.Region || (string(status.RegionOptStatus) != "ENABLED" && string(status.RegionOptStatus) != "ENABLED_BY_DEFAULT") {
-		return result, &contract.Error{Code: "REGION_NOT_READY", Message: "区域尚未启用或仍在准备，请先完成区域启用"}
+	products, err := c.Products(ctx, cfg)
+	if err != nil {
+		return result, err
 	}
+	result.Blueprints = products.Blueprints
+	result.Bundles = products.Bundles
+	result.CheckedAt = clock.Now()
+	return result, nil
+}
+func (Cloud) Products(ctx context.Context, cfg aws.Config) (contract.Catalogue, error) {
+	result := contract.Catalogue{Region: cfg.Region, Blueprints: []contract.Blueprint{}, Bundles: []contract.Bundle{}}
 	client := sdk.NewFromConfig(cfg)
-	regions, err := client.GetRegions(ctx, &sdk.GetRegionsInput{IncludeAvailabilityZones: aws.Bool(true)})
-	if err != nil {
-		return result, err
-	}
-	for _, region := range regions.Regions {
-		if string(region.Name) == cfg.Region {
-			for _, zone := range region.AvailabilityZones {
-				if strings.EqualFold(aws.ToString(zone.State), "available") {
-					result.Zones = append(result.Zones, aws.ToString(zone.ZoneName))
-				}
-			}
-		}
-	}
-	if len(result.Zones) == 0 {
-		return result, &contract.Error{Code: "REGION_NOT_READY", Message: "该账号区域没有可用的 Lightsail 可用区"}
-	}
+	var err error
 	err = pages(ctx, func(token *string) (string, error) {
 		out, err := client.GetBlueprints(ctx, &sdk.GetBlueprintsInput{IncludeInactive: aws.Bool(false), PageToken: token})
 		if err != nil {
@@ -168,6 +157,44 @@ func (Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogue,
 	if err != nil {
 		return result, err
 	}
+
+	if len(result.Blueprints) == 0 || len(result.Bundles) == 0 {
+		return result, contract.ErrCatalogue
+	}
+	sort.Slice(result.Blueprints, func(i, j int) bool { return result.Blueprints[i].Name < result.Blueprints[j].Name })
+	sort.Slice(result.Bundles, func(i, j int) bool { return result.Bundles[i].MonthlyCents < result.Bundles[j].MonthlyCents })
+	result.CheckedAt = clock.Now()
+	return result, nil
+}
+func (Cloud) Environment(ctx context.Context, cfg aws.Config) (contract.Catalogue, error) {
+	result := contract.Catalogue{Region: cfg.Region, Zones: []string{}, Blueprints: []contract.Blueprint{}, Bundles: []contract.Bundle{}, KeyPairs: []string{}}
+	// Account Management uses the commercial partition's global endpoint.
+	accountCfg := cfg
+	accountCfg.Region = "us-east-1"
+	status, err := account.NewFromConfig(accountCfg).GetRegionOptStatus(ctx, &account.GetRegionOptStatusInput{RegionName: aws.String(cfg.Region)})
+	if err != nil {
+		return result, err
+	}
+	if aws.ToString(status.RegionName) != cfg.Region || (string(status.RegionOptStatus) != "ENABLED" && string(status.RegionOptStatus) != "ENABLED_BY_DEFAULT") {
+		return result, &contract.Error{Code: "REGION_NOT_READY", Message: "区域尚未启用或仍在准备，请先完成区域启用"}
+	}
+	client := sdk.NewFromConfig(cfg)
+	regions, err := client.GetRegions(ctx, &sdk.GetRegionsInput{IncludeAvailabilityZones: aws.Bool(true)})
+	if err != nil {
+		return result, err
+	}
+	for _, region := range regions.Regions {
+		if string(region.Name) == cfg.Region {
+			for _, zone := range region.AvailabilityZones {
+				if strings.EqualFold(aws.ToString(zone.State), "available") {
+					result.Zones = append(result.Zones, aws.ToString(zone.ZoneName))
+				}
+			}
+		}
+	}
+	if len(result.Zones) == 0 {
+		return result, &contract.Error{Code: "REGION_NOT_READY", Message: "该账号区域没有可用的 Lightsail 可用区"}
+	}
 	err = pages(ctx, func(token *string) (string, error) {
 		out, err := client.GetKeyPairs(ctx, &sdk.GetKeyPairsInput{PageToken: token})
 		if err != nil {
@@ -182,22 +209,18 @@ func (Cloud) Catalogue(ctx context.Context, cfg aws.Config) (contract.Catalogue,
 		return result, err
 	}
 	result.Quota = quota(ctx, cfg, client)
-	if len(result.Blueprints) == 0 || len(result.Bundles) == 0 {
-		return result, contract.ErrCatalogue
-	}
 	sort.Strings(result.Zones)
 	sort.Strings(result.KeyPairs)
-	sort.Slice(result.Blueprints, func(i, j int) bool { return result.Blueprints[i].Name < result.Blueprints[j].Name })
-	sort.Slice(result.Bundles, func(i, j int) bool { return result.Bundles[i].MonthlyCents < result.Bundles[j].MonthlyCents })
 	result.CheckedAt = clock.Now()
 	return result, nil
 }
+
 func quota(ctx context.Context, cfg aws.Config, client *sdk.Client) contract.Quota {
 	result := contract.Quota{Code: "QUOTA_UNAVAILABLE"}
 	quotaClient := servicequotas.NewFromConfig(cfg)
 	known := false
 	err := pages(ctx, func(token *string) (string, error) {
-		out, err := quotaClient.ListServiceQuotas(ctx, &servicequotas.ListServiceQuotasInput{ServiceCode: aws.String("lightsail"), NextToken: token})
+		out, err := quotaClient.ListServiceQuotas(ctx, &servicequotas.ListServiceQuotasInput{ServiceCode: aws.String("lightsail"), MaxResults: aws.Int32(100), NextToken: token})
 		if err != nil {
 			return "", err
 		}

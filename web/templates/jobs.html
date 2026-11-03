@@ -7,7 +7,7 @@
 
 {{define "job-detail"}}
 <div class="page-header"><div class="container-xl"><a class="small text-secondary" href="/jobs">返回任务中心</a><h1 class="page-title mt-2">{{.Detail.Job.Title}}</h1><div class="small text-secondary mt-2">{{.Detail.Job.ID}}</div></div></div>
-<div class="page-body"><div class="container-xl" data-job-watch data-events-url="/api/v1/jobs/{{.Detail.Job.ID}}/stream" data-fragment-url="/partials/jobs/{{.Detail.Job.ID}}"><div class="d-flex justify-content-between align-items-center mb-3"><span class="small text-secondary" data-job-live-status role="status">正在连接进度更新</span><button class="btn btn-sm" type="button" data-job-refresh>刷新结果</button></div>{{template "job-content" .}}</div></div>
+<div class="page-body"><div class="container-xl" data-job-watch data-events-url="/api/v1/jobs/{{.Detail.Job.ID}}/stream" data-fragment-url="/partials/jobs/{{.Detail.Job.ID}}"><div class="action-row justify-content-between mb-3"><span class="small text-secondary action-note" data-job-live-status role="status">正在连接进度更新</span><button class="btn btn-sm" type="button" data-job-refresh>刷新结果</button></div>{{template "job-content" .}}</div></div>
 {{end}}
 {{define "job-content"}}
 <section id="job-content" data-event-seq="{{.Detail.Job.EventSeq}}" data-terminal="{{.Terminal}}">

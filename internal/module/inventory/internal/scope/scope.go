@@ -47,7 +47,7 @@ func Label(kind string) string {
 	case contract.EC2Instance:
 		return "EC2 实例"
 	case contract.EC2Address:
-		return "EC2 弹性 IP"
+		return "EC2 弹性 / Carrier IP"
 	default:
 		return kind
 	}

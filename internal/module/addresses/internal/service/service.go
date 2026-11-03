@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
 	"strconv"
 	"time"
 
@@ -34,6 +36,7 @@ type Jobs interface {
 	Submit(context.Context, int64, oc.SubmitRequest, auth.RequestMeta) (oc.Job, error)
 }
 type Deps struct {
+	Cache         *catalogcache.Cache
 	Accounts      Accounts
 	Access        Access
 	Jobs          Jobs
@@ -85,11 +88,11 @@ func (s *Service) Options(ctx context.Context, actorID int64) (contract.Options,
 	}
 	return result, nil
 }
-func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region, kind string) (contract.Catalogue, error) {
+func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region, kind string, refresh ...bool) (contract.Catalogue, error) {
 	if err := s.actor(ctx, actorID); err != nil {
 		return contract.Catalogue{}, err
 	}
-	if !validRegion(region) || (kind != "lightsail" && kind != "ec2") {
+	if !validRegion(region) || (kind != "lightsail" && kind != "ec2" && kind != "wavelength") {
 		return contract.Catalogue{}, contract.ErrInvalid
 	}
 	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
@@ -105,10 +108,14 @@ func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region, kind
 	if err != nil {
 		return contract.Catalogue{}, publicError(err)
 	}
-	result, err := s.deps.Cloud.Catalogue(ctx, cfg, kind, info.AWSAccountID)
+	result, fresh, err := catalogcache.Read(ctx, s.deps.Cache, catalogcache.Key("address-list", info.Partition, info.AccountID, id, info.Fingerprint, region, kind), catalogcache.Resources, len(refresh) > 0 && refresh[0], func(ctx context.Context) (contract.Catalogue, error) {
+		return s.deps.Cloud.Catalogue(ctx, cfg, kind, info.AWSAccountID)
+	})
 	if err != nil {
 		return result, publicError(err)
 	}
+	result.CheckedAt = fresh.UpdatedAt
+	result.Freshness = map[string]catalogue.Freshness{"resources": fresh}
 	result.ConnectionID = id
 	result.WritesEnabled = s.deps.WritesEnabled
 	return result, nil

@@ -20,6 +20,8 @@ import (
 	"github.com/herta-network/aws-panel/internal/auth"
 	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
 	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
+	"github.com/herta-network/aws-panel/internal/module/addresses"
+	ad "github.com/herta-network/aws-panel/internal/module/addresses/contract"
 	"github.com/herta-network/aws-panel/internal/module/lightsail/contract"
 	"github.com/herta-network/aws-panel/internal/module/lightsail/entity"
 	"github.com/herta-network/aws-panel/internal/module/lightsail/internal/bootstrap"
@@ -39,6 +41,8 @@ type Clients interface {
 	ConfigForBound(context.Context, int64, string, string, bool, string, func(context.Context) error) (aws.Config, error)
 }
 type ExecutorDeps struct {
+	AddressCloud  addresses.Cloud
+	Effects       repository.EffectStore
 	Store         repository.LightsailStore
 	Clients       Clients
 	Cloud         source.Cloud
@@ -156,6 +160,9 @@ func (e *Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.T
 	if json.Unmarshal(raw, &input) != nil || len(input.Targets) != len(targets) {
 		return nil, contract.ErrInvalid
 	}
+	if _, ok := e.deps.Cloud.(source.FirewallCloud); !ok || e.deps.Effects == nil {
+		return nil, contract.ErrUnavailable
+	}
 	byKey := map[string]oc.Target{}
 	for _, target := range targets {
 		byKey[target.Key] = target
@@ -163,6 +170,7 @@ func (e *Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.T
 	catalogues := map[string]contract.Catalogue{}
 	configs := map[string]aws.Config{}
 	cpu := map[string]int64{}
+	ips := map[string]float64{}
 	seen := map[string]bool{}
 	result := []oc.ItemPlan{}
 	for _, value := range input.Targets {
@@ -214,11 +222,27 @@ func (e *Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.T
 		if spec.Quota.Known && spec.Quota.UsedVCPU+cpu[quotaGroup] > spec.Quota.LimitVCPU {
 			return nil, contract.ErrQuota
 		}
+		if value.IPType != "ipv6" {
+			policy, err := addresses.PlanAutomatic(ctx, e.deps.AddressCloud, cfg, "lightsail", target.Binding.AWSAccountID, "", "")
+			if err != nil {
+				return nil, err
+			}
+			ips[quotaGroup]++
+			if policy.Quota.LimitKnown && policy.Quota.UsageKnown && policy.Quota.Used+ips[quotaGroup] > policy.Quota.Limit {
+				return nil, contract.ErrQuota
+			}
+			spec.AutomaticIP = &policy
+		}
+		spec.AllowAllFirewall = true
 		body, _ := json.Marshal(spec)
 		target.Key = identity
 		target.Label = target.Binding.AWSAccountID + " · " + value.Region + " · " + value.Name
 		target.LockKey = "lightsail/instance/" + value.Name
-		result = append(result, oc.ItemPlan{Target: target, Steps: []oc.StepPlan{{Kind: "create", Label: "创建并确认实例归属", Input: body, WritesCloud: true}, {Kind: "ready", Label: "等待实例运行", Input: body}}})
+		steps := []oc.StepPlan{{Kind: "create", Label: "创建并确认实例归属", Input: body, WritesCloud: true}, {Kind: "ready", Label: "等待实例运行", Input: body}, {Kind: "firewall", Label: "放行全部公网入站", Input: body, WritesCloud: true}}
+		if spec.AutomaticIP != nil {
+			steps = append(steps, oc.StepPlan{Kind: "ip_allocate", Label: "自动分配静态 IP", Input: body, WritesCloud: true}, oc.StepPlan{Kind: "ip_attach", Label: "自动绑定静态 IP", Input: body, WritesCloud: true})
+		}
+		result = append(result, oc.ItemPlan{Target: target, Steps: steps})
 	}
 	return result, nil
 }
@@ -253,6 +277,12 @@ func (e *Executor) config(ctx context.Context, call oc.Call, write bool) (aws.Co
 	return e.deps.Clients.ConfigForBound(ctx, call.ActorID, call.Target.Binding.ConnectionID, call.Target.Binding.Region, write, call.Target.Binding.Fingerprint, call.Check)
 }
 func (e *Executor) Execute(ctx context.Context, call oc.Call) oc.Result {
+	if call.Kind == "firewall" {
+		return e.firewall(ctx, call, false)
+	}
+	if isIPStep(call.Kind) {
+		return e.automaticIP(ctx, call, false)
+	}
 	if call.Kind == "ready" {
 		return e.ready(ctx, call)
 	}
@@ -352,6 +382,12 @@ func (e *Executor) Execute(ctx context.Context, call oc.Call) oc.Result {
 }
 func encode(value any) string { raw, _ := json.Marshal(value); return string(raw) }
 func (e *Executor) Reconcile(ctx context.Context, call oc.Call) oc.Result {
+	if call.Kind == "firewall" {
+		return e.firewall(ctx, call, true)
+	}
+	if isIPStep(call.Kind) {
+		return e.automaticIP(ctx, call, true)
+	}
 	if call.Kind == "ready" {
 		return e.ready(ctx, call)
 	}
@@ -571,6 +607,10 @@ func publicError(err error) error {
 			return &contract.Error{Code: op.Code, Message: "连接不可用或配置已变化，请检查连接并重新预览"}
 		}
 		return &contract.Error{Code: op.Code, Message: op.Message}
+	}
+	var address *ad.Error
+	if errors.As(err, &address) {
+		return &contract.Error{Code: address.Code, Message: address.Message}
 	}
 	var account *ac.Error
 	if errors.As(err, &account) {

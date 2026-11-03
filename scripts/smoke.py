@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory(prefix="aws-panel-smoke-", dir="/tmp") as direc
         migration_environment = environment | {"AWS_PANEL_DB_USER": "aws_panel_migrator", "AWS_PANEL_DB_PASSWORD": ""}
         subprocess.run([str(binary), "migrate", "up"], cwd=root, env=migration_environment, check=True)
         subprocess.run([str(binary), "migrate", "status"], cwd=root, env=environment, check=True)
-        subprocess.run(["go", "test", "-race", "-count=1", "./tests/integration", "./internal/auth/ratelimit"], cwd=root, env=environment, check=True)
+        subprocess.run(["go", "test", "-race", "-count=1", "-timeout", "20m", "./tests/integration", "./internal/auth/ratelimit"], cwd=root, env=environment, check=True)
         subprocess.run([str(binary), "vault", "init"], cwd=root, env=environment, check=True)
         bootstrap = subprocess.run([str(binary),"admin","init","--username","admin","--display-name","测试管理员","--password-stdin"],cwd=root,env=environment,input=ADMIN_PASSWORD+"\n",text=True,capture_output=True)
         assert bootstrap.returncode == 0 and ADMIN_PASSWORD not in bootstrap.stdout + bootstrap.stderr, "administrator bootstrap failed"
