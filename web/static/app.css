@@ -27,6 +27,14 @@
 .footer { border-top: 0; margin-top: 40px; }
 .htmx-indicator { display: none; }
 .htmx-request.htmx-indicator, .htmx-request .htmx-indicator { display: inline-block; }
+.app-nav { display: flex; gap: 22px; margin-left: 28px; }
+.app-nav a { color: #65748a; font-size: 14px; }
+.app-nav a[aria-current="page"] { color: #206bc4; font-weight: 600; }
+.login-container { max-width: 460px; margin-top: 40px; }
+.form-width { max-width: 680px; }
+.audit-details { max-width: 380px; white-space: pre-wrap; word-break: break-word; padding: 8px 0; }
+.resource-name { max-width: 240px; overflow-wrap: anywhere; }
+.resource-message { max-width: 300px; }
 @media (max-width: 767px) {
   .container-xl { padding-left: 20px; padding-right: 20px; }
   .app-header { min-height: 64px; }
@@ -34,4 +42,7 @@
   .page-title { font-size: 26px; }
   .welcome-card .card-body { padding: 24px; }
   .page-body { margin-top: 24px; }
+  .app-header .container-xl { padding-top: 12px; padding-bottom: 12px; }
+  .app-nav { order: 3; width: 100%; margin-left: 0; border-top: 1px solid #edf0f5; padding-top: 12px; gap: 16px; flex-wrap: wrap; }
+  .login-container { margin-top: 8px; }
 }

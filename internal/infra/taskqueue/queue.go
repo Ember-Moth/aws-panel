@@ -13,6 +13,7 @@ import (
 )
 
 const HeartbeatType = "platform:heartbeat"
+const OperationType = "operations:step"
 
 type envelope struct {
 	Version int               `json:"version"`

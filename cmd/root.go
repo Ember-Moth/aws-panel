@@ -30,6 +30,6 @@ func NewRoot() *cobra.Command {
 		SilenceUsage: true, SilenceErrors: true,
 	}
 	root.PersistentFlags().StringVar(&path, "config", "", "YAML configuration path (otherwise use defaults and environment)")
-	root.AddCommand(runCommand(&path), migrateCommand(&path), versionCommand(), healthcheckCommand())
+	root.AddCommand(runCommand(&path), migrateCommand(&path), adminCommand(&path), vaultCommand(&path), versionCommand(), healthcheckCommand())
 	return root
 }

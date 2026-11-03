@@ -15,6 +15,9 @@ func TestStrictConfiguration(t *testing.T) {
 		"worker:\n  concurrency: 12\n",
 		"log:\n  level: unsupported\n",
 		"http: {}\n---\nhttp: {}\n",
+		"auth:\n  public_url: http://panel.example.com\n",
+		"auth:\n  public_url: https://user:password@panel.example.com\n",
+		"http:\n  trusted_proxies: [not-an-ip]\n",
 	} {
 		t.Run(strings.Split(content, "\n")[0], func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "config.yaml")
@@ -59,10 +62,24 @@ func TestPasswordFile(t *testing.T) {
 }
 
 func TestDefaultsAndExample(t *testing.T) {
+	if Defaults().Cloud.WritesEnabled {
+		t.Fatal("cloud writes must default to disabled")
+	}
 	if err := Defaults().Validate(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Load("../../etc/aws-panel.example.yaml"); err != nil {
 		t.Fatal(err)
+	}
+}
+func TestCloudWriteSwitchIsExplicit(t *testing.T) {
+	t.Setenv("AWS_PANEL_CLOUD_WRITES_ENABLED", "true")
+	cfg, err := Load("")
+	if err != nil || !cfg.Cloud.WritesEnabled {
+		t.Fatal("explicit cloud write switch was ignored", err)
+	}
+	t.Setenv("AWS_PANEL_CLOUD_WRITES_ENABLED", "invalid")
+	if _, err := Load(""); err == nil {
+		t.Fatal("ambiguous cloud write switch accepted")
 	}
 }

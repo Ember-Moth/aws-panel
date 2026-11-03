@@ -9,12 +9,19 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
 import urllib.request
 
 root = Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(root/"tests"/"e2e"))
+from identity import ADMIN_PASSWORD, MEMBER_PASSWORD, UPDATED_PASSWORD, check_identity
+from accounts import check_accounts, FIXTURE_SECRETS
+from operations import check_operations, wait_job
+from inventory import check_inventory, check_regions
+from lightsail import check_lightsail, ROOT_PASSWORD_FIXTURE
 binary = root / "bin" / "aws-panel"
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 parser = argparse.ArgumentParser(description=__doc__)
@@ -55,6 +62,12 @@ with tempfile.TemporaryDirectory(prefix="aws-panel-smoke-", dir="/tmp") as direc
         "AWS_PANEL_REDIS_ADDRESS": f"127.0.0.1:{redis_port}",
         "AWS_PANEL_REDIS_PASSWORD": "", "AWS_PANEL_REDIS_PASSWORD_FILE": "",
         "AWS_PANEL_HTTP_ADDRESS": f"127.0.0.1:{http_port}",
+        "AWS_PANEL_PUBLIC_URL": f"http://127.0.0.1:{http_port}",
+        "AWS_PANEL_TRUSTED_PROXIES": "",
+        "AWS_PANEL_KEYRING_FILE": str(work / "keyring.json"),
+        "AWS_PANEL_DIAGNOSTICS": "true",
+        "AWS_PANEL_CLOUD_WRITES_ENABLED": "false",
+        "AWS_PANEL_TEST_REDIS_ADDRESS": f"127.0.0.1:{redis_port}",
         "AWS_PANEL_TEST_DB_PORT": str(pg_port),
         "AWS_PANEL_TEST_DB_NAME": "aws_panel_test", "AWS_PANEL_TEST_DB_PASSWORD": "smoke-runtime-only",
         "AWS_PANEL_TEST_MIGRATION_USER": "aws_panel_migrator", "AWS_PANEL_TEST_MIGRATION_PASSWORD": "",
@@ -77,7 +90,12 @@ with tempfile.TemporaryDirectory(prefix="aws-panel-smoke-", dir="/tmp") as direc
         migration_environment = environment | {"AWS_PANEL_DB_USER": "aws_panel_migrator", "AWS_PANEL_DB_PASSWORD": ""}
         subprocess.run([str(binary), "migrate", "up"], cwd=root, env=migration_environment, check=True)
         subprocess.run([str(binary), "migrate", "status"], cwd=root, env=environment, check=True)
-        subprocess.run(["go", "test", "-count=1", "./tests/integration"], cwd=root, env=environment, check=True)
+        subprocess.run(["go", "test", "-race", "-count=1", "./tests/integration", "./internal/auth/ratelimit"], cwd=root, env=environment, check=True)
+        subprocess.run([str(binary), "vault", "init"], cwd=root, env=environment, check=True)
+        bootstrap = subprocess.run([str(binary),"admin","init","--username","admin","--display-name","测试管理员","--password-stdin"],cwd=root,env=environment,input=ADMIN_PASSWORD+"\n",text=True,capture_output=True)
+        assert bootstrap.returncode == 0 and ADMIN_PASSWORD not in bootstrap.stdout + bootstrap.stderr, "administrator bootstrap failed"
+        repeated = subprocess.run([str(binary),"admin","init","--username","another","--password-stdin"],cwd=root,env=environment,input=ADMIN_PASSWORD+"\n",text=True,capture_output=True)
+        assert repeated.returncode != 0, "administrator bootstrap is repeatable"
         app_log = (work / "app.log").open("w")
         app = subprocess.Popen([str(binary), "run"], cwd=root, env=environment, stdout=app_log, stderr=subprocess.STDOUT)
         origin = f"http://127.0.0.1:{http_port}"
@@ -86,27 +104,64 @@ with tempfile.TemporaryDirectory(prefix="aws-panel-smoke-", dir="/tmp") as direc
             if app.poll() is not None:
                 raise RuntimeError("Application exited during startup: " + (work / "app.log").read_text())
             try:
-                _, raw = get(origin, "/api/v1/system")
-                status = json.loads(raw)["data"]
-                if status["worker_heartbeat"]:
+                if get(origin, "/health/ready")[0] == 200:
                     break
             except (OSError, urllib.error.HTTPError):
                 pass
             if time.monotonic() > deadline:
-                raise RuntimeError("Worker did not record its startup heartbeat")
+                raise RuntimeError("Application did not become ready")
             time.sleep(0.2)
+        admin = check_identity(origin)
+        check_accounts(admin)
+        subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(pg_port), "-U", "aws_panel_migrator", "-d", "aws_panel_test", "-v", "ON_ERROR_STOP=1", "-f", "tests/e2e/inventory-fixture.sql"], cwd=root, env=migration_environment, check=True, capture_output=True)
+        check_inventory(admin)
+        region_plan = subprocess.check_output(["psql", "-h", "127.0.0.1", "-p", str(pg_port), "-U", "aws_panel_migrator", "-d", "aws_panel_test", "-Atc", "SELECT id FROM plans WHERE operation='regions.enable' AND input_hash='browser-region-preview-only' LIMIT 1"], cwd=root, env=migration_environment, text=True).strip()
+        check_regions(admin, region_plan)
+        subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(pg_port), "-U", "aws_panel_migrator", "-d", "aws_panel_test", "-v", "ON_ERROR_STOP=1", "-f", "tests/e2e/lightsail-fixture.sql"], cwd=root, env=migration_environment, check=True, capture_output=True)
+        lightsail_plan = subprocess.check_output(["psql", "-h", "127.0.0.1", "-p", str(pg_port), "-U", "aws_panel_migrator", "-d", "aws_panel_test", "-Atc", "SELECT id FROM plans WHERE operation='lightsail.create' AND input_hash='browser-lightsail-preview-only' LIMIT 1"], cwd=root, env=migration_environment, text=True).strip()
+        check_lightsail(admin, lightsail_plan)
+        restart_job = check_operations(admin)
+        for operation in ("status", "rotate", "reencrypt"):
+            subprocess.run([str(binary), "vault", operation], cwd=root, env=environment, check=True)
+        status_code, _, raw = admin.request("/api/v1/system")
+        assert status_code == 200
+        status = json.loads(raw)["data"]
+        assert status["worker_heartbeat"], "Worker did not record its startup heartbeat"
         assert status["timezone"] == "Asia/Shanghai"
         assert status["server_time"].endswith("+08:00")
         assert get(origin, "/health/ready")[0] == 200
-        page = get(origin, "/")[1].decode()
+        page = admin.request("/")[2]
         assert 'hx-get="/partials/system-status"' in page and "<html" in page
-        partial = get(origin, "/partials/system-status")[1].decode()
+        partial = admin.request("/partials/system-status")[2]
         assert 'id="system-status"' in partial and "<html" not in partial
         assert "运行正常" in partial
         for asset in ("htmx.min.js", "tabler.min.css", "tabler.min.js"):
             assert get(origin, "/static/vendor/" + asset)[0] == 200
+        # Sessions must survive process restarts, while revoked sessions stay dead.
+        app.send_signal(signal.SIGTERM)
+        assert app.wait(timeout=30) == 0
+        app = subprocess.Popen([str(binary),"run"],cwd=root,env=environment,stdout=app_log,stderr=subprocess.STDOUT)
+        deadline = time.monotonic() + 20
+        while True:
+            try:
+                if get(origin,"/health/ready")[0] == 200:
+                    break
+            except OSError:
+                pass
+            if time.monotonic() > deadline:
+                raise RuntimeError("Application did not restart")
+            time.sleep(0.2)
+        assert admin.request("/api/v1/auth/session")[0] == 200, "persisted session lost on restart"
+        wait_job(admin, restart_job)
+        app_log.flush()
+        logs = (work/"app.log").read_text()
+        for secret in (ADMIN_PASSWORD,MEMBER_PASSWORD,UPDATED_PASSWORD,*FIXTURE_SECRETS,ROOT_PASSWORD_FIXTURE):
+            assert secret not in logs, "password appeared in application logs"
         if options.preview:
             print(f"Local preview: {origin} (temporary database; Ctrl-C cleans up)", flush=True)
+            print(f"Region preview fixture: {origin}/regions/plans/{region_plan} (cloud writes disabled)", flush=True)
+            print(f"Lightsail preview fixture: {origin}/lightsail/plans/{lightsail_plan} (cloud writes disabled)", flush=True)
+            print("Disposable login: admin; fixture password is defined in tests/e2e/identity.py",flush=True)
             try:
                 while True:
                     time.sleep(1)
@@ -114,7 +169,7 @@ with tempfile.TemporaryDirectory(prefix="aws-panel-smoke-", dir="/tmp") as direc
                 pass
         app.send_signal(signal.SIGTERM)
         assert app.wait(timeout=30) == 0, "application did not stop cleanly"
-        print("PASS: migration gate, PostgreSQL timezone, queue heartbeat, HTML/htmx, assets and graceful shutdown.")
+        print("PASS: identity, accounts, vault, durable tasks, outbox/lease recovery, SSE revocation, real Asynq delivery and restart persistence. AWS is simulated.")
     finally:
         if app and app.poll() is None:
             app.terminate()

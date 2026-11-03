@@ -16,9 +16,16 @@ import (
 	"github.com/herta-network/aws-panel/internal/config"
 	"github.com/herta-network/aws-panel/internal/infra/postgres"
 	"github.com/herta-network/aws-panel/internal/infra/taskqueue"
+	"github.com/herta-network/aws-panel/internal/module/accounts"
+	"github.com/herta-network/aws-panel/internal/module/inventory"
+	"github.com/herta-network/aws-panel/internal/module/lightsail"
+	"github.com/herta-network/aws-panel/internal/module/operations"
+	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 	"github.com/herta-network/aws-panel/internal/module/platform"
+	"github.com/herta-network/aws-panel/internal/module/regions"
 	"github.com/herta-network/aws-panel/internal/repository/kernel"
 	"github.com/herta-network/aws-panel/internal/transport/http/routes"
+	"github.com/herta-network/aws-panel/internal/transport/http/security"
 	httpserver "github.com/herta-network/aws-panel/internal/transport/http/server"
 	"github.com/herta-network/aws-panel/internal/transport/task"
 	paneltrace "github.com/herta-network/aws-panel/pkg/trace"
@@ -64,6 +71,30 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	if err := bootstrap.Load(bootCtx, platformService, runtime); err != nil {
 		return err
 	}
+	accountStore := accounts.NewRepository(kernel.Connection{DB: db}, platform.NewAuditAppender, operations.NewReferenceGuard)
+	catalog := accounts.NewCatalog(accountStore)
+	identityService := newIdentity(cfg, db, redisClient, catalog)
+	accountService := accounts.New(accounts.Deps{Store: accountStore, Access: identityService, KeyringFile: cfg.Secrets.KeyringFile})
+	if err := accountService.CheckVault(bootCtx); err != nil {
+		return err
+	}
+	defer accountService.Close()
+	client := asynq.NewClient(taskqueue.RedisOption(cfg.Redis))
+	defer client.Close()
+	operationStore := operations.NewRepository(kernel.Connection{DB: db}, platform.NewAuditAppender, accounts.NewBindingGuard)
+	inventoryStore := inventory.NewRepository(kernel.Connection{DB: db}, platform.NewAuditAppender, operations.NewExecutionGuard)
+	lightsailStore := lightsail.NewRepository(kernel.Connection{DB: db}, operations.NewExecutionGuard)
+	operationService, err := operations.New(operations.Deps{Store: operationStore, Access: identityService, Connections: jobConnections{accounts: accountService}, Publisher: task.Publisher{Client: client}, CloudWritesEnabled: cfg.Cloud.WritesEnabled, Executors: []oc.Executor{operations.NewDiagnostic(operationStore), inventory.NewExecutor(inventory.ExecutorDeps{Store: inventoryStore, Clients: accountService}), regions.NewExecutor(regions.ExecutorDeps{Clients: accountService}), lightsail.NewExecutor(lightsail.ExecutorDeps{Store: lightsailStore, Clients: accountService, LaunchSecrets: accountService})}})
+	if err != nil {
+		return err
+	}
+	inventoryService := inventory.New(inventory.Deps{Store: inventoryStore, Accounts: accountService, Access: identityService, Jobs: operationService, Observer: operations.NewObserver(operationStore)})
+	regionService := regions.New(regions.Deps{Accounts: accountService, Access: identityService, Jobs: operationService, WritesEnabled: cfg.Cloud.WritesEnabled})
+	lightsailService := lightsail.New(lightsail.Deps{Accounts: accountService, Access: identityService, Jobs: operationService, WritesEnabled: cfg.Cloud.WritesEnabled})
+	policy, err := security.New(cfg)
+	if err != nil {
+		return err
+	}
 	renderer, err := web.NewRenderer()
 	if err != nil {
 		return errors.New("cannot load embedded page templates")
@@ -71,13 +102,18 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	bootCancel()
 
 	ready := &lifecycle.Readiness{}
-	worker := task.New(cfg, platformService, logger)
+	worker := task.New(cfg, platformService, operationService, logger)
 	scheduled, err := scheduler.New(cfg, logger)
 	if err != nil {
 		return errors.New("cannot configure task scheduler")
 	}
 	httpService, err := httpserver.New(cfg.HTTP, routes.Dependencies{
-		Platform: platformService, Renderer: renderer,
+		Platform: platformService, Identity: identityService, Accounts: accountService, Policy: policy, Renderer: renderer,
+		Operations: operationService, Diagnostics: cfg.Worker.Diagnostics,
+		Inventory: inventoryService,
+		Regions:   regionService,
+		Lightsail: lightsailService,
+		Shutdown:  ctx.Done(),
 		Ready: func(ctx context.Context) bool {
 			if !ready.Ready() || !worker.Ready() {
 				return false
@@ -100,6 +136,10 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		return errors.New("cannot start task worker")
 	}
 	defer worker.Shutdown()
+	stopOperations := runOperations(ctx, operationService, logger)
+	defer stopOperations()
+	stopInventory := runInventory(ctx, inventoryService, logger)
+	defer stopInventory()
 	if err := scheduled.Start(); err != nil {
 		return errors.New("cannot start task scheduler")
 	}
@@ -111,8 +151,6 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		return err
 	}
 
-	client := asynq.NewClient(taskqueue.RedisOption(cfg.Redis))
-	defer client.Close()
 	heartbeat, err := taskqueue.NewTask(ctx, taskqueue.HeartbeatType, struct{}{})
 	if err != nil {
 		return err
@@ -140,6 +178,8 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	ready.Set(false)
 	logger.Info("stopping AWS Panel")
 	scheduled.Shutdown()
+	stopInventory()
+	stopOperations()
 	worker.StopPolling()
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), cfg.HTTP.ShutdownTimeout)
 	if stopErr := httpService.Shutdown(stopCtx); stopErr != nil {

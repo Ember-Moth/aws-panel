@@ -1,36 +1,4 @@
 {{define "dashboard"}}
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="AWS Panel 团队云资源管理工作台">
-  <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"selfRequestsOnly":true,"historyCacheSize":0,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"503","swap":true,"error":true},{"code":"[45]..","swap":false,"error":true}]}'>
-  <title>AWS Panel · 工作台</title>
-  <link rel="stylesheet" href="/static/vendor/tabler.min.css">
-  <link rel="stylesheet" href="/static/app.css">
-  <script src="/static/vendor/htmx.min.js" defer></script>
-  <script src="/static/vendor/tabler.min.js" defer></script>
-  <script src="/static/app.js" defer></script>
-</head>
-<body>
-  <div class="page">
-    <header class="navbar navbar-expand-md d-print-none app-header">
-      <div class="container-xl">
-        <a href="/" class="navbar-brand brand" aria-label="AWS Panel 首页">
-          <span class="brand-mark" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 20 10a4 4 0 0 1-1 8Z"/><path d="m9 13 3 3 3-3"/></svg>
-          </span>
-          AWS Panel
-        </a>
-        <div class="ms-auto d-flex align-items-center gap-3 text-secondary header-caption">
-          <span class="d-none d-sm-inline">团队工作区</span>
-          <span class="header-separator d-none d-sm-inline"></span>
-          <span>北京时间</span>
-        </div>
-      </div>
-    </header>
-    <main class="page-wrapper">
       <div class="page-header d-print-none">
         <div class="container-xl">
           <div class="row align-items-center g-3">
@@ -61,14 +29,11 @@
                   <span class="workspace-mark mb-4" aria-hidden="true">
                     <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
                   </span>
-                  <div><span class="badge bg-blue-lt">项目初始化</span></div>
-                  <h2 class="mt-3 mb-3">工作区已建立</h2>
-                  <p class="text-secondary welcome-description">应用基础已就位。账号接入、资源管理和任务操作将在后续阶段逐步加入。</p>
-                  <div class="empty-workspace">
-                    <span class="empty-lines" aria-hidden="true"><i></i><i></i><i></i></span>
-                    <span class="text-secondary">尚未接入 AWS 账号</span>
-                  </div>
-                  <p class="small text-secondary mb-0">当前页面不会执行云资源操作。</p>
+                  <div><span class="badge bg-blue-lt">团队工作区</span></div>
+                  <h2 class="mt-3 mb-3">查看团队的 AWS 资源</h2>
+                  <p class="text-secondary welcome-description">按账号和区域查看 Lightsail 实例与区域状态，通过任务同步最新数据，并跟踪每个范围的刷新结果。</p>
+                  <div class="btn-list mb-4"><a class="btn btn-primary" href="/resources">查看资源</a><a class="btn" href="/accounts">管理 AWS 连接</a></div>
+                  <p class="small text-secondary mb-0">首次使用前，请配置并验证访问连接。区域启用和 Lightsail 创建入口位于资源工作台，云端写入需由管理员显式启用。</p>
                 </div>
               </section>
             </div>
@@ -78,11 +43,4 @@
           </div>
         </div>
       </div>
-      <footer class="footer footer-transparent d-print-none">
-        <div class="container-xl text-center text-secondary small">AWS Panel · 团队云资源管理</div>
-      </footer>
-    </main>
-  </div>
-</body>
-</html>
 {{end}}

@@ -1,0 +1,35 @@
+{{define "connection-edit"}}
+<div class="page-header"><div class="container-xl"><a class="text-secondary small" href="/accounts/{{.Account.ID}}">返回 {{.Account.Name}}</a><h1 class="page-title mt-2">{{if .New}}添加访问连接{{else}}编辑访问连接{{end}}</h1><p class="text-secondary mt-2">{{.Account.Partition}} · {{.Account.AWSAccountID}}</p></div></div>
+<div class="page-body"><div class="container-xl"><div class="form-width">{{template "connection-form" .}}</div></div></div>
+{{end}}
+{{define "connection-form"}}
+<section class="card" id="connection-form"><div class="card-body p-4">
+  {{if .Error}}<div class="alert alert-danger">{{.Error}}</div>{{end}}
+  {{if not .VaultReady}}<div class="alert alert-warning">凭据存储不可用，请检查主密钥配置。</div>{{end}}
+  <form class="credential-form" data-new="{{.New}}" method="post" action="{{.Action}}" hx-post="{{.Action}}" hx-target="#connection-form" hx-swap="outerHTML">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Connection.Version}}">
+    <div class="mb-3"><label class="form-label" for="connection-name">名称</label><input id="connection-name" class="form-control" name="name" value="{{.Connection.Name}}" maxlength="80" required></div>
+    <div class="mb-3"><label class="form-label" for="connection-region">身份验证区域</label><input id="connection-region" class="form-control" name="region" value="{{.Connection.Region}}" required><div class="form-hint">区域应属于当前账号的 AWS 分区。</div></div>
+    <div class="mb-3"><label class="form-label" for="auth-type">认证方式</label><select id="auth-type" class="form-select" name="auth_type"><option value="access_key" {{if eq .Connection.AuthType "access_key"}}selected{{end}}>Access Key</option><option value="temporary" {{if eq .Connection.AuthType "temporary"}}selected{{end}}>临时凭据</option><option value="assume_role" {{if eq .Connection.AuthType "assume_role"}}selected{{end}}>AssumeRole</option></select></div>
+    {{if not .New}}<label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="replace_credentials" value="true"><span class="form-check-label">替换保存的凭据或 External ID</span></label><p class="small text-secondary">留空保留现有秘密；更换认证方式时需要重新提供完整凭据。{{if .Connection.AccessKeyMasked}}当前密钥：{{.Connection.AccessKeyMasked}}{{end}}</p>{{end}}
+    <div data-auth-section="access_key temporary">
+      <div class="mb-3"><label class="form-label" for="access-key-id">Access Key ID</label><input id="access-key-id" class="form-control" name="access_key_id" autocomplete="off" maxlength="128" data-credential-required></div>
+      <div class="mb-3"><label class="form-label" for="secret-access-key">Secret Access Key</label><input id="secret-access-key" class="form-control" name="secret_access_key" type="password" autocomplete="new-password" maxlength="128" data-credential-required></div>
+    </div>
+    <div data-auth-section="temporary">
+      <div class="mb-3"><label class="form-label" for="session-token">Session Token</label><textarea id="session-token" class="form-control" name="session_token" rows="3" autocomplete="off" data-credential-required></textarea></div>
+      <div class="mb-3"><label class="form-label" for="expires-at">到期时间（北京时间）</label><input id="expires-at" class="form-control" name="expires_at" type="datetime-local" data-credential-required></div>
+    </div>
+    <div data-auth-section="assume_role">
+      <div class="mb-3"><label class="form-label" for="source-connection">来源连接</label><select id="source-connection" class="form-select" name="source_connection_id" required><option value="">请选择已验证的来源连接</option>{{range .Sources}}<option value="{{.ID}}" {{if eq (textptr $.Connection.SourceConnectionID) .ID}}selected{{end}}>{{.Name}} · {{connectionStatus .Status}}</option>{{end}}</select></div>
+      <div class="mb-3"><label class="form-label" for="role-arn">目标 Role ARN</label><input id="role-arn" class="form-control" name="role_arn" value="{{.Connection.RoleARN}}" required></div>
+      <div class="mb-3"><label class="form-label" for="external-id">External ID（可选）</label><input id="external-id" class="form-control" name="external_id" type="password" autocomplete="new-password"><div class="form-hint">勾选“替换”并留空可清除现有 External ID。</div></div>
+    </div>
+    <hr><div class="mb-3"><label class="form-label" for="route-mode">网络出口</label><select id="route-mode" class="form-select" name="route_mode"><option value="direct" {{if eq .Connection.RouteMode "direct"}}selected{{end}}>直连</option><option value="socks5" {{if eq .Connection.RouteMode "socks5"}}selected{{end}}>指定 SOCKS5 代理</option></select></div>
+    <div class="mb-3" data-proxy-section><label class="form-label" for="proxy-id">代理</label><select id="proxy-id" class="form-select" name="proxy_id"><option value="">请选择代理</option>{{range .Proxies}}<option value="{{.ID}}" {{if eq (textptr $.Connection.ProxyID) .ID}}selected{{end}}>{{.Name}} · {{.Host}}:{{.Port}}{{if not .Active}}（已停用）{{end}}</option>{{end}}</select><div class="form-hint">代理故障不会回退直连。</div></div>
+    <label class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox" name="active" value="true" {{if .Connection.Active}}checked{{end}}><span class="form-check-label">启用连接</span></label>
+    <button class="btn btn-primary" type="submit">保存连接</button>
+  </form>
+  {{if not .New}}<hr><form method="post" action="/connections/{{.Connection.ID}}/delete" hx-post="/connections/{{.Connection.ID}}/delete" hx-confirm="删除此连接及存储的凭据？这不会删除 AWS 资源。"><input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Connection.Version}}"><button class="btn btn-outline-danger btn-sm" type="submit">删除连接</button></form>{{end}}
+</div></section>
+{{end}}

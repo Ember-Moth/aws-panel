@@ -1,0 +1,40 @@
+{{define "layout"}}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{.CSRF}}">
+  <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"selfRequestsOnly":true,"historyCacheSize":0,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"400|401|403|409|422|429|503","swap":true,"error":true},{"code":"[45]..","swap":false,"error":true}]}'>
+  <title>AWS Panel · {{.Title}}</title>
+  <link rel="stylesheet" href="/static/vendor/tabler.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/vendor/htmx.min.js" defer></script>
+  <script src="/static/vendor/tabler.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body><div class="page">
+  <header class="navbar navbar-expand-md d-print-none app-header"><div class="container-xl flex-wrap gap-3">
+    <a href="/" class="navbar-brand brand" aria-label="AWS Panel 首页"><span class="brand-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18a5 5 0 1 1 1-9.9A6 6 0 0 1 20 10a4 4 0 0 1-1 8Z"/><path d="m9 13 3 3 3-3"/></svg></span>AWS Panel</a>
+    {{if .User}}
+    <nav class="app-nav" aria-label="主导航">
+      <a href="/" {{if eq .Active "dashboard"}}aria-current="page"{{end}}>工作台</a>
+      <a href="/accounts" {{if eq .Active "accounts"}}aria-current="page"{{end}}>AWS 账号</a>
+      <a href="/resources" {{if eq .Active "resources"}}aria-current="page"{{end}}>资源</a>
+      <a href="/jobs" {{if eq .Active "jobs"}}aria-current="page"{{end}}>任务</a>
+      {{if eq .User.Role "admin"}}<a href="/proxies" {{if eq .Active "proxies"}}aria-current="page"{{end}}>代理</a>{{end}}
+      {{if eq .User.Role "admin"}}<a href="/members" {{if eq .Active "members"}}aria-current="page"{{end}}>成员</a><a href="/audit" {{if eq .Active "audit"}}aria-current="page"{{end}}>审计</a>{{end}}
+    </nav>
+    <div class="ms-auto d-flex align-items-center gap-3 header-caption">
+      <a class="text-secondary" href="/profile">{{.User.DisplayName}}</a>
+      <form method="post" action="/logout" class="m-0"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="btn btn-sm btn-outline-secondary" type="submit">退出</button></form>
+    </div>
+    {{else}}<span class="ms-auto text-secondary small">团队工作区</span>{{end}}
+  </div></header>
+  <main class="page-wrapper">
+    {{.Content}}
+    <footer class="footer footer-transparent d-print-none"><div class="container-xl text-center text-secondary small">AWS Panel · 北京时间 Asia/Shanghai</div></footer>
+  </main>
+</div></body>
+</html>
+{{end}}

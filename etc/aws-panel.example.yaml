@@ -1,8 +1,17 @@
 # Copy to etc/aws-panel.yaml. Private config and password files are gitignored.
 # Default listeners are loopback-only; credentials can be provided with *_FILE.
+secrets:
+  keyring_file: ""
 http:
   address: 127.0.0.1:8080
   shutdown_timeout: 10s
+  trusted_proxies: []
+auth:
+  public_url: http://127.0.0.1:8080
+  session_ttl: 12h
+  login_window: 15m
+  login_ip_limit: 60
+  login_account_limit: 10
 database:
   host: 127.0.0.1
   port: 5432
@@ -22,5 +31,8 @@ worker:
   concurrency: 4
   shutdown_timeout: 15s
   heartbeat_interval: 1m
+  diagnostics: false
 log:
   level: info
+cloud:
+  writes_enabled: false

@@ -92,9 +92,13 @@ func NewConfig(region string, provider awssdk.CredentialsProvider, client *http.
 	if region == "" || provider == nil || client == nil {
 		return awssdk.Config{}, errors.New("AWS region, explicit credentials and HTTP client are required")
 	}
+	cached := provider
+	if _, ok := provider.(*awssdk.CredentialsCache); !ok {
+		cached = awssdk.NewCredentialsCache(provider)
+	}
 	return awssdk.Config{
 		Region:      region,
-		Credentials: awssdk.NewCredentialsCache(provider),
+		Credentials: cached,
 		HTTPClient:  client,
 		Retryer: func() awssdk.Retryer {
 			return retry.NewStandard(func(options *retry.StandardOptions) { options.MaxAttempts = 3 })

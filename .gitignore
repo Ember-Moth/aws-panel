@@ -2,6 +2,7 @@
 /build/
 /etc/aws-panel.yaml
 /deploy/.env
+/deploy/*.env
 /.env
 /.local/
 *.log

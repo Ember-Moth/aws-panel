@@ -31,3 +31,21 @@ func TestTemplatesEscapeDataAndRenderPartial(t *testing.T) {
 		t.Fatal("timezone missing")
 	}
 }
+
+func TestLayoutEscapesIdentityAndCSRFFields(t *testing.T) {
+	renderer, err := NewRenderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	attack := `"><script>alert(1)</script>`
+	body, err := renderer.Page("dashboard", Layout{Title: attack, CSRF: attack, User: &UserView{DisplayName: attack, Role: "viewer"}}, SystemView{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), "<script>alert(1)</script>") {
+		t.Fatal("layout rendered unescaped identity data")
+	}
+	if !strings.Contains(string(body), "&lt;script&gt;") {
+		t.Fatal("layout identity data absent")
+	}
+}

@@ -57,3 +57,24 @@ func (s *Service) RecordHeartbeat(ctx context.Context) error {
 	defer cancel()
 	return s.deps.Store.TouchHeartbeat(ctx, "worker", clock.Now())
 }
+
+func (s *Service) ListAudit(ctx context.Context, before int64) (*contract.AuditList, error) {
+	if before < 0 {
+		before = 0
+	}
+	rows, err := s.deps.Store.ListAudit(ctx, before, 21)
+	if err != nil {
+		return nil, err
+	}
+	result := &contract.AuditList{Items: make([]contract.AuditEvent, 0, 20)}
+	if len(rows) > 20 {
+		result.NextBefore = rows[19].ID
+		rows = rows[:20]
+	}
+	for _, row := range rows {
+		result.Items = append(result.Items, contract.AuditEvent{ID: row.ID, Actor: row.ActorName, Action: row.Action,
+			TargetType: row.TargetType, TargetID: row.TargetID, Outcome: row.Outcome, RequestID: row.RequestID,
+			ClientIP: row.ClientIP, Metadata: row.Metadata, OccurredAt: clock.In(row.OccurredAt)})
+	}
+	return result, nil
+}

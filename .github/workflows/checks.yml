@@ -15,12 +15,19 @@ jobs:
         image: postgres:17.11-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
         env:
           POSTGRES_DB: aws_panel_test
-          POSTGRES_USER: aws_panel
-          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_USER: aws_panel_migrator
+          POSTGRES_PASSWORD: test-only-migration-password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U aws_panel -d aws_panel_test"
+          --health-cmd "pg_isready -U aws_panel_migrator -d aws_panel_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8.10.3-alpine@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
@@ -28,15 +35,38 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Initialize runtime database role
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          POSTGRES_USER: aws_panel_migrator
+          POSTGRES_DB: aws_panel_test
+          PGPASSWORD: test-only-migration-password
+          AWS_PANEL_DB_PASSWORD: test-only-runtime-password
+        run: sh deploy/postgres-init.sh
       - name: Check
         env:
           AWS_PANEL_TEST_DB_PORT: "5432"
-          AWS_PANEL_TEST_DB_PASSWORD: test-only-password
+          AWS_PANEL_TEST_DB_PASSWORD: test-only-runtime-password
+          AWS_PANEL_TEST_MIGRATION_USER: aws_panel_migrator
+          AWS_PANEL_TEST_MIGRATION_PASSWORD: test-only-migration-password
+          AWS_PANEL_TEST_REDIS_ADDRESS: 127.0.0.1:6379
         run: make check
       - name: Race tests
         env:
           AWS_PANEL_TEST_DB_PORT: "5432"
-          AWS_PANEL_TEST_DB_PASSWORD: test-only-password
+          AWS_PANEL_TEST_DB_PASSWORD: test-only-runtime-password
+          AWS_PANEL_TEST_MIGRATION_USER: aws_panel_migrator
+          AWS_PANEL_TEST_MIGRATION_PASSWORD: test-only-migration-password
+          AWS_PANEL_TEST_REDIS_ADDRESS: 127.0.0.1:6379
         run: make test-race
       - name: Build
         run: make build
+
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Container initialization and recovery acceptance
+        run: python3 scripts/compose-smoke.py --report .local/compose-acceptance.json

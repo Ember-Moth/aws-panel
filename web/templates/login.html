@@ -1,0 +1,15 @@
+{{define "login"}}<div class="container-tight py-5 login-container">{{template "login-form" .}}</div>{{end}}
+{{define "login-form"}}
+<section class="card" id="login-card"><div class="card-body p-4">
+  <div class="page-pretitle mb-2">TEAM ACCESS</div><h1 class="h2 mb-2">登录工作区</h1>
+  <p class="text-secondary mb-4">使用团队成员账号登录 AWS Panel。</p>
+  {{if .Notice}}<div class="alert alert-success" role="status">{{.Notice}}</div>{{end}}
+  {{if .Error}}<div class="alert alert-danger" role="alert">{{.Error}}</div>{{end}}
+  <form method="post" action="/login" hx-post="/login" hx-target="#login-card" hx-swap="outerHTML" hx-disabled-elt="find button">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <div class="mb-3"><label class="form-label" for="login-username">用户名</label><input id="login-username" class="form-control" name="username" value="{{.Username}}" autocomplete="username" maxlength="64" required autofocus></div>
+    <div class="mb-4"><label class="form-label" for="login-password">密码</label><input id="login-password" class="form-control" name="password" type="password" autocomplete="current-password" maxlength="128" required></div>
+    <button class="btn btn-primary w-100" type="submit">登录</button>
+  </form>
+</div></section>
+{{end}}

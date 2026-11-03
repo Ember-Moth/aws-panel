@@ -18,8 +18,10 @@ type SystemResponse struct {
 // @Summary Get system status
 // @Tags system
 // @Produce json
+// @Security SessionCookie
 // @Success 200 {object} SystemResponse
 // @Failure 503 {object} httpx.Envelope
+// @Failure 401,403 {object} httpx.Envelope
 // @Router /system [get]
 func SystemStatus(service platform.Service) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {

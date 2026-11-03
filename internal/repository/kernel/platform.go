@@ -12,4 +12,5 @@ type PlatformStore interface {
 	Runtime(context.Context) (entity.Runtime, error)
 	TouchHeartbeat(context.Context, string, time.Time) error
 	Heartbeat(context.Context, string) (*time.Time, error)
+	ListAudit(context.Context, int64, int) ([]AuditRecord, error)
 }

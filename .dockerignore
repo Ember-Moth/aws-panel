@@ -4,5 +4,6 @@ bin
 build
 etc/aws-panel.yaml
 deploy/.env
+deploy/*.env
 .env
 *.log

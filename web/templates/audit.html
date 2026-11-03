@@ -1,0 +1,13 @@
+{{define "audit"}}
+<div class="page-header"><div class="container-xl"><div class="page-pretitle">ACTIVITY</div><h1 class="page-title">审计记录</h1><p class="text-secondary mt-2">查看成员登录和管理操作记录，时间统一为北京时间。</p></div></div>
+<div class="page-body"><div class="container-xl"><div class="card">
+  <div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>时间</th><th>操作者</th><th>操作</th><th>目标</th><th>结果</th><th>来源 IP</th></tr></thead><tbody>
+    {{range .Items}}<tr>
+      <td class="small text-nowrap">{{beijing .OccurredAt}}</td><td>{{if .Actor}}{{.Actor}}{{else}}—{{end}}</td>
+      <td><span class="small text-nowrap">{{actionLabel .Action}}</span><details class="small text-secondary mt-1"><summary>查看详情</summary><div class="text-break">{{.Action}}</div><div class="audit-details">{{.Metadata}}</div>{{if .RequestID}}<div class="text-break">请求：{{.RequestID}}</div>{{end}}</details></td>
+      <td class="small">{{if .TargetID}}{{if eq .TargetType "member"}}成员 #{{.TargetID}}{{else if eq .TargetType "job"}}<a href="/jobs/{{.TargetID}}">任务 {{.TargetID}}</a>{{else}}{{.TargetType}} {{.TargetID}}{{end}}{{else}}—{{end}}</td><td>{{if eq .Outcome "success"}}<span class="badge bg-green-lt">成功</span>{{else}}<span class="badge bg-red-lt">失败</span>{{end}}</td><td class="small">{{if .ClientIP}}{{.ClientIP}}{{else}}本地{{end}}</td>
+    </tr>{{else}}<tr><td colspan="6" class="text-center text-secondary py-5">暂无审计记录</td></tr>{{end}}
+  </tbody></table></div>
+  <div class="card-footer btn-list"><a class="btn btn-sm" href="/audit">最新记录</a>{{if .NextBefore}}<a class="btn btn-sm" href="/audit?before={{.NextBefore}}">更早记录</a>{{end}}</div>
+</div></div></div>
+{{end}}

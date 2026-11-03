@@ -1,18 +1,25 @@
 name: aws-panel
 
 x-application: &application
-  image: aws-panel:local
+  image: ${AWS_PANEL_IMAGE:-aws-panel:local}
   build:
     context: ..
     dockerfile: deploy/Dockerfile
   environment: &application-environment
     TZ: Asia/Shanghai
     AWS_PANEL_HTTP_ADDRESS: 0.0.0.0:8080
+    AWS_PANEL_PUBLIC_URL: ${AWS_PANEL_PUBLIC_URL:-http://127.0.0.1:8080}
+    AWS_PANEL_TRUSTED_PROXIES: ${AWS_PANEL_TRUSTED_PROXIES:-}
     AWS_PANEL_DB_HOST: postgres
     AWS_PANEL_DB_NAME: aws_panel
     AWS_PANEL_DB_USER: aws_panel
     AWS_PANEL_DB_PASSWORD: ${AWS_PANEL_DB_PASSWORD:?Set AWS_PANEL_DB_PASSWORD in deploy/.env}
     AWS_PANEL_REDIS_ADDRESS: redis:6379
+    AWS_PANEL_KEYRING_FILE: /var/lib/aws-panel/keys/keyring.json
+    AWS_PANEL_CLOUD_WRITES_ENABLED: ${AWS_PANEL_CLOUD_WRITES_ENABLED:-false}
+    AWS_PANEL_DIAGNOSTICS: ${AWS_PANEL_DIAGNOSTICS:-false}
+  volumes:
+    - vault-keys:/var/lib/aws-panel/keys:ro
   depends_on:
     postgres:
       condition: service_healthy
@@ -24,7 +31,7 @@ services:
     <<: *application
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${AWS_PANEL_HTTP_PORT:-8080}:8080"
     stop_grace_period: 40s
     healthcheck:
       test: ["CMD", "/usr/local/bin/aws-panel", "healthcheck"]
@@ -41,6 +48,13 @@ services:
       <<: *application-environment
       AWS_PANEL_DB_USER: aws_panel_migrator
       AWS_PANEL_DB_PASSWORD: ${AWS_PANEL_MIGRATION_DB_PASSWORD:?Set AWS_PANEL_MIGRATION_DB_PASSWORD in deploy/.env}
+
+  vault:
+    <<: *application
+    profiles: ["tools"]
+    command: ["vault", "status"]
+    volumes:
+      - vault-keys:/var/lib/aws-panel/keys
 
   postgres:
     image: postgres:17.11-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
@@ -72,5 +86,6 @@ services:
       retries: 10
 
 volumes:
+  vault-keys:
   postgres-data:
   redis-data:

@@ -1,0 +1,35 @@
+{{define "members"}}
+<div class="page-header"><div class="container-xl"><div class="row align-items-center g-3">
+  <div class="col"><div class="page-pretitle">TEAM</div><h1 class="page-title">成员管理</h1><p class="text-secondary mt-2 mb-0">管理团队成员、角色和访问状态。</p></div>
+  <div class="col-auto"><a href="/members/new" class="btn btn-primary">新增成员</a></div>
+</div></div></div>
+<div class="page-body"><div class="container-xl"><div class="card">
+  <div class="card-header"><h2 class="card-title">团队成员</h2><span class="text-secondary ms-auto">共 {{.List.Total}} 人</span></div>
+  <div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>成员</th><th>角色</th><th>状态</th><th>最近更新</th><th></th></tr></thead><tbody>
+    {{range .List.Items}}<tr>
+      <td class="text-nowrap"><div class="fw-medium">{{.DisplayName}}</div><div class="small text-secondary">{{.Username}}</div></td>
+      <td class="text-nowrap">{{roleLabel .Role}}</td><td>{{if .Active}}<span class="badge bg-green-lt">可用</span>{{else}}<span class="badge bg-secondary-lt">已禁用</span>{{end}}</td>
+      <td class="text-secondary small">{{beijing .UpdatedAt}}</td><td class="text-end"><a class="btn btn-sm" href="/members/{{.ID}}/edit">编辑</a></td>
+    </tr>{{end}}
+  </tbody></table></div>
+  <div class="card-footer d-flex justify-content-between align-items-center"><span class="text-secondary small">第 {{.List.Page}} 页</span><div class="btn-list">{{if .Previous}}<a class="btn btn-sm" href="/members?page={{.Previous}}">上一页</a>{{end}}{{if .Next}}<a class="btn btn-sm" href="/members?page={{.Next}}">下一页</a>{{end}}</div></div>
+</div></div></div>
+{{end}}
+{{define "member-edit"}}
+<div class="page-header"><div class="container-xl"><a class="text-secondary small" href="/members">返回成员列表</a><h1 class="page-title mt-2">{{if .New}}新增成员{{else}}编辑成员{{end}}</h1></div></div>
+<div class="page-body"><div class="container-xl"><div class="form-width">{{template "member-form" .}}</div></div></div>
+{{end}}
+{{define "member-form"}}
+<section class="card" id="member-form"><div class="card-body p-4">
+  {{if .Error}}<div class="alert alert-danger" role="alert">{{.Error}}</div>{{end}}
+  <form method="post" action="{{.Action}}" hx-post="{{.Action}}" hx-target="#member-form" hx-swap="outerHTML" hx-disabled-elt="find button">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Member.Version}}">
+    <div class="mb-3"><label class="form-label" for="member-username">用户名</label><input id="member-username" class="form-control" name="username" value="{{.Member.Username}}" autocomplete="off" maxlength="64" required {{if not .New}}readonly{{end}}><div class="form-hint">3 至 64 位字母、数字、点、下划线或短横线，创建后不可修改。</div></div>
+    <div class="mb-3"><label class="form-label" for="member-name">显示名称</label><input id="member-name" class="form-control" name="display_name" value="{{.Member.DisplayName}}" maxlength="80" required></div>
+    {{if .New}}<div class="mb-3"><label class="form-label" for="member-password">初始密码</label><input id="member-password" class="form-control" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="128" required><div class="form-hint">15 至 128 个字符。</div></div>{{end}}
+    <div class="mb-3"><label class="form-label" for="member-role">角色</label><select id="member-role" class="form-select" name="role"><option value="viewer" {{if eq .Member.Role "viewer"}}selected{{end}}>只读成员</option><option value="operator" {{if eq .Member.Role "operator"}}selected{{end}}>操作员</option><option value="admin" {{if eq .Member.Role "admin"}}selected{{end}}>管理员</option></select><div class="form-hint">管理员可管理成员和连接。操作员与只读成员的资源权限随业务模块开放。</div></div>
+    {{if not .New}}<label class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="active" value="true" {{if .Member.Active}}checked{{end}}><span class="form-check-label">允许访问工作区</span></label><p class="small text-secondary">禁用成员或调整角色会注销该成员的所有会话。</p>{{end}}
+    <div class="btn-list mt-4"><button class="btn btn-primary" type="submit">{{if .New}}创建成员{{else}}保存修改{{end}}</button><a class="btn" href="/members">取消</a></div>
+  </form>
+</div></section>
+{{end}}

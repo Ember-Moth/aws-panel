@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"strconv"
@@ -24,11 +25,29 @@ type Config struct {
 	Redis    Redis    `yaml:"redis"`
 	Worker   Worker   `yaml:"worker"`
 	Log      Log      `yaml:"log"`
+	Auth     Auth     `yaml:"auth"`
+	Secrets  Secrets  `yaml:"secrets"`
+	Cloud    Cloud    `yaml:"cloud"`
+}
+type Cloud struct {
+	WritesEnabled bool `yaml:"writes_enabled"`
+}
+type Secrets struct {
+	KeyringFile string `yaml:"keyring_file"`
 }
 
 type HTTP struct {
 	Address         string        `yaml:"address"`
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout"`
+	TrustedProxies  []string      `yaml:"trusted_proxies"`
+}
+
+type Auth struct {
+	PublicURL         string        `yaml:"public_url"`
+	SessionTTL        time.Duration `yaml:"session_ttl"`
+	LoginWindow       time.Duration `yaml:"login_window"`
+	LoginIPLimit      int           `yaml:"login_ip_limit"`
+	LoginAccountLimit int           `yaml:"login_account_limit"`
 }
 
 type Database struct {
@@ -54,6 +73,7 @@ type Worker struct {
 	Concurrency       int           `yaml:"concurrency"`
 	ShutdownTimeout   time.Duration `yaml:"shutdown_timeout"`
 	HeartbeatInterval time.Duration `yaml:"heartbeat_interval"`
+	Diagnostics       bool          `yaml:"diagnostics"`
 }
 
 type Log struct {
@@ -67,6 +87,7 @@ func Defaults() Config {
 		Redis:    Redis{Address: "127.0.0.1:6379"},
 		Worker:   Worker{Concurrency: 4, ShutdownTimeout: 15 * time.Second, HeartbeatInterval: time.Minute},
 		Log:      Log{Level: "info"},
+		Auth:     Auth{PublicURL: "http://127.0.0.1:8080", SessionTTL: 12 * time.Hour, LoginWindow: 15 * time.Minute, LoginIPLimit: 60, LoginAccountLimit: 10},
 	}
 }
 
@@ -94,6 +115,30 @@ func Load(path string) (Config, error) {
 		}
 	}
 	override("AWS_PANEL_HTTP_ADDRESS", &cfg.HTTP.Address)
+	override("AWS_PANEL_PUBLIC_URL", &cfg.Auth.PublicURL)
+	override("AWS_PANEL_KEYRING_FILE", &cfg.Secrets.KeyringFile)
+	if value, ok := os.LookupEnv("AWS_PANEL_CLOUD_WRITES_ENABLED"); ok {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, errors.New("AWS_PANEL_CLOUD_WRITES_ENABLED must be a boolean")
+		}
+		cfg.Cloud.WritesEnabled = enabled
+	}
+	if value, ok := os.LookupEnv("AWS_PANEL_DIAGNOSTICS"); ok {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, errors.New("AWS_PANEL_DIAGNOSTICS must be a boolean")
+		}
+		cfg.Worker.Diagnostics = enabled
+	}
+	if value, ok := os.LookupEnv("AWS_PANEL_TRUSTED_PROXIES"); ok {
+		cfg.HTTP.TrustedProxies = nil
+		if strings.TrimSpace(value) != "" {
+			for _, part := range strings.Split(value, ",") {
+				cfg.HTTP.TrustedProxies = append(cfg.HTTP.TrustedProxies, strings.TrimSpace(part))
+			}
+		}
+	}
 	override("AWS_PANEL_DB_HOST", &cfg.Database.Host)
 	override("AWS_PANEL_DB_NAME", &cfg.Database.Name)
 	override("AWS_PANEL_DB_USER", &cfg.Database.User)
@@ -143,6 +188,28 @@ func readPassword(value, path string) (string, error) {
 }
 
 func (c Config) Validate() error {
+	origin, err := url.Parse(c.Auth.PublicURL)
+	if err != nil || origin.Host == "" || origin.User != nil || origin.RawQuery != "" || origin.Fragment != "" || (origin.Path != "" && origin.Path != "/") {
+		return errors.New("auth.public_url must be an HTTP(S) origin without credentials, path or query")
+	}
+	if origin.Scheme != "https" {
+		ip, parseErr := netip.ParseAddr(origin.Hostname())
+		if origin.Scheme != "http" || (origin.Hostname() != "localhost" && (parseErr != nil || !ip.IsLoopback())) {
+			return errors.New("auth.public_url requires HTTPS; HTTP is only permitted on loopback hosts")
+		}
+	}
+	if c.Auth.SessionTTL < 5*time.Minute || c.Auth.SessionTTL > 7*24*time.Hour ||
+		c.Auth.LoginWindow < time.Minute || c.Auth.LoginWindow > 24*time.Hour ||
+		c.Auth.LoginIPLimit < 1 || c.Auth.LoginAccountLimit < 1 {
+		return errors.New("invalid authentication limits or session lifetime")
+	}
+	for _, value := range c.HTTP.TrustedProxies {
+		if _, err := netip.ParsePrefix(value); err != nil {
+			if _, err := netip.ParseAddr(value); err != nil {
+				return errors.New("http.trusted_proxies must contain IP addresses or CIDRs")
+			}
+		}
+	}
 	if _, _, err := net.SplitHostPort(c.HTTP.Address); err != nil {
 		return errors.New("http.address must contain host and port")
 	}

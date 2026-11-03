@@ -16,7 +16,7 @@ import (
 //go:embed *.sql
 var files embed.FS
 
-const Version uint = 1
+const Version uint = 7
 
 func Up(cfg config.Database) error {
 	source, err := iofs.New(files, ".")

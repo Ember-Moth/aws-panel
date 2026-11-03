@@ -2,15 +2,22 @@ package task
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log/slog"
 	"sync/atomic"
 
 	"github.com/herta-network/aws-panel/internal/config"
 	"github.com/herta-network/aws-panel/internal/infra/taskqueue"
+	"github.com/herta-network/aws-panel/internal/module/operations/contract"
 	"github.com/hibiken/asynq"
 )
 
 type HeartbeatRecorder interface{ RecordHeartbeat(context.Context) error }
+type OperationRunner interface {
+	Run(context.Context, contract.Message) error
+}
 
 type Service struct {
 	server  *asynq.Server
@@ -18,7 +25,7 @@ type Service struct {
 	healthy atomic.Bool
 }
 
-func New(cfg config.Config, recorder HeartbeatRecorder, logger *slog.Logger) *Service {
+func New(cfg config.Config, recorder HeartbeatRecorder, runner OperationRunner, logger *slog.Logger) *Service {
 	service := &Service{mux: asynq.NewServeMux()}
 	service.server = asynq.NewServer(taskqueue.RedisOption(cfg.Redis), asynq.Config{
 		Concurrency:     cfg.Worker.Concurrency,
@@ -30,7 +37,21 @@ func New(cfg config.Config, recorder HeartbeatRecorder, logger *slog.Logger) *Se
 	service.mux.HandleFunc(taskqueue.HeartbeatType, func(ctx context.Context, _ *asynq.Task) error {
 		return recorder.RecordHeartbeat(ctx)
 	})
+	service.mux.HandleFunc(taskqueue.OperationType, OperationHandler(runner))
 	return service
+}
+func OperationHandler(runner OperationRunner) asynq.HandlerFunc {
+	return func(ctx context.Context, task *asynq.Task) error {
+		var message contract.Message
+		if len(task.Payload()) > 4096 || json.Unmarshal(task.Payload(), &message) != nil {
+			return fmt.Errorf("invalid step message: %w", asynq.SkipRetry)
+		}
+		err := runner.Run(ctx, message)
+		if errors.Is(err, contract.ErrInvalid) {
+			return fmt.Errorf("invalid step reference: %w", asynq.SkipRetry)
+		}
+		return err
+	}
 }
 
 func (s *Service) Start() error {

@@ -1,0 +1,20 @@
+{{define "profile"}}
+<div class="page-header"><div class="container-xl"><div class="page-pretitle">ACCOUNT</div><h1 class="page-title">个人设置</h1></div></div>
+<div class="page-body"><div class="container-xl"><div class="row row-cards">
+  <div class="col-lg-4"><section class="card"><div class="card-body"><h2 class="card-title">{{.User.DisplayName}}</h2><div class="text-secondary mb-3">{{.User.Username}}</div><span class="badge bg-blue-lt">{{roleLabel .User.Role}}</span></div></section></div>
+  <div class="col-lg-8">{{template "password-form" .}}</div>
+</div></div></div>
+{{end}}
+{{define "password-form"}}
+<section class="card" id="password-form"><div class="card-body p-4">
+  <h2 class="card-title">修改密码</h2><p class="text-secondary">修改后，所有已登录的会话都会注销，需要重新登录。</p>
+  {{if .Error}}<div class="alert alert-danger" role="alert">{{.Error}}</div>{{end}}
+  <form method="post" action="/profile/password" hx-post="/profile/password" hx-target="#password-form" hx-swap="outerHTML" hx-disabled-elt="find button">
+    <input type="hidden" name="_csrf" value="{{.CSRF}}">
+    <div class="mb-3"><label class="form-label" for="current-password">当前密码</label><input class="form-control" id="current-password" name="current_password" type="password" autocomplete="current-password" maxlength="128" required></div>
+    <div class="mb-3"><label class="form-label" for="new-password">新密码</label><input class="form-control" id="new-password" name="new_password" type="password" autocomplete="new-password" minlength="15" maxlength="128" required><div class="form-hint">15 至 128 个字符。</div></div>
+    <div class="mb-4"><label class="form-label" for="confirm-password">确认新密码</label><input class="form-control" id="confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="15" maxlength="128" required></div>
+    <button class="btn btn-primary" type="submit">更新密码并退出</button>
+  </form>
+</div></section>
+{{end}}
