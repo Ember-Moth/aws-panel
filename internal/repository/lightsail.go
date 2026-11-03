@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/entity"
 )
 
 type LightsailStore interface {

@@ -2,9 +2,9 @@ package view
 
 import (
 	"context"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/web"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/web"
 )
 
 func Layout(ctx context.Context, title, active string) web.Layout {

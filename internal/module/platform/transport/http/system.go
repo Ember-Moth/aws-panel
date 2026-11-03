@@ -3,10 +3,10 @@ package http
 import (
 	"context"
 
+	"github.com/Ember-Moth/aws-panel/internal/module/platform"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/contract"
+	"github.com/Ember-Moth/aws-panel/pkg/httpx"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/herta-network/aws-panel/internal/module/platform"
-	"github.com/herta-network/aws-panel/internal/module/platform/contract"
-	"github.com/herta-network/aws-panel/pkg/httpx"
 )
 
 type SystemResponse struct {

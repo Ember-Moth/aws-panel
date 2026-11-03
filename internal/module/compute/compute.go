@@ -2,13 +2,13 @@ package compute
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/addresses"
-	"github.com/herta-network/aws-panel/internal/module/compute/contract"
-	"github.com/herta-network/aws-panel/internal/module/compute/internal/awsapi"
-	"github.com/herta-network/aws-panel/internal/module/compute/internal/service"
-	"github.com/herta-network/aws-panel/internal/module/compute/internal/source"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/internal/awsapi"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/internal/service"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/internal/source"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 )
 
 type Deps = service.Deps

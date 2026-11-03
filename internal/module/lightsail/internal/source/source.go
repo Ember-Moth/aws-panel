@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/contract"
 )
 
 type Instance struct {

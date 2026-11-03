@@ -8,9 +8,9 @@ import (
 	"log/slog"
 	"sync/atomic"
 
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/internal/infra/taskqueue"
-	"github.com/herta-network/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/infra/taskqueue"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"github.com/hibiken/asynq"
 )
 

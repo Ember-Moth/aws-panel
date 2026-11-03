@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/herta-network/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
 	"github.com/spf13/cobra"
 )
 

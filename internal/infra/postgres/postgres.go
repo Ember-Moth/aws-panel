@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"gorm.io/driver/postgres"

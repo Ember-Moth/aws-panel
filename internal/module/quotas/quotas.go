@@ -2,9 +2,9 @@ package quotas
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/module/quotas/contract"
-	"github.com/herta-network/aws-panel/internal/module/quotas/internal/awsapi"
-	"github.com/herta-network/aws-panel/internal/module/quotas/internal/service"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas/internal/awsapi"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas/internal/service"
 )
 
 type Deps = service.Deps

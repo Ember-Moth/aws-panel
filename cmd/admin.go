@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/herta-network/aws-panel/internal/app"
-	"github.com/herta-network/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/app"
+	"github.com/Ember-Moth/aws-panel/internal/config"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )

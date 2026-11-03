@@ -8,13 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions"
+	rc "github.com/Ember-Moth/aws-panel/internal/module/regions/contract"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/operations"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions"
-	rc "github.com/herta-network/aws-panel/internal/module/regions/contract"
 )
 
 func regionServices(t *testing.T, h *inventoryHarness, enabled bool) (operations.Service, regions.Service) {

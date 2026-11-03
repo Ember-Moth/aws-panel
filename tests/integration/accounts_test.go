@@ -12,15 +12,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/vault"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity"
+	ic "github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/vault"
-	"github.com/herta-network/aws-panel/internal/module/accounts"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/identity"
-	ic "github.com/herta-network/aws-panel/internal/module/identity/contract"
-	"github.com/herta-network/aws-panel/internal/module/platform"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
 )
 
 func TestAccountsVaultRoutingAndAuthorization(t *testing.T) {

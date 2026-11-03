@@ -3,7 +3,7 @@ package state
 import (
 	"sync/atomic"
 
-	"github.com/herta-network/aws-panel/internal/module/platform/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/contract"
 )
 
 // Runtime publishes immutable settings after bootstrap has loaded the database.

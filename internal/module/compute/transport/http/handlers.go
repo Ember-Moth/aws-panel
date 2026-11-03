@@ -9,15 +9,15 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/transport/http/view"
+	"github.com/Ember-Moth/aws-panel/pkg/httpx"
+	"github.com/Ember-Moth/aws-panel/web"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/compute"
-	"github.com/herta-network/aws-panel/internal/module/compute/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/transport/http/view"
-	"github.com/herta-network/aws-panel/pkg/httpx"
-	"github.com/herta-network/aws-panel/web"
 )
 
 type Handler struct {

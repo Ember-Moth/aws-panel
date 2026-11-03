@@ -2,7 +2,7 @@ package repo
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/module/inventory/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/entity"
 )
 
 func (s *Store) Overview(ctx context.Context, accounts []string) ([]entity.Overview, error) {

@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	ic "github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	ic "github.com/herta-network/aws-panel/internal/module/identity/contract"
-	"github.com/herta-network/aws-panel/internal/module/operations"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
 )
 
 type blockedDiagnostic struct {

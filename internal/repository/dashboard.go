@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/module/dashboard/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/dashboard/entity"
 )
 
 type DashboardStore interface {

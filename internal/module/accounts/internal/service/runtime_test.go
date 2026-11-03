@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
 	"github.com/aws/smithy-go"
-	"github.com/herta-network/aws-panel/internal/module/accounts/contract"
 )
 
 func TestVerificationErrorsAreClassifiedWithoutRawSecrets(t *testing.T) {

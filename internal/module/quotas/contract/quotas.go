@@ -1,7 +1,7 @@
 package contract
 
 import (
-	"github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/Ember-Moth/aws-panel/internal/catalogue"
 	"time"
 )
 

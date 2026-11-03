@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/accounts/entity"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/entity"
 )
 
 func (s *Service) currentStatus(ctx context.Context, value entity.Connection) entity.Connection {

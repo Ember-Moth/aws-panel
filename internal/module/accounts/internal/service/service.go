@@ -13,17 +13,17 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/vault"
+	awsnet "github.com/Ember-Moth/aws-panel/internal/infra/aws"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/vault"
-	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/accounts/entity"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
 )
 
 type Access interface {

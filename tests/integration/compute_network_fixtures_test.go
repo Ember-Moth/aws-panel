@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	cp "github.com/herta-network/aws-panel/internal/module/compute/contract"
+	cp "github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
 	"net/http"
 	"strings"
 )

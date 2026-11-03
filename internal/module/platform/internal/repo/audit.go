@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 )
 
 func (s *Store) AppendAudit(ctx context.Context, event kernel.AuditEntry) error {

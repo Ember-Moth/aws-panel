@@ -1,7 +1,7 @@
 package entity
 
 import (
-	"github.com/herta-network/aws-panel/internal/auth/vault"
+	"github.com/Ember-Moth/aws-panel/internal/auth/vault"
 	"time"
 )
 

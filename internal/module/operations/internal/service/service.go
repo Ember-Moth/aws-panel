@@ -14,13 +14,13 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/operations/entity"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
 )
 
 type Access interface {

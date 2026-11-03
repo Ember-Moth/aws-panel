@@ -1,8 +1,8 @@
 package report
 
 import (
-	"github.com/herta-network/aws-panel/internal/catalogue"
-	"github.com/herta-network/aws-panel/internal/module/quotas/contract"
+	"github.com/Ember-Moth/aws-panel/internal/catalogue"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas/contract"
 	"math"
 )
 

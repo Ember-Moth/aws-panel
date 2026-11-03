@@ -4,7 +4,7 @@ import (
 	"os"
 	_ "time/tzdata"
 
-	"github.com/herta-network/aws-panel/cmd"
+	"github.com/Ember-Moth/aws-panel/cmd"
 )
 
 // @title AWS Panel API

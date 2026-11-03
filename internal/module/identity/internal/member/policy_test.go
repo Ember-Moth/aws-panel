@@ -1,7 +1,7 @@
 package member
 
 import (
-	"github.com/herta-network/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
 	"testing"
 )
 

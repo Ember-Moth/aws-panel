@@ -7,12 +7,12 @@ import (
 	"net"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/transport/http/middleware"
+	"github.com/Ember-Moth/aws-panel/internal/transport/http/routes"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/hlog"
 	"github.com/cloudwego/hertz/pkg/network/standard"
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/internal/transport/http/middleware"
-	"github.com/herta-network/aws-panel/internal/transport/http/routes"
 )
 
 type Service struct {

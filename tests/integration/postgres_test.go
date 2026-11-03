@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/app/migration/schema"
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/internal/infra/postgres"
-	"github.com/herta-network/aws-panel/internal/module/platform"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/app/migration/schema"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/infra/postgres"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 )
 
 func TestPostgresFoundation(t *testing.T) {

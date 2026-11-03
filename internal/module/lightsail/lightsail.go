@@ -3,16 +3,16 @@ package lightsail
 import (
 	"context"
 
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/addresses"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/contract"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/internal/awsapi"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/internal/repo"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/internal/service"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/internal/source"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/internal/awsapi"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/internal/repo"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/internal/service"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/internal/source"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 )
 
 type Deps = service.Deps

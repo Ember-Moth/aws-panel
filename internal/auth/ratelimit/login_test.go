@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/auth/token"
+	"github.com/Ember-Moth/aws-panel/internal/auth/token"
 	"github.com/redis/go-redis/v9"
 )
 

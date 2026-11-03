@@ -3,10 +3,10 @@ package integration
 import (
 	"context"
 	"errors"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	ad "github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	ad "github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 	"testing"
 )
 

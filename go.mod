@@ -1,4 +1,4 @@
-module github.com/herta-network/aws-panel
+module github.com/Ember-Moth/aws-panel
 
 go 1.27.3
 

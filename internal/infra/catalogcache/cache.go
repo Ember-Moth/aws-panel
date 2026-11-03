@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/catalogue"
+	"github.com/Ember-Moth/aws-panel/internal/catalogue"
 	"github.com/redis/go-redis/v9"
 )
 

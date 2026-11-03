@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 )
 
 func (s *Service) Delete(ctx context.Context, actorID int64, kind, id string, version int64, meta auth.RequestMeta) error {

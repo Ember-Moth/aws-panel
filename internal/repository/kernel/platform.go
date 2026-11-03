@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/platform/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/entity"
 )
 
 // PlatformStore grants only the platform module's persistence capabilities.

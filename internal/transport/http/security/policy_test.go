@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth/token"
+	"github.com/Ember-Moth/aws-panel/internal/config"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/herta-network/aws-panel/internal/auth/token"
-	"github.com/herta-network/aws-panel/internal/config"
 )
 
 func policy(t *testing.T) *Policy {

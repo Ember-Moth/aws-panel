@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/herta-network/aws-panel/internal/app/buildinfo"
+	"github.com/Ember-Moth/aws-panel/internal/app/buildinfo"
 	"github.com/spf13/cobra"
 )
 

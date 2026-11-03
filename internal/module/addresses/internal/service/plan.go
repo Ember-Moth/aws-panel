@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 const OperationID = "addresses.manage"

@@ -10,15 +10,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/token"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/transport/http/security"
+	"github.com/Ember-Moth/aws-panel/internal/transport/http/view"
+	"github.com/Ember-Moth/aws-panel/pkg/httpx"
+	"github.com/Ember-Moth/aws-panel/web"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/token"
-	"github.com/herta-network/aws-panel/internal/module/identity"
-	"github.com/herta-network/aws-panel/internal/module/identity/contract"
-	"github.com/herta-network/aws-panel/internal/transport/http/security"
-	"github.com/herta-network/aws-panel/internal/transport/http/view"
-	"github.com/herta-network/aws-panel/pkg/httpx"
-	"github.com/herta-network/aws-panel/web"
 )
 
 type Handler struct {

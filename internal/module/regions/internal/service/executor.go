@@ -11,15 +11,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	awsnet "github.com/Ember-Moth/aws-panel/internal/infra/aws"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/internal/source"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions/internal/source"
 )
 
 const Operation = "regions.enable"

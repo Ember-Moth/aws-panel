@@ -11,14 +11,14 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/password"
-	"github.com/herta-network/aws-panel/internal/auth/token"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/identity/contract"
-	"github.com/herta-network/aws-panel/internal/module/identity/entity"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/password"
+	"github.com/Ember-Moth/aws-panel/internal/auth/token"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 )
 
 type Limiter interface {

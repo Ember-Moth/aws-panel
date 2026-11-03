@@ -3,7 +3,7 @@ package instanceinit
 
 import (
 	"errors"
-	"github.com/herta-network/aws-panel/internal/auth/unixpassword"
+	"github.com/Ember-Moth/aws-panel/internal/auth/unixpassword"
 	"strings"
 )
 

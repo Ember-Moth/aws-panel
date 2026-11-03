@@ -9,17 +9,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/token"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	dc "github.com/Ember-Moth/aws-panel/internal/module/dashboard/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity"
+	identitycontract "github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/contract"
+	"github.com/Ember-Moth/aws-panel/internal/transport/http/security"
+	"github.com/Ember-Moth/aws-panel/web"
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/token"
-	"github.com/herta-network/aws-panel/internal/config"
-	dc "github.com/herta-network/aws-panel/internal/module/dashboard/contract"
-	"github.com/herta-network/aws-panel/internal/module/identity"
-	identitycontract "github.com/herta-network/aws-panel/internal/module/identity/contract"
-	"github.com/herta-network/aws-panel/internal/module/platform/contract"
-	"github.com/herta-network/aws-panel/internal/transport/http/security"
-	"github.com/herta-network/aws-panel/web"
 )
 
 type dashboardStub struct{ err error }

@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
-	dc "github.com/herta-network/aws-panel/internal/module/dashboard/contract"
+	dc "github.com/Ember-Moth/aws-panel/internal/module/dashboard/contract"
 	"html/template"
 	"io/fs"
 	"strconv"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
 )
 
 //go:embed templates/*.html static

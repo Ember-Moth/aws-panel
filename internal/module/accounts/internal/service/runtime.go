@@ -14,17 +14,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/vault"
+	awsnet "github.com/Ember-Moth/aws-panel/internal/infra/aws"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/smithy-go"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/vault"
-	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/accounts/entity"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 type clientEntry struct {

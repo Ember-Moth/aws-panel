@@ -2,11 +2,11 @@ package awsapi
 
 import (
 	"context"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/internal/source"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/account"
-	"github.com/herta-network/aws-panel/internal/module/regions/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions/internal/source"
 	"sort"
 )
 

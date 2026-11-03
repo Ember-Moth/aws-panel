@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
+	"github.com/Ember-Moth/aws-panel/internal/catalogue"
+	"github.com/Ember-Moth/aws-panel/internal/infra/catalogcache"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas/contract"
+	reportdata "github.com/Ember-Moth/aws-panel/internal/module/quotas/internal/report"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/catalogue"
-	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/quotas/contract"
-	reportdata "github.com/herta-network/aws-panel/internal/module/quotas/internal/report"
 	"golang.org/x/sync/errgroup"
 )
 

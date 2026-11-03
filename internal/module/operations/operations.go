@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/operations/internal/diagnostic"
-	"github.com/herta-network/aws-panel/internal/module/operations/internal/repo"
-	"github.com/herta-network/aws-panel/internal/module/operations/internal/service"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/internal/diagnostic"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/internal/repo"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/internal/service"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 )
 
 type Deps = service.Deps

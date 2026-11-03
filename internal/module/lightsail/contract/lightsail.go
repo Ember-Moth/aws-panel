@@ -1,8 +1,8 @@
 package contract
 
 import (
-	"github.com/herta-network/aws-panel/internal/catalogue"
-	ip "github.com/herta-network/aws-panel/internal/instanceip"
+	"github.com/Ember-Moth/aws-panel/internal/catalogue"
+	ip "github.com/Ember-Moth/aws-panel/internal/instanceip"
 	"time"
 )
 

@@ -3,12 +3,12 @@ package regions
 import (
 	"context"
 
-	"github.com/herta-network/aws-panel/internal/auth"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions/internal/awsapi"
-	"github.com/herta-network/aws-panel/internal/module/regions/internal/service"
-	"github.com/herta-network/aws-panel/internal/module/regions/internal/source"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/internal/awsapi"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/internal/service"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/internal/source"
 )
 
 type Deps = service.Deps

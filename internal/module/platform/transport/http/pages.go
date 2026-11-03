@@ -3,11 +3,11 @@ package http
 import (
 	"context"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform"
+	"github.com/Ember-Moth/aws-panel/internal/transport/http/view"
+	"github.com/Ember-Moth/aws-panel/web"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/platform"
-	"github.com/herta-network/aws-panel/internal/transport/http/view"
-	"github.com/herta-network/aws-panel/web"
 )
 
 func Dashboard(service platform.Service, renderer *web.Renderer) app.HandlerFunc {

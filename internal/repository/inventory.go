@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/inventory/entity"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 )
 
 type InventoryStore interface {

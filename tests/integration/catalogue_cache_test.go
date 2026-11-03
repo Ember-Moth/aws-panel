@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/infra/catalogcache"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute"
+	cp "github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail"
+	lc "github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/compute"
-	cp "github.com/herta-network/aws-panel/internal/module/compute/contract"
-	"github.com/herta-network/aws-panel/internal/module/lightsail"
-	lc "github.com/herta-network/aws-panel/internal/module/lightsail/contract"
 	"github.com/redis/go-redis/v9"
 )
 

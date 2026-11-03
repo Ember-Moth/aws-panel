@@ -9,15 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/executor"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/scope"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/inventory/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory/entity"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/executor"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/scope"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
 )
 
 func scheduleView(row entity.Schedule) (contract.Schedule, error) {

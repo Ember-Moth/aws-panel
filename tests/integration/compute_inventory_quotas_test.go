@@ -2,11 +2,11 @@ package integration
 
 import (
 	"context"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	iv "github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	iv "github.com/herta-network/aws-panel/internal/module/inventory/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/quotas"
 	"testing"
 	"time"
 )

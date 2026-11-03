@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/auth/unixpassword"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/contract"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/internal/bootstrap"
+	"github.com/Ember-Moth/aws-panel/internal/auth/unixpassword"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/internal/bootstrap"
 )
 
 type LaunchSecrets interface {

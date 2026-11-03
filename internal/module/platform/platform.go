@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/platform/contract"
-	"github.com/herta-network/aws-panel/internal/module/platform/internal/repo"
-	"github.com/herta-network/aws-panel/internal/module/platform/internal/system"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/internal/repo"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/internal/system"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 )
 
 type Service interface {

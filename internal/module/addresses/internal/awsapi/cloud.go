@@ -8,6 +8,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/internal/source"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/aws/middleware"
@@ -16,10 +20,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/lightsail"
 	lt "github.com/aws/aws-sdk-go-v2/service/lightsail/types"
 	"github.com/aws/smithy-go"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	"github.com/herta-network/aws-panel/internal/module/addresses/internal/source"
-	"github.com/herta-network/aws-panel/internal/module/quotas"
 )
 
 type Cloud struct{}

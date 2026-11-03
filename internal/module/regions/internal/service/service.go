@@ -4,16 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/herta-network/aws-panel/internal/catalogue"
-	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
+	"github.com/Ember-Moth/aws-panel/internal/catalogue"
+	"github.com/Ember-Moth/aws-panel/internal/infra/catalogcache"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions/internal/source"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions/internal/source"
 )
 
 type Access interface {

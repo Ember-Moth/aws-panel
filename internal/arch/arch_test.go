@@ -12,7 +12,7 @@ import (
 
 func TestDependencyBoundaries(t *testing.T) {
 	root := filepath.Join("..", "..")
-	prefix := "github.com/herta-network/aws-panel/"
+	prefix := "github.com/Ember-Moth/aws-panel/"
 	err := filepath.WalkDir(root, func(path string, item fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr

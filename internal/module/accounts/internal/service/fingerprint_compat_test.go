@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/herta-network/aws-panel/internal/module/accounts/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/entity"
 	"testing"
 	"time"
 )

@@ -3,11 +3,11 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	cp "github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	lc "github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	cp "github.com/herta-network/aws-panel/internal/module/compute/contract"
-	lc "github.com/herta-network/aws-panel/internal/module/lightsail/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 	"testing"
 )
 

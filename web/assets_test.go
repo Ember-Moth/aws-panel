@@ -1,7 +1,7 @@
 package web
 
 import (
-	dc "github.com/herta-network/aws-panel/internal/module/dashboard/contract"
+	dc "github.com/Ember-Moth/aws-panel/internal/module/dashboard/contract"
 	"strings"
 	"testing"
 )

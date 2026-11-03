@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/module/inventory/contract"
 )
 
 const Operation = "inventory.refresh"

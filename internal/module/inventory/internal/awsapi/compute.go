@@ -2,13 +2,13 @@ package awsapi
 
 import (
 	"context"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses"
+	ad "github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/source"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/addresses"
-	ad "github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	"github.com/herta-network/aws-panel/internal/module/compute"
-	"github.com/herta-network/aws-panel/internal/module/inventory/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/source"
 )
 
 func computeResources(ctx context.Context, cfg aws.Config, req source.Request) (source.Snapshot, error) {

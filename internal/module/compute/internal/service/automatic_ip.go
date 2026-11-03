@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses"
+	ad "github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/module/addresses"
-	ad "github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	"github.com/herta-network/aws-panel/internal/module/compute/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 )
 
 func (e *Executor) automaticIP(ctx context.Context, cfg aws.Config, c oc.Call, s contract.Spec, reconcile bool) oc.Result {

@@ -8,12 +8,12 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	lc "github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
+	le "github.com/Ember-Moth/aws-panel/internal/module/lightsail/entity"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	lc "github.com/herta-network/aws-panel/internal/module/lightsail/contract"
-	le "github.com/herta-network/aws-panel/internal/module/lightsail/entity"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 func (h *launchHarness) tick(t *testing.T, id string) {

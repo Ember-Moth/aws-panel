@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/pkg/httpx"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/herta-network/aws-panel/pkg/httpx"
 	"go.opentelemetry.io/otel"
 )
 

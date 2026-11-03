@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/identity/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/identity/contract"
-	"github.com/herta-network/aws-panel/internal/module/identity/entity"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 func (s *Service) Principal(ctx context.Context, id int64) (auth.Principal, error) {

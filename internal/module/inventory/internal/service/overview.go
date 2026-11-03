@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"github.com/herta-network/aws-panel/internal/module/inventory/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
 )
 
 func (s *Service) Overview(ctx context.Context, actorID int64) ([]contract.Observation, error) {

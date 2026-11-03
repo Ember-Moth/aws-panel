@@ -6,12 +6,12 @@ import (
 	"errors"
 	"regexp"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/unixpassword"
+	"github.com/Ember-Moth/aws-panel/internal/auth/vault"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/unixpassword"
-	"github.com/herta-network/aws-panel/internal/auth/vault"
-	"github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 type launchPayload struct {

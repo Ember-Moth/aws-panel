@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/accounts"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/operations"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 )
 
 type jobConnections struct{ accounts accounts.Service }

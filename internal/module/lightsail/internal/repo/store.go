@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/lightsail/contract"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/entity"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

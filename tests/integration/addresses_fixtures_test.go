@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses"
+	ad "github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/addresses"
-	ad "github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	"github.com/herta-network/aws-panel/internal/module/operations"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 )
 
 type addressAWS struct {

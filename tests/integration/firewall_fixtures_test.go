@@ -3,10 +3,10 @@ package integration
 import (
 	"context"
 	"fmt"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute"
+	cp "github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/module/compute"
-	cp "github.com/herta-network/aws-panel/internal/module/compute/contract"
-	"github.com/herta-network/aws-panel/internal/module/lightsail"
 	"net/http"
 	"strings"
 )

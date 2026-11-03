@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-	"github.com/herta-network/aws-panel/internal/module/accounts"
 )
 
 const (

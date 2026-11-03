@@ -2,10 +2,10 @@
 package bootstrap
 
 import (
-	"github.com/herta-network/aws-panel/internal/instanceinit"
+	"github.com/Ember-Moth/aws-panel/internal/instanceinit"
 
-	"github.com/herta-network/aws-panel/internal/auth/unixpassword"
-	"github.com/herta-network/aws-panel/internal/module/lightsail/contract"
+	"github.com/Ember-Moth/aws-panel/internal/auth/unixpassword"
+	"github.com/Ember-Moth/aws-panel/internal/module/lightsail/contract"
 )
 
 func Supported(blueprint string) bool {

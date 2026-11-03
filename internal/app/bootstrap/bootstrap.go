@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/herta-network/aws-panel/internal/app/state"
-	"github.com/herta-network/aws-panel/internal/module/platform/contract"
+	"github.com/Ember-Moth/aws-panel/internal/app/state"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/contract"
 )
 
 type SettingsLoader interface {

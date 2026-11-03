@@ -1,7 +1,7 @@
 VERSION ?= dev
 REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 BUILD_TIME := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS := -s -w -X github.com/herta-network/aws-panel/internal/app/buildinfo.Version=$(VERSION) -X github.com/herta-network/aws-panel/internal/app/buildinfo.Revision=$(REVISION) -X github.com/herta-network/aws-panel/internal/app/buildinfo.BuildTime=$(BUILD_TIME)
+LDFLAGS := -s -w -X github.com/Ember-Moth/aws-panel/internal/app/buildinfo.Version=$(VERSION) -X github.com/Ember-Moth/aws-panel/internal/app/buildinfo.Revision=$(REVISION) -X github.com/Ember-Moth/aws-panel/internal/app/buildinfo.BuildTime=$(BUILD_TIME)
 
 .PHONY: build run fmt fmt-check vet test test-race assets swagger generated-check check smoke preview compose-smoke
 

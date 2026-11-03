@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/module/operations/entity"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 type lease struct {

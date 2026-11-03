@@ -293,7 +293,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_transport_http.DeleteRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_transport_http.DeleteRequest"
                         }
                     }
                 ],
@@ -467,7 +467,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.CatalogueResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.CatalogueResponse"
                         }
                     },
                     "400": {
@@ -521,7 +521,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.OptionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.OptionsResponse"
                         }
                     },
                     "401": {
@@ -570,7 +570,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Request"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Request"
                         }
                     }
                 ],
@@ -578,7 +578,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -641,7 +641,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -709,7 +709,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.SubmitRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.SubmitRequest"
                         }
                     }
                 ],
@@ -717,7 +717,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.JobResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.JobResponse"
                         }
                     },
                     "400": {
@@ -1139,7 +1139,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_transport_http.DeleteRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_transport_http.DeleteRequest"
                         }
                     }
                 ],
@@ -1423,7 +1423,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.RefreshRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.RefreshRequest"
                         }
                     }
                 ],
@@ -1431,7 +1431,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_transport_http.RefreshResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_dashboard_transport_http.RefreshResponse"
                         }
                     },
                     "400": {
@@ -1513,7 +1513,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.CatalogueResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.CatalogueResponse"
                         }
                     },
                     "400": {
@@ -1643,7 +1643,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.OptionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.OptionsResponse"
                         }
                     },
                     "401": {
@@ -1692,7 +1692,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Request"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Request"
                         }
                     }
                 ],
@@ -1700,7 +1700,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -1763,7 +1763,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -1831,7 +1831,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.SubmitRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.SubmitRequest"
                         }
                     }
                 ],
@@ -1839,7 +1839,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.JobResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.JobResponse"
                         }
                     },
                     "400": {
@@ -2094,7 +2094,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_transport_http.DeleteRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.DeleteRequest"
                         }
                     }
                 ],
@@ -2308,7 +2308,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_operations_transport_http.JobResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_operations_transport_http.JobResponse"
                         }
                     },
                     "400": {
@@ -2377,7 +2377,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_operations_transport_http.DetailResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_operations_transport_http.DetailResponse"
                         }
                     },
                     "400": {
@@ -2731,7 +2731,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.CatalogueResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.CatalogueResponse"
                         }
                     },
                     "400": {
@@ -2785,7 +2785,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.OptionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.OptionsResponse"
                         }
                     },
                     "401": {
@@ -2842,7 +2842,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -2905,7 +2905,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -2973,7 +2973,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.SubmitRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.SubmitRequest"
                         }
                     }
                 ],
@@ -2981,7 +2981,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.JobResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.JobResponse"
                         }
                     },
                     "400": {
@@ -3056,7 +3056,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.RegionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.RegionsResponse"
                         }
                     },
                     "400": {
@@ -3760,7 +3760,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_transport_http.DeleteRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_transport_http.DeleteRequest"
                         }
                     }
                 ],
@@ -4058,7 +4058,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_transport_http.OptionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_quotas_transport_http.OptionsResponse"
                         }
                     },
                     "401": {
@@ -4115,7 +4115,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_transport_http.RegionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_quotas_transport_http.RegionsResponse"
                         }
                     },
                     "400": {
@@ -4190,7 +4190,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_transport_http.CatalogueResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.CatalogueResponse"
                         }
                     },
                     "400": {
@@ -4244,7 +4244,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_transport_http.OptionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.OptionsResponse"
                         }
                     },
                     "401": {
@@ -4301,7 +4301,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -4364,7 +4364,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_transport_http.PreviewResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.PreviewResponse"
                         }
                     },
                     "400": {
@@ -4432,7 +4432,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_transport_http.SubmitRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.SubmitRequest"
                         }
                     }
                 ],
@@ -4440,7 +4440,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_transport_http.JobResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.JobResponse"
                         }
                     },
                     "400": {
@@ -4592,7 +4592,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_transport_http.OptionsResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.OptionsResponse"
                         }
                     },
                     "401": {
@@ -4641,7 +4641,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_contract.RefreshRequest"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_inventory_contract.RefreshRequest"
                         }
                     }
                 ],
@@ -4649,7 +4649,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_transport_http.RefreshResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.RefreshResponse"
                         }
                     },
                     "400": {
@@ -4786,7 +4786,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_transport_http.DetailResponse"
+                            "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.DetailResponse"
                         }
                     },
                     "400": {
@@ -4986,7 +4986,7 @@
             "type": "object",
             "properties": {
                 "account": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Account"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Account"
                 },
                 "can_manage": {
                     "type": "boolean"
@@ -4994,7 +4994,7 @@
                 "connections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Connection"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Connection"
                     }
                 },
                 "preferred_connection_id": {
@@ -5205,7 +5205,7 @@
                 "chain": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_operations_contract.ConnectionVersion"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_operations_contract.ConnectionVersion"
                     }
                 },
                 "connection_id": {
@@ -5559,7 +5559,7 @@
                 "targets": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Target"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Target"
                     }
                 }
             }
@@ -5723,7 +5723,7 @@
                     "$ref": "#/definitions/contract.Image"
                 },
                 "quota": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Quota"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Quota"
                 },
                 "security_groups": {
                     "type": "array",
@@ -5735,7 +5735,7 @@
                     "$ref": "#/definitions/contract.Subnet"
                 },
                 "target": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Target"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Target"
                 },
                 "type": {
                     "$ref": "#/definitions/contract.InstanceType"
@@ -5938,7 +5938,7 @@
                     }
                 },
                 "target": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_operations_contract.Target"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_operations_contract.Target"
                 }
             }
         },
@@ -6027,7 +6027,7 @@
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Instance"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Instance"
                     }
                 },
                 "region": {
@@ -6218,13 +6218,13 @@
                 "account_options": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.Account"
                     }
                 },
                 "accounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.Account"
                     }
                 },
                 "active_accounts": {
@@ -6249,7 +6249,7 @@
                     }
                 },
                 "query": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.Query"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.Query"
                 },
                 "quotas": {
                     "type": "array",
@@ -6418,7 +6418,7 @@
                 "affected_connections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Connection"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Connection"
                     }
                 },
                 "bindings": {
@@ -7082,7 +7082,7 @@
                 "zones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.WavelengthZone"
                     }
                 }
             }
@@ -7098,7 +7098,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_accounts_contract.Account": {
+        "github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Account": {
             "type": "object",
             "properties": {
                 "active": {
@@ -7136,7 +7136,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_accounts_contract.Connection": {
+        "github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Connection": {
             "type": "object",
             "properties": {
                 "access_key_masked": {
@@ -7195,7 +7195,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_accounts_transport_http.DeleteRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_accounts_transport_http.DeleteRequest": {
             "type": "object",
             "properties": {
                 "version": {
@@ -7203,7 +7203,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Account": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Account": {
             "type": "object",
             "properties": {
                 "aws_account_id": {
@@ -7212,7 +7212,7 @@
                 "connections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Connection"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Connection"
                     }
                 },
                 "id": {
@@ -7223,7 +7223,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Catalogue": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Catalogue": {
             "type": "object",
             "properties": {
                 "addresses": {
@@ -7250,7 +7250,7 @@
                 "instances": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Instance"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Instance"
                     }
                 },
                 "region": {
@@ -7262,7 +7262,7 @@
                 "wavelength_zones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.WavelengthZone"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.WavelengthZone"
                     }
                 },
                 "writes_enabled": {
@@ -7270,7 +7270,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Connection": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Connection": {
             "type": "object",
             "properties": {
                 "id": {
@@ -7284,7 +7284,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Instance": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Instance": {
             "type": "object",
             "properties": {
                 "address_id": {
@@ -7325,13 +7325,13 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Options": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Options": {
             "type": "object",
             "properties": {
                 "accounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Account"
                     }
                 },
                 "writes_enabled": {
@@ -7339,7 +7339,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Preview": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Preview": {
             "type": "object",
             "properties": {
                 "can_submit": {
@@ -7354,23 +7354,23 @@
                 "targets": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.PreviewTarget"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.PreviewTarget"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.PreviewTarget": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.PreviewTarget": {
             "type": "object",
             "properties": {
                 "aws_account_id": {
                     "type": "string"
                 },
                 "spec": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Spec"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Spec"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Quota": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Quota": {
             "type": "object",
             "properties": {
                 "limit": {
@@ -7390,18 +7390,18 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Request": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Request": {
             "type": "object",
             "properties": {
                 "targets": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Target"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Target"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Spec": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Spec": {
             "type": "object",
             "properties": {
                 "address": {
@@ -7414,7 +7414,7 @@
                     "type": "string"
                 },
                 "instance": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Instance"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Instance"
                 },
                 "managed": {
                     "type": "boolean"
@@ -7426,14 +7426,14 @@
                     "$ref": "#/definitions/contract.Address"
                 },
                 "quota": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Quota"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Quota"
                 },
                 "target": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Target"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Target"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Target": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Target": {
             "type": "object",
             "properties": {
                 "action": {
@@ -7465,7 +7465,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_contract.WavelengthZone": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.WavelengthZone": {
             "type": "object",
             "properties": {
                 "border_group": {
@@ -7479,18 +7479,18 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.CatalogueResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.CatalogueResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Catalogue"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Catalogue"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.JobResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.JobResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -7501,29 +7501,29 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.OptionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.OptionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Options"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Options"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.PreviewResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.PreviewResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Preview"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_addresses_contract.Preview"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.SubmitRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_addresses_transport_http.SubmitRequest": {
             "type": "object",
             "properties": {
                 "idempotency_key": {
@@ -7531,7 +7531,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Account": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Account": {
             "type": "object",
             "properties": {
                 "aws_account_id": {
@@ -7540,7 +7540,7 @@
                 "connections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Connection"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Connection"
                     }
                 },
                 "id": {
@@ -7551,7 +7551,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Catalogue": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Catalogue": {
             "type": "object",
             "properties": {
                 "checked_at": {
@@ -7618,7 +7618,7 @@
                     }
                 },
                 "wavelength_zone": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.WavelengthZone"
                 },
                 "writes_enabled": {
                     "type": "boolean"
@@ -7631,7 +7631,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Connection": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Connection": {
             "type": "object",
             "properties": {
                 "id": {
@@ -7645,7 +7645,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Instance": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Instance": {
             "type": "object",
             "properties": {
                 "arn": {
@@ -7722,13 +7722,13 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Options": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Options": {
             "type": "object",
             "properties": {
                 "accounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Account"
                     }
                 },
                 "writes_enabled": {
@@ -7736,7 +7736,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Preview": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Preview": {
             "type": "object",
             "properties": {
                 "can_submit": {
@@ -7751,23 +7751,23 @@
                 "targets": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.PreviewTarget"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.PreviewTarget"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.PreviewTarget": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.PreviewTarget": {
             "type": "object",
             "properties": {
                 "aws_account_id": {
                     "type": "string"
                 },
                 "spec": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Spec"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Spec"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Quota": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Quota": {
             "type": "object",
             "properties": {
                 "key": {
@@ -7790,7 +7790,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Request": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Request": {
             "type": "object",
             "properties": {
                 "targets": {
@@ -7801,7 +7801,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Spec": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Spec": {
             "type": "object",
             "properties": {
                 "automatic_ip": {
@@ -7823,7 +7823,7 @@
                     }
                 },
                 "companion_instance": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Instance"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Instance"
                 },
                 "firewall": {
                     "$ref": "#/definitions/contract.FirewallPlan"
@@ -7831,7 +7831,7 @@
                 "group_zones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.WavelengthZone"
                     }
                 },
                 "image": {
@@ -7844,7 +7844,7 @@
                     "$ref": "#/definitions/contract.IngressPeer"
                 },
                 "instance": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Instance"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Instance"
                 },
                 "network": {
                     "$ref": "#/definitions/contract.Network"
@@ -7852,11 +7852,11 @@
                 "network_quotas": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Quota"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Quota"
                     }
                 },
                 "quota": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Quota"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Quota"
                 },
                 "security_groups": {
                     "type": "array",
@@ -7868,7 +7868,7 @@
                     "$ref": "#/definitions/contract.Subnet"
                 },
                 "target": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Target"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Target"
                 },
                 "type": {
                     "$ref": "#/definitions/contract.InstanceType"
@@ -7883,11 +7883,11 @@
                     }
                 },
                 "wavelength_zone": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.WavelengthZone"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.Target": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Target": {
             "type": "object",
             "properties": {
                 "action": {
@@ -7958,7 +7958,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_contract.WavelengthZone": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_contract.WavelengthZone": {
             "type": "object",
             "properties": {
                 "border_group": {
@@ -7984,18 +7984,18 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.CatalogueResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.CatalogueResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Catalogue"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Catalogue"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.JobResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.JobResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8006,29 +8006,29 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.OptionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.OptionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Options"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Options"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.PreviewResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.PreviewResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Preview"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_compute_contract.Preview"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.SubmitRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_compute_transport_http.SubmitRequest": {
             "type": "object",
             "properties": {
                 "idempotency_key": {
@@ -8036,7 +8036,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_dashboard_contract.Account": {
+        "github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.Account": {
             "type": "object",
             "properties": {
                 "active": {
@@ -8080,7 +8080,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_dashboard_contract.Query": {
+        "github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.Query": {
             "type": "object",
             "properties": {
                 "account_id": {
@@ -8091,7 +8091,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_dashboard_contract.RefreshRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.RefreshRequest": {
             "type": "object",
             "properties": {
                 "account_id": {
@@ -8105,7 +8105,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_dashboard_transport_http.RefreshResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_dashboard_transport_http.RefreshResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8116,7 +8116,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_inventory_contract.Options": {
+        "github_com_Ember-Moth_aws-panel_internal_module_inventory_contract.Options": {
             "type": "object",
             "properties": {
                 "accounts": {
@@ -8133,7 +8133,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_inventory_contract.RefreshRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_inventory_contract.RefreshRequest": {
             "type": "object",
             "properties": {
                 "idempotency_key": {
@@ -8147,7 +8147,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_inventory_transport_http.DeleteRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.DeleteRequest": {
             "type": "object",
             "properties": {
                 "version": {
@@ -8155,7 +8155,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_inventory_transport_http.DetailResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.DetailResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8166,18 +8166,18 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_inventory_transport_http.OptionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.OptionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_contract.Options"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_inventory_contract.Options"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_inventory_transport_http.RefreshResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_inventory_transport_http.RefreshResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8188,7 +8188,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Account": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Account": {
             "type": "object",
             "properties": {
                 "aws_account_id": {
@@ -8197,7 +8197,7 @@
                 "connections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Connection"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Connection"
                     }
                 },
                 "id": {
@@ -8208,7 +8208,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Catalogue": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Catalogue": {
             "type": "object",
             "properties": {
                 "blueprints": {
@@ -8242,7 +8242,7 @@
                     }
                 },
                 "quota": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Quota"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Quota"
                 },
                 "region": {
                     "type": "string"
@@ -8258,7 +8258,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Connection": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Connection": {
             "type": "object",
             "properties": {
                 "id": {
@@ -8272,13 +8272,13 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Options": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Options": {
             "type": "object",
             "properties": {
                 "accounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Account"
                     }
                 },
                 "writes_enabled": {
@@ -8286,7 +8286,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Preview": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Preview": {
             "type": "object",
             "properties": {
                 "can_submit": {
@@ -8304,12 +8304,12 @@
                 "targets": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.PreviewTarget"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.PreviewTarget"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.PreviewTarget": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.PreviewTarget": {
             "type": "object",
             "properties": {
                 "account_id": {
@@ -8319,11 +8319,11 @@
                     "type": "string"
                 },
                 "spec": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.StepSpec"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.StepSpec"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Quota": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Quota": {
             "type": "object",
             "properties": {
                 "code": {
@@ -8340,7 +8340,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Region": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Region": {
             "type": "object",
             "properties": {
                 "available": {
@@ -8357,7 +8357,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Regions": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Regions": {
             "type": "object",
             "properties": {
                 "checked_at": {
@@ -8375,12 +8375,12 @@
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Region"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Region"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.StepSpec": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.StepSpec": {
             "type": "object",
             "properties": {
                 "allow_all_firewall": {
@@ -8399,14 +8399,14 @@
                     "type": "string"
                 },
                 "quota": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Quota"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Quota"
                 },
                 "target": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Target"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Target"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Target": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Target": {
             "type": "object",
             "properties": {
                 "blueprint_id": {
@@ -8441,18 +8441,18 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.CatalogueResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.CatalogueResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Catalogue"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Catalogue"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.JobResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.JobResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8463,40 +8463,40 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.OptionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.OptionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Options"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Options"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.PreviewResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.PreviewResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Preview"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Preview"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.RegionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.RegionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Regions"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_lightsail_contract.Regions"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.SubmitRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_lightsail_transport_http.SubmitRequest": {
             "type": "object",
             "properties": {
                 "idempotency_key": {
@@ -8504,7 +8504,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_operations_contract.ConnectionVersion": {
+        "github_com_Ember-Moth_aws-panel_internal_module_operations_contract.ConnectionVersion": {
             "type": "object",
             "properties": {
                 "id": {
@@ -8521,7 +8521,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_operations_contract.Target": {
+        "github_com_Ember-Moth_aws-panel_internal_module_operations_contract.Target": {
             "type": "object",
             "properties": {
                 "binding": {
@@ -8546,7 +8546,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_operations_transport_http.DetailResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_operations_transport_http.DetailResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8557,7 +8557,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_operations_transport_http.JobResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_operations_transport_http.JobResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8568,7 +8568,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Account": {
+        "github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Account": {
             "type": "object",
             "properties": {
                 "aws_account_id": {
@@ -8577,7 +8577,7 @@
                 "connections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Connection"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Connection"
                     }
                 },
                 "id": {
@@ -8588,7 +8588,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Connection": {
+        "github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Connection": {
             "type": "object",
             "properties": {
                 "id": {
@@ -8602,18 +8602,18 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Options": {
+        "github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Options": {
             "type": "object",
             "properties": {
                 "accounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Account"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Region": {
+        "github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Region": {
             "type": "object",
             "properties": {
                 "available": {
@@ -8627,7 +8627,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Regions": {
+        "github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Regions": {
             "type": "object",
             "properties": {
                 "checked_at": {
@@ -8642,34 +8642,34 @@
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Region"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Region"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_quotas_transport_http.OptionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_quotas_transport_http.OptionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Options"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Options"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_quotas_transport_http.RegionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_quotas_transport_http.RegionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Regions"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_quotas_contract.Regions"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.Account": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Account": {
             "type": "object",
             "properties": {
                 "aws_account_id": {
@@ -8678,7 +8678,7 @@
                 "connections": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Connection"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Connection"
                     }
                 },
                 "id": {
@@ -8689,7 +8689,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.Catalogue": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Catalogue": {
             "type": "object",
             "properties": {
                 "checked_at": {
@@ -8707,12 +8707,12 @@
                 "regions": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Region"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Region"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.Connection": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Connection": {
             "type": "object",
             "properties": {
                 "id": {
@@ -8726,13 +8726,13 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.Options": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Options": {
             "type": "object",
             "properties": {
                 "accounts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Account"
                     }
                 },
                 "writes_enabled": {
@@ -8740,7 +8740,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.Preview": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Preview": {
             "type": "object",
             "properties": {
                 "can_submit": {
@@ -8755,12 +8755,12 @@
                 "targets": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.PreviewTarget"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.PreviewTarget"
                     }
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.PreviewTarget": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.PreviewTarget": {
             "type": "object",
             "properties": {
                 "account_id": {
@@ -8780,7 +8780,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.Region": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Region": {
             "type": "object",
             "properties": {
                 "code": {
@@ -8794,7 +8794,7 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_contract.Target": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Target": {
             "type": "object",
             "properties": {
                 "connection_id": {
@@ -8805,18 +8805,18 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_transport_http.CatalogueResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.CatalogueResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Catalogue"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Catalogue"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_transport_http.JobResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.JobResponse": {
             "type": "object",
             "properties": {
                 "data": {
@@ -8827,29 +8827,29 @@
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_transport_http.OptionsResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.OptionsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Options"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Options"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_transport_http.PreviewResponse": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.PreviewResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Preview"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_regions_contract.Preview"
                 },
                 "request_id": {
                     "type": "string"
                 }
             }
         },
-        "github_com_herta-network_aws-panel_internal_module_regions_transport_http.SubmitRequest": {
+        "github_com_Ember-Moth_aws-panel_internal_module_regions_transport_http.SubmitRequest": {
             "type": "object",
             "properties": {
                 "idempotency_key": {
@@ -8872,7 +8872,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Account"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Account"
                 },
                 "request_id": {
                     "type": "string"
@@ -8885,7 +8885,7 @@
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Account"
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Account"
                     }
                 },
                 "request_id": {
@@ -8916,7 +8916,7 @@
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Connection"
+                    "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_accounts_contract.Connection"
                 },
                 "request_id": {
                     "type": "string"

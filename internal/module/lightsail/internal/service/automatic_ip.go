@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/herta-network/aws-panel/internal/module/addresses"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"strings"
 )
 

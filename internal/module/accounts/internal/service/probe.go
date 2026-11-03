@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/vault"
-	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/vault"
+	awsnet "github.com/Ember-Moth/aws-panel/internal/infra/aws"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 )
 
 func (s *Service) ProbeProxy(ctx context.Context, actorID int64, id string, meta auth.RequestMeta) (contract.Verification, error) {

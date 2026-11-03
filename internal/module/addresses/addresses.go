@@ -2,14 +2,14 @@ package addresses
 
 import (
 	"context"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/internal/awsapi"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/internal/service"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/internal/source"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	"github.com/herta-network/aws-panel/internal/module/addresses/internal/awsapi"
-	"github.com/herta-network/aws-panel/internal/module/addresses/internal/service"
-	"github.com/herta-network/aws-panel/internal/module/addresses/internal/source"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 type Deps = service.Deps

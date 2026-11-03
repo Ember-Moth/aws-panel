@@ -10,16 +10,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	ic "github.com/Ember-Moth/aws-panel/internal/module/identity/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory"
+	iv "github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
+	ie "github.com/Ember-Moth/aws-panel/internal/module/inventory/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	ic "github.com/herta-network/aws-panel/internal/module/identity/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory"
-	iv "github.com/herta-network/aws-panel/internal/module/inventory/contract"
-	ie "github.com/herta-network/aws-panel/internal/module/inventory/entity"
-	"github.com/herta-network/aws-panel/internal/module/operations"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 func TestInventorySDKPaginationIsolationAndStaleSnapshots(t *testing.T) {

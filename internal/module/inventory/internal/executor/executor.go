@@ -12,15 +12,15 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	awsnet "github.com/Ember-Moth/aws-panel/internal/infra/aws"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/scope"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/source"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory/entity"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/scope"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/source"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 type Clients interface {

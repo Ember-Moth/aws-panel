@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/auth/token"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/pkg/httpx"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/network"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/auth/token"
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/pkg/httpx"
 )
 
 type Policy struct {

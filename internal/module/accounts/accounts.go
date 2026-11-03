@@ -2,14 +2,14 @@ package accounts
 
 import (
 	"context"
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/internal/awsapi"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/internal/repo"
+	"github.com/Ember-Moth/aws-panel/internal/module/accounts/internal/service"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	awssdk "github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/accounts/internal/awsapi"
-	"github.com/herta-network/aws-panel/internal/module/accounts/internal/repo"
-	"github.com/herta-network/aws-panel/internal/module/accounts/internal/service"
-	"github.com/herta-network/aws-panel/internal/repository"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
 )
 
 type Access = service.Access

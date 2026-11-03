@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 )
 
 type EffectStore interface {

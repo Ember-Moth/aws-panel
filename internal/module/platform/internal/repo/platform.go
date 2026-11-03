@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/platform/entity"
-	"github.com/herta-network/aws-panel/internal/repository/kernel"
+	"github.com/Ember-Moth/aws-panel/internal/module/platform/entity"
+	"github.com/Ember-Moth/aws-panel/internal/repository/kernel"
 	"gorm.io/gorm"
 )
 

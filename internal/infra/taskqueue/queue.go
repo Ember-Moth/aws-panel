@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/herta-network/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/config"
 	"github.com/hibiken/asynq"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"

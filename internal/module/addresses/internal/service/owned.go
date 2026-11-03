@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 )
 
 func ownedReceipt(ctx context.Context, store repository.EffectStore, account, region string, v contract.ManagedIP) (bool, error) {

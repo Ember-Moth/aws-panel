@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/app/migration/schema"
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/internal/infra/postgres"
+	"github.com/Ember-Moth/aws-panel/internal/app/migration/schema"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/infra/postgres"
 	"github.com/spf13/cobra"
 )
 

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/herta-network/aws-panel/internal/module/dashboard/contract"
-	"github.com/herta-network/aws-panel/internal/module/dashboard/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/dashboard/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/dashboard/entity"
 	"testing"
 	"time"
 )

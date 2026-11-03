@@ -8,8 +8,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 )
 
 type Executor struct{ store repository.OperationsStore }

@@ -3,9 +3,9 @@ package cmd
 import (
 	"os"
 
-	"github.com/herta-network/aws-panel/internal/app"
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/pkg/logger"
+	"github.com/Ember-Moth/aws-panel/internal/app"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/pkg/logger"
 	"github.com/spf13/cobra"
 )
 

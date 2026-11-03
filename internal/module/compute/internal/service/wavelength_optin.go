@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
+	awsnet "github.com/Ember-Moth/aws-panel/internal/infra/aws"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute/internal/source"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/compute/contract"
-	"github.com/herta-network/aws-panel/internal/module/compute/internal/source"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 	"slices"
 	"time"
 )

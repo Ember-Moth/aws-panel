@@ -6,11 +6,11 @@ import (
 	"errors"
 	"time"
 
+	awsnet "github.com/Ember-Moth/aws-panel/internal/infra/aws"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsnet "github.com/herta-network/aws-panel/internal/infra/aws"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 )
 
 type effectProof struct {

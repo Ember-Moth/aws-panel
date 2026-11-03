@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/infra/taskqueue"
+	"github.com/Ember-Moth/aws-panel/internal/module/operations"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	tasktransport "github.com/Ember-Moth/aws-panel/internal/transport/task"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/infra/taskqueue"
-	"github.com/herta-network/aws-panel/internal/module/operations"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	tasktransport "github.com/herta-network/aws-panel/internal/transport/task"
 	"github.com/hibiken/asynq"
 )
 

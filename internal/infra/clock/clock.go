@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/config"
 )
 
 var (

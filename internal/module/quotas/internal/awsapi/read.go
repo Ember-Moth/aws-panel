@@ -2,20 +2,20 @@ package awsapi
 
 import (
 	"context"
-	reportdata "github.com/herta-network/aws-panel/internal/module/quotas/internal/report"
+	reportdata "github.com/Ember-Moth/aws-panel/internal/module/quotas/internal/report"
 	"math"
 	"sort"
 	"strings"
 
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	et "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/aws/aws-sdk-go-v2/service/lightsail"
 	"github.com/aws/aws-sdk-go-v2/service/servicequotas"
 	qt "github.com/aws/aws-sdk-go-v2/service/servicequotas/types"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/quotas/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions"
 )
 
 type Cloud struct{}

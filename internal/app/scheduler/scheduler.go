@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/config"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/infra/taskqueue"
+	"github.com/Ember-Moth/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/infra/taskqueue"
 	"github.com/hibiken/asynq"
 )
 

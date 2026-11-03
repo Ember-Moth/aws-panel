@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/herta-network/aws-panel/internal/module/inventory"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory"
 )
 
 func runInventory(ctx context.Context, service inventory.Service, logger *slog.Logger) func() {

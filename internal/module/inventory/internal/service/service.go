@@ -11,16 +11,16 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Ember-Moth/aws-panel/internal/auth"
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	ac "github.com/Ember-Moth/aws-panel/internal/module/accounts/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/entity"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/executor"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/scope"
+	oc "github.com/Ember-Moth/aws-panel/internal/module/operations/contract"
+	"github.com/Ember-Moth/aws-panel/internal/repository"
 	"github.com/google/uuid"
-	"github.com/herta-network/aws-panel/internal/auth"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory/entity"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/executor"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/scope"
-	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
-	"github.com/herta-network/aws-panel/internal/repository"
 )
 
 type Accounts interface {

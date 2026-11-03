@@ -7,16 +7,16 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/Ember-Moth/aws-panel/internal/infra/clock"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/scope"
+	"github.com/Ember-Moth/aws-panel/internal/module/inventory/internal/source"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/account"
 	"github.com/aws/aws-sdk-go-v2/service/lightsail"
 	lt "github.com/aws/aws-sdk-go-v2/service/lightsail/types"
-	"github.com/herta-network/aws-panel/internal/infra/clock"
-	"github.com/herta-network/aws-panel/internal/module/inventory/contract"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/scope"
-	"github.com/herta-network/aws-panel/internal/module/inventory/internal/source"
 )
 
 type Cloud struct{}

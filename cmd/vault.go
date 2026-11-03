@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/herta-network/aws-panel/internal/app"
-	"github.com/herta-network/aws-panel/internal/auth/vault"
-	"github.com/herta-network/aws-panel/internal/config"
+	"github.com/Ember-Moth/aws-panel/internal/app"
+	"github.com/Ember-Moth/aws-panel/internal/auth/vault"
+	"github.com/Ember-Moth/aws-panel/internal/config"
 	"github.com/spf13/cobra"
 )
 

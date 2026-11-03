@@ -7,10 +7,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Ember-Moth/aws-panel/internal/config"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/herta-network/aws-panel/internal/config"
 )
 
 //go:embed *.sql

@@ -9,16 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ember-Moth/aws-panel/internal/infra/catalogcache"
+	"github.com/Ember-Moth/aws-panel/internal/module/addresses"
+	ad "github.com/Ember-Moth/aws-panel/internal/module/addresses/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/compute"
+	cp "github.com/Ember-Moth/aws-panel/internal/module/compute/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/quotas"
+	qc "github.com/Ember-Moth/aws-panel/internal/module/quotas/contract"
+	"github.com/Ember-Moth/aws-panel/internal/module/regions"
+	rc "github.com/Ember-Moth/aws-panel/internal/module/regions/contract"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/herta-network/aws-panel/internal/infra/catalogcache"
-	"github.com/herta-network/aws-panel/internal/module/addresses"
-	ad "github.com/herta-network/aws-panel/internal/module/addresses/contract"
-	"github.com/herta-network/aws-panel/internal/module/compute"
-	cp "github.com/herta-network/aws-panel/internal/module/compute/contract"
-	"github.com/herta-network/aws-panel/internal/module/quotas"
-	qc "github.com/herta-network/aws-panel/internal/module/quotas/contract"
-	"github.com/herta-network/aws-panel/internal/module/regions"
-	rc "github.com/herta-network/aws-panel/internal/module/regions/contract"
 )
 
 type pageQuotaCloud struct {
