@@ -68,7 +68,7 @@ func (s *Service) SaveLaunchSecret(ctx context.Context, actorID int64, binding c
 		if err := s.seal(ctx, tx, id, "instance_launch", binding.AccountID, "root_password_hash/"+id, launchPayload{ActorID: actorID, Binding: binding, PasswordHash: hash}); err != nil {
 			return err
 		}
-		return tx.AppendAudit(ctx, audit(auth.Meta(ctx), actor, "accounts.launch_secret.created", "instance_launch", id, map[string]string{"account_id": binding.AccountID, "source": "lightsail.root_password"}))
+		return tx.AppendAudit(ctx, audit(auth.Meta(ctx), actor, "accounts.launch_secret.created", "instance_launch", id, map[string]string{"account_id": binding.AccountID, "source": "instance.root_password"}))
 	})
 	return id, err
 }

@@ -17,10 +17,13 @@ func RegionOK(value string) bool {
 	return len(value) <= 40 && regionPattern.MatchString(value) && !strings.HasPrefix(value, "cn-") && !strings.HasPrefix(value, "us-gov-")
 }
 func KindOK(value string) bool {
-	return value == contract.AccountRegion || value == contract.LightsailRegion || value == contract.LightsailInstance
+	return value == contract.AccountRegion || value == contract.LightsailRegion || value == contract.LightsailInstance || value == contract.LightsailStaticIP || value == contract.EC2Instance || value == contract.EC2Address
+}
+func Regional(kind string) bool {
+	return kind != contract.AccountRegion && kind != contract.LightsailRegion
 }
 func Region(kind, region string) string {
-	if kind != contract.LightsailInstance {
+	if !Regional(kind) {
 		return "global"
 	}
 	return region
@@ -39,6 +42,12 @@ func Label(kind string) string {
 		return "Lightsail 可用区域"
 	case contract.LightsailInstance:
 		return "Lightsail 实例"
+	case contract.LightsailStaticIP:
+		return "Lightsail 静态 IP"
+	case contract.EC2Instance:
+		return "EC2 实例"
+	case contract.EC2Address:
+		return "EC2 弹性 IP"
 	default:
 		return kind
 	}
@@ -56,7 +65,7 @@ func Normalize(input []contract.RefreshTarget) ([]contract.RefreshTarget, error)
 			return nil, contract.ErrInvalid
 		}
 		target.ConnectionID = id.String()
-		if target.Kind != contract.LightsailInstance {
+		if !Regional(target.Kind) {
 			if target.Region != "" && target.Region != "global" && target.Region != "us-east-1" {
 				return nil, contract.ErrInvalid
 			}

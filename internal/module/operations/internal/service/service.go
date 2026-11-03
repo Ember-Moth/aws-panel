@@ -195,6 +195,14 @@ func (s *Service) Prepare(ctx context.Context, actorID int64, req contract.PlanR
 	}
 	seen := map[string]bool{}
 	for _, item := range items {
+		if len(item.Target.LockKeys) > 8 {
+			return contract.Plan{}, contract.ErrInvalid
+		}
+		for _, lock := range item.Target.LockKeys {
+			if !labelOK(lock) {
+				return contract.Plan{}, contract.ErrInvalid
+			}
+		}
 		if (!d.Diagnostic && d.WritesCloud && item.Target.LockKey == "") || (item.Target.LockKey != "" && !labelOK(item.Target.LockKey)) {
 			return contract.Plan{}, contract.ErrInvalid
 		}

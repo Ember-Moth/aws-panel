@@ -1,46 +1,31 @@
 {{define "dashboard"}}
-      <div class="page-header d-print-none">
-        <div class="container-xl">
-          <div class="row align-items-center g-3">
-            <div class="col">
-              <div class="page-pretitle">WORKSPACE</div>
-              <h1 class="page-title">工作台</h1>
-              <div class="text-secondary mt-2">集中管理团队的 AWS 账号、资源与操作。</div>
-            </div>
-            <div class="col-auto">
-              <button class="btn btn-outline-secondary" type="button"
-                hx-get="/partials/system-status" hx-target="#system-status" hx-swap="outerHTML"
-                hx-disabled-elt="this" hx-indicator="#refresh-spinner">
-                <svg class="icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 18 17"/></svg>
-                刷新状态
-                <span id="refresh-spinner" class="spinner-border spinner-border-sm htmx-indicator ms-2" aria-hidden="true"></span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="page-body">
-        <div class="container-xl">
-          <div id="connection-error" class="alert alert-danger d-none" role="alert">服务连接中断，以下状态可能已过期。请稍后刷新。</div>
-          <div class="row row-cards">
-            <div class="col-lg-8">
-              <section class="card welcome-card">
-                <div class="card-body">
-                  <span class="workspace-mark mb-4" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-                  </span>
-                  <div><span class="badge bg-blue-lt">团队工作区</span></div>
-                  <h2 class="mt-3 mb-3">查看团队的 AWS 资源</h2>
-                  <p class="text-secondary welcome-description">按账号和区域查看 Lightsail 实例与区域状态，通过任务同步最新数据，并跟踪每个范围的刷新结果。</p>
-                  <div class="btn-list mb-4"><a class="btn btn-primary" href="/resources">查看资源</a><a class="btn" href="/accounts">管理 AWS 连接</a></div>
-                  <p class="small text-secondary mb-0">首次使用前，请配置并验证访问连接。区域启用和 Lightsail 创建入口位于资源工作台，云端写入需由管理员显式启用。</p>
-                </div>
-              </section>
-            </div>
-            <div class="col-lg-4">
-              {{template "system-status" .}}
-            </div>
-          </div>
-        </div>
-      </div>
+<div class="page-header"><div class="container-xl"><h1 class="page-title">仪表盘</h1><p class="text-secondary mt-2 mb-0">账号池的资源、区域与配额总览。</p></div></div><div class="page-body"><div class="container-xl">
+<div class="card scope-card"><div class="card-body dashboard-scope"><form method="get" action="/" data-dashboard-filter class="dashboard-filter"><label class="form-label">AWS 账号<select class="form-select" name="account_id"><option value="">全部可访问账号</option>{{range .Overview.AccountOptions}}<option value="{{.ID}}" {{if eq $.Overview.Query.AccountID .ID}}selected{{end}}>{{.Name}} · {{.AWSAccountID}}</option>{{end}}</select></label><label class="form-label">区域<select class="form-select" name="region"><option value="">全部已启用区域</option>{{range .Overview.Regions}}<option value="{{.}}" {{if eq $.Overview.Query.Region .}}selected{{end}}>{{.}}</option>{{end}}</select></label><button class="btn" type="submit">查看</button></form><form method="post" action="/dashboard/refresh" hx-post="/dashboard/refresh" hx-target="#dashboard-refresh-result" hx-swap="innerHTML" hx-disabled-elt="find button"><input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="idempotency_key" value="{{.Key}}"><input type="hidden" name="account_id" value="{{.Overview.Query.AccountID}}"><input type="hidden" name="region" value="{{.Overview.Query.Region}}"><button class="btn btn-primary" type="submit" data-dashboard-refresh {{if not .Overview.CanRefresh}}disabled{{end}}>{{template "workspace-icon" "sync"}}<span class="ms-2">后台刷新账号池</span></button></form></div></div>
+<div id="dashboard-refresh-result" role="status"></div><div id="connection-error" class="alert alert-warning d-none" role="alert" data-dashboard-poll-error>仪表盘更新暂不可用，当前保留上次读数。恢复连接后会继续更新。</div><p class="dashboard-note">统计来自最近成功读取的数据。后台刷新只查询 AWS，不创建资源；页面每 15 秒更新快照，卡片时间取最早一项。<span data-dashboard-no-connection {{if .Overview.CanRefresh}}hidden{{end}}><a href="/accounts">先配置并验证账号连接</a></span></p>
+{{template "dashboard-content" .}}
+<details class="dashboard-system supporting-details mt-4"><summary>面板服务状态</summary><div class="mt-3">{{template "system-status" .System}}</div></details>
+</div></div>{{end}}
+{{define "dashboard-metric-status"}}
+<div class="metric-meta">{{if .Known}}<span>{{.KnownScopes}} / {{.ExpectedScopes}} 范围已读取</span>{{if .Partial}}<span class="badge bg-yellow-lt">部分数据</span>{{end}}{{if .Stale}}<span class="badge bg-secondary-lt">旧快照</span>{{end}}{{else}}<span>尚未采集</span>{{end}}</div>{{if .UnknownAccounts}}<div class="small text-secondary mt-1">{{.UnknownAccounts}} 个账号范围待确认</div>{{end}}{{if .UpdatedAt}}<div class="metric-timestamp">快照 {{beijing .UpdatedAt}}</div>{{end}}
 {{end}}
+{{define "dashboard-content"}}
+<section id="dashboard-content" data-can-refresh="{{.Overview.CanRefresh}}" hx-get="{{.PartialURL}}" hx-trigger="every 15s" hx-swap="outerHTML">
+<template data-dashboard-account-options><option value="">全部可访问账号</option>{{range .Overview.AccountOptions}}<option value="{{.ID}}">{{.Name}} · {{.AWSAccountID}}</option>{{end}}</template><template data-dashboard-region-options><option value="">全部已启用区域</option>{{range .Overview.Regions}}<option value="{{.}}">{{.}}</option>{{end}}</template>
+{{range .Overview.Warnings}}<div class="alert alert-warning">{{.}}</div>{{end}}
+<div class="dashboard-metrics">
+<article class="card metric-card"><h2>AWS 账号</h2><div class="metric-value">{{.Overview.AccountCount}}<span>个</span></div><div class="metric-meta">{{.Overview.ActiveAccounts}} 个启用 · {{.Overview.ReadyAccounts}} 个可刷新</div><a class="small mt-2" href="/accounts">查看账号与连接</a></article>
+{{with dashboardMetric .Overview.Metrics "ec2_instances"}}<article class="card metric-card"><h2>EC2 实例</h2><div class="metric-value">{{if .Known}}{{number .Count}}{{else}}—{{end}}<span>台</span></div>{{if .Known}}<div class="small text-secondary mb-2">{{number .Running}} 台运行中</div>{{end}}{{template "dashboard-metric-status" .}}</article>{{end}}
+{{with dashboardMetric .Overview.Metrics "lightsail_instances"}}<article class="card metric-card"><h2>Lightsail 实例</h2><div class="metric-value">{{if .Known}}{{number .Count}}{{else}}—{{end}}<span>台</span></div>{{if .Known}}<div class="small text-secondary mb-2">{{number .Running}} 台运行中</div>{{end}}{{template "dashboard-metric-status" .}}</article>{{end}}
+<article class="card metric-card">{{with dashboardMetric .Overview.Metrics "public_ipv4"}}<h2>公网 IPv4</h2><div class="metric-value">{{if .Known}}{{number .Count}}{{else}}—{{end}}<span>个</span></div>{{template "dashboard-metric-status" .}}{{end}}<div class="small text-secondary mt-2">弹性 IP {{with dashboardMetric .Overview.Metrics "ec2_ips"}}{{if .Known}}{{.Count}}{{else}}—{{end}}{{end}} · Lightsail 静态 IP {{with dashboardMetric .Overview.Metrics "lightsail_ips"}}{{if .Known}}{{.Count}}{{else}}—{{end}}{{end}}</div></article>
+<article class="card metric-card">{{with dashboardMetric .Overview.Metrics "enabled_regions"}}<h2>已启用区域</h2><div class="metric-value">{{if .Known}}{{number .Count}}{{else}}—{{end}}<span>账号区域</span></div>{{template "dashboard-metric-status" .}}{{end}}<div class="small text-secondary mt-2">{{if (dashboardMetric .Overview.Metrics "enabled_regions").Known}}已确认覆盖 {{.Overview.DistinctRegions}} 个区域{{else}}启用范围待查询{{end}}</div></article>
+</div>
+<div class="resource-toolbar mt-4"><div><h2>账号池配额</h2><p class="small text-secondary mt-1 mb-0">仅汇总启用账号已返回的额度；区域、实例类别和模型的配额分别生效。</p></div><a class="btn btn-sm" href="/quotas">单账号配额检测</a></div>
+<div class="dashboard-quota-cards">
+{{with dashboardQuota .Overview.Quotas "ec2.ondemand.total"}}<article class="card"><div class="card-body"><div class="d-flex justify-content-between gap-2"><h3 class="card-title">EC2 按需 vCPU</h3>{{if .Stale}}<span class="badge bg-secondary-lt">旧快照</span>{{end}}</div><div class="quota-total">{{if .Known}}{{number .Limit}}{{else}}—{{end}}<span>vCPU 已确认上限</span></div><div class="quota-pair"><span>已确认用量</span><strong>{{if .UsageKnown}}{{number .Used}} vCPU{{else}}未知{{end}}</strong></div>{{if .Complete}}<meter class="quota-meter" min="0" max="100" value="{{.Percent}}" aria-label="EC2 按需总用量比例">{{.Percent}}%</meter>{{else}}<p class="small text-secondary mb-0">{{if .Known}}{{.KnownScopes}} / {{.ExpectedScopes}} 个类别范围有适用额度。{{else}}尚未读取账号池额度。{{end}}{{if .UnknownAccounts}} {{.UnknownAccounts}} 个账号的范围待确认。{{end}}</p>{{end}}{{if .UpdatedAt}}<p class="small text-secondary mt-2 mb-0">最早快照 {{beijing .UpdatedAt}}</p>{{end}}</div></article>{{end}}
+{{with dashboardQuota .Overview.Quotas "lightsail.vcpu"}}<article class="card"><div class="card-body"><div class="d-flex justify-content-between gap-2"><h3 class="card-title">Lightsail vCPU</h3>{{if .Stale}}<span class="badge bg-secondary-lt">旧快照</span>{{end}}</div><div class="quota-total">{{if .Known}}{{number .Limit}}{{else}}—{{end}}<span>vCPU 已确认上限</span></div><div class="quota-pair"><span>已确认用量</span><strong>{{if .UsageKnown}}{{number .Used}} vCPU{{else}}未知{{end}}</strong></div>{{if .Complete}}<meter class="quota-meter" min="0" max="100" value="{{.Percent}}" aria-label="Lightsail vCPU 总用量比例">{{.Percent}}%</meter>{{else}}<p class="small text-secondary mb-0">{{if .Known}}{{.KnownScopes}} / {{.ExpectedScopes}} 个账号区域有适用额度。{{else}}尚未读取账号池额度。{{end}}{{if .UnknownAccounts}} {{.UnknownAccounts}} 个账号的范围待确认。{{end}}</p>{{end}}{{if .UpdatedAt}}<p class="small text-secondary mt-2 mb-0">最早快照 {{beijing .UpdatedAt}}</p>{{end}}</div></article>{{end}}
+</div>
+<details class="card quota-breakdown mt-3" data-quota-breakdown><summary>按 EC2 类别查看额度</summary><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>类别</th><th>已确认上限</th><th>已确认用量</th><th>覆盖范围</th></tr></thead><tbody>{{range .Overview.Quotas}}{{if and (eq .Service "ec2") (ne .Key "ec2.ondemand.total")}}<tr><td>{{.Name}}</td><td>{{if .Known}}{{number .Limit}} {{.Unit}}{{else}}未知{{end}}</td><td>{{if .UsageKnown}}{{number .Used}} {{.Unit}}{{else}}未知{{end}}</td><td>{{if .ExpectedScopes}}{{.KnownScopes}} / {{.ExpectedScopes}}{{else}}范围待确认{{end}}{{if .Stale}} · 旧快照{{end}}</td></tr>{{end}}{{end}}</tbody></table></div></details>
+<section class="card mt-4"><div class="card-header d-flex flex-wrap justify-content-between gap-3"><div><h2 class="card-title">Bedrock 模型配额</h2><div class="small text-secondary mt-1">{{if .Overview.BedrockCoverage.ExpectedScopes}}{{.Overview.BedrockCoverage.KnownScopes}} / {{.Overview.BedrockCoverage.ExpectedScopes}} 个账号区域已读取{{else}}区域范围待确认{{end}} · 已读取 {{.Overview.BedrockCoverage.Count}} 个配额项目</div></div><input class="form-control bedrock-search" type="search" placeholder="搜索模型、配额名称或代码" aria-label="筛选 Bedrock 配额" data-bedrock-filter></div><div class="bedrock-table table-responsive" data-bedrock-table><table class="table table-vcenter card-table"><thead><tr><th>模型 / 配额</th><th>已确认总上限</th><th>范围</th><th>覆盖</th></tr></thead><tbody>{{range .Overview.Quotas}}{{if eq .Service "bedrock"}}<tr data-bedrock-row><td class="quota-name">{{.Name}}<div class="data-id mt-1">{{.Code}}</div></td><td>{{if .Known}}{{number .Limit}} {{.Unit}}{{else}}未知{{end}}{{if .Period}}<div class="small text-secondary">{{.Period}}</div>{{end}}</td><td>{{if .Global}}账号全局{{else}}账号 × 区域{{end}}</td><td>{{if .ExpectedScopes}}{{.KnownScopes}} / {{.ExpectedScopes}}{{else}}范围待确认{{end}}{{if .Stale}}<div class="small text-secondary">旧快照</div>{{end}}</td></tr>{{end}}{{end}}</tbody></table>{{if not .Overview.BedrockCoverage.Count}}<div class="empty-state"><h3>{{if .Overview.BedrockCoverage.Known}}AWS 未返回账号级配额项目{{else}}尚未采集 Bedrock 配额{{end}}</h3><p>后台刷新会读取 Service Quotas，不调用模型。</p></div>{{end}}<p class="p-4 text-secondary text-center mb-0" data-bedrock-no-match hidden>没有匹配的模型配额。</p></div><div class="card-footer small text-secondary">模型、调用方式及 token / 请求单位分别汇总。未返回的项目不视为 0，实时用量未采集；配额不等同于模型调用权限或实时容量。</div></section>
+<section class="card mt-4"><div class="card-header"><h2 class="card-title">账号池状态</h2><a class="btn btn-sm ms-auto" href="/accounts">管理账号</a></div><div class="table-responsive"><table class="table table-vcenter card-table"><thead><tr><th>账号</th><th>默认出口</th><th>数据连接</th><th>已启用区域</th><th>采集状态</th></tr></thead><tbody>{{range .Overview.Accounts}}<tr><td><a href="/accounts/{{.ID}}">{{.Name}}</a><div class="data-id mt-1">{{.AWSAccountID}}</div></td><td>{{if .RouteMode}}{{routeMode .RouteMode}}{{else}}受限{{end}}{{if .ProxyName}}<div class="small text-secondary">{{.ProxyName}}</div>{{end}}</td><td>{{if .ConnectionName}}{{.ConnectionName}}{{else}}—{{end}}</td><td>{{if .RegionsKnown}}{{.EnabledRegions}}{{else}}待查询{{end}}</td><td><span class="badge {{if eq .Status "ready"}}bg-green-lt{{else}}bg-secondary-lt{{end}}">{{dashboardAccountStatus .Status}}</span>{{if .FailedScopes}}<div class="small text-warning mt-1">{{.FailedScopes}} 项读取不完整</div>{{end}}{{if .UpdatedAt}}<div class="small text-secondary mt-1">{{beijing .UpdatedAt}}</div>{{end}}</td></tr>{{else}}<tr><td colspan="5" class="empty-state">还没有可访问的 AWS 账号。<a href="/accounts">添加或配置账号</a></td></tr>{{end}}</tbody></table></div></section>
+</section>{{end}}
+{{define "dashboard-refresh-result"}}<div class="alert alert-info d-block"><strong>已提交后台刷新</strong><p class="mt-1 mb-2">按账号和区域读取，已有快照继续显示。</p><div class="d-flex flex-wrap gap-3">{{range .Jobs}}<a href="/jobs/{{.ID}}">查看任务 · {{.Accounts}} 个账号</a>{{end}}</div>{{if .Skipped}}<details class="mt-3"><summary>{{len .Skipped}} 个账号未提交</summary><ul class="mb-0 mt-2">{{range .Skipped}}<li>{{.Name}}：{{.Reason}}</li>{{end}}</ul></details>{{end}}</div>{{end}}

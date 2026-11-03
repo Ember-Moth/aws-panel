@@ -32,6 +32,8 @@ func (Cloud) Fetch(ctx context.Context, cfg aws.Config, req source.Request) (sou
 		return lightsailRegions(ctx, cfg)
 	case contract.LightsailInstance:
 		return instances(ctx, cfg, req)
+	case contract.EC2Instance, contract.EC2Address, contract.LightsailStaticIP:
+		return computeResources(ctx, cfg, req)
 	default:
 		return source.Snapshot{}, contract.ErrInvalid
 	}

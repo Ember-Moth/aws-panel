@@ -214,6 +214,9 @@ func resourceView(row entity.Resource, names map[string]string) (contract.Resour
 	if json.Unmarshal([]byte(row.Details), &details) != nil {
 		return contract.Resource{}, contract.ErrUnavailable
 	}
+	if details.EC2 != nil {
+		details.EC2.CreatedAt = clock.In(details.EC2.CreatedAt)
+	}
 	if details.Instance != nil {
 		details.Instance.CreatedAt = timeView(details.Instance.CreatedAt)
 	}

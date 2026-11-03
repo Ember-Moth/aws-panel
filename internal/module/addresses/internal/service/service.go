@@ -1,0 +1,183 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"strconv"
+	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/herta-network/aws-panel/internal/auth"
+	ac "github.com/herta-network/aws-panel/internal/module/accounts/contract"
+	"github.com/herta-network/aws-panel/internal/module/addresses/contract"
+	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
+)
+
+type Access interface {
+	Principal(context.Context, int64) (auth.Principal, error)
+	AccountAccess(context.Context, int64, string, bool) (bool, error)
+}
+type Clients interface {
+	ConfigFor(context.Context, int64, string, string, bool) (aws.Config, error)
+	ConfigForBound(context.Context, int64, string, string, bool, string, func(context.Context) error) (aws.Config, error)
+}
+type Accounts interface {
+	Clients
+	Inspect(context.Context, int64, string, string, bool) (ac.Snapshot, error)
+	ListAccounts(context.Context, int64) ([]ac.Account, error)
+	AccountDetail(context.Context, int64, string) (*ac.AccountDetail, error)
+}
+type Jobs interface {
+	Prepare(context.Context, int64, oc.PlanRequest) (oc.Plan, error)
+	Plan(context.Context, int64, string) (oc.Plan, error)
+	Submit(context.Context, int64, oc.SubmitRequest, auth.RequestMeta) (oc.Job, error)
+}
+type Deps struct {
+	Accounts      Accounts
+	Access        Access
+	Jobs          Jobs
+	Cloud         Cloud
+	WritesEnabled bool
+}
+type Service struct{ deps Deps }
+
+func New(deps Deps) *Service { return &Service{deps: deps} }
+func (s *Service) actor(ctx context.Context, id int64) error {
+	actor, err := s.deps.Access.Principal(ctx, id)
+	if err != nil {
+		return contract.ErrForbidden
+	}
+	if actor.Role != "admin" && actor.Role != "operator" {
+		return contract.ErrForbidden
+	}
+	return nil
+}
+func (s *Service) Options(ctx context.Context, actorID int64) (contract.Options, error) {
+	if err := s.actor(ctx, actorID); err != nil {
+		return contract.Options{}, err
+	}
+	rows, err := s.deps.Accounts.ListAccounts(ctx, actorID)
+	if err != nil {
+		return contract.Options{}, publicError(err)
+	}
+	result := contract.Options{Accounts: []contract.Account{}, WritesEnabled: s.deps.WritesEnabled}
+	for _, row := range rows {
+		if row.Partition != "aws" {
+			continue
+		}
+		allowed, err := s.deps.Access.AccountAccess(ctx, actorID, row.ID, true)
+		if err != nil {
+			return result, contract.ErrUnavailable
+		}
+		if !allowed {
+			continue
+		}
+		detail, err := s.deps.Accounts.AccountDetail(ctx, actorID, row.ID)
+		if err != nil {
+			return result, publicError(err)
+		}
+		account := contract.Account{ID: row.ID, Name: row.Name, AWSAccountID: row.AWSAccountID, Connections: []contract.Connection{}}
+		for _, connection := range detail.Connections {
+			account.Connections = append(account.Connections, contract.Connection{ID: connection.ID, Name: connection.Name, Status: connection.Status})
+		}
+		result.Accounts = append(result.Accounts, account)
+	}
+	return result, nil
+}
+func (s *Service) Catalogue(ctx context.Context, actorID int64, id, region, kind string) (contract.Catalogue, error) {
+	if err := s.actor(ctx, actorID); err != nil {
+		return contract.Catalogue{}, err
+	}
+	if !validRegion(region) || (kind != "lightsail" && kind != "ec2") {
+		return contract.Catalogue{}, contract.ErrInvalid
+	}
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	info, err := s.deps.Accounts.Inspect(ctx, actorID, id, region, true)
+	if err != nil {
+		return contract.Catalogue{}, publicError(err)
+	}
+	if info.Partition != "aws" {
+		return contract.Catalogue{}, contract.ErrInvalid
+	}
+	cfg, err := s.deps.Accounts.ConfigFor(ctx, actorID, id, region, true)
+	if err != nil {
+		return contract.Catalogue{}, publicError(err)
+	}
+	result, err := s.deps.Cloud.Catalogue(ctx, cfg, kind, info.AWSAccountID)
+	if err != nil {
+		return result, publicError(err)
+	}
+	result.ConnectionID = id
+	result.WritesEnabled = s.deps.WritesEnabled
+	return result, nil
+}
+func preview(plan oc.Plan) (contract.Preview, error) {
+	if plan.Operation != OperationID {
+		return contract.Preview{}, contract.ErrInvalid
+	}
+	result := contract.Preview{ID: plan.ID, ExpiresAt: plan.ExpiresAt, CanSubmit: plan.CanSubmit, Targets: []contract.PreviewTarget{}}
+	for _, item := range plan.Items {
+		var spec contract.Spec
+		if len(item.Steps) == 0 || json.Unmarshal(item.Steps[0].Input, &spec) != nil {
+			return result, contract.ErrUnavailable
+		}
+		result.Targets = append(result.Targets, contract.PreviewTarget{AWSAccountID: item.Target.Binding.AWSAccountID, Spec: spec})
+	}
+	return result, nil
+}
+func (s *Service) Prepare(ctx context.Context, actorID int64, req contract.Request) (contract.Preview, error) {
+	if err := s.actor(ctx, actorID); err != nil {
+		return contract.Preview{}, err
+	}
+	targets, err := normalize(req.Targets)
+	if err != nil {
+		return contract.Preview{}, err
+	}
+	raw, _ := json.Marshal(contract.Request{Targets: targets})
+	bindings := make([]oc.Target, 0, len(targets))
+	for i, target := range targets {
+		bindings = append(bindings, oc.Target{Key: "address-" + strconv.Itoa(i), Label: "地址操作", Binding: oc.Binding{ConnectionID: target.ConnectionID, Region: target.Region}})
+	}
+	plan, err := s.deps.Jobs.Prepare(ctx, actorID, oc.PlanRequest{Operation: OperationID, InputVersion: 1, Input: raw, Targets: bindings})
+	if err != nil {
+		return contract.Preview{}, publicError(err)
+	}
+	return preview(plan)
+}
+func (s *Service) Plan(ctx context.Context, actorID int64, id string) (contract.Preview, error) {
+	if err := s.actor(ctx, actorID); err != nil {
+		return contract.Preview{}, err
+	}
+	plan, err := s.deps.Jobs.Plan(ctx, actorID, id)
+	if err != nil {
+		return contract.Preview{}, publicError(err)
+	}
+	return preview(plan)
+}
+func (s *Service) Submit(ctx context.Context, actorID int64, id, key string, meta auth.RequestMeta) (oc.Job, error) {
+	if _, err := s.Plan(ctx, actorID, id); err != nil {
+		return oc.Job{}, err
+	}
+	job, err := s.deps.Jobs.Submit(ctx, actorID, oc.SubmitRequest{PlanID: id, IdempotencyKey: key}, meta)
+	return job, publicError(err)
+}
+func publicError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var own *contract.Error
+	if errors.As(err, &own) {
+		return own
+	}
+	var account *ac.Error
+	if errors.As(err, &account) {
+		return &contract.Error{Code: account.Code, Message: account.Message}
+	}
+	var op *oc.Error
+	if errors.As(err, &op) {
+		return &contract.Error{Code: op.Code, Message: op.Message}
+	}
+	return contract.ErrUnavailable
+}

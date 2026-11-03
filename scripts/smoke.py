@@ -22,6 +22,8 @@ from accounts import check_accounts, FIXTURE_SECRETS
 from operations import check_operations, wait_job
 from inventory import check_inventory, check_regions
 from lightsail import check_lightsail, ROOT_PASSWORD_FIXTURE
+from compute import check_compute
+from dashboard import check_dashboard
 binary = root / "bin" / "aws-panel"
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 parser = argparse.ArgumentParser(description=__doc__)
@@ -120,6 +122,8 @@ with tempfile.TemporaryDirectory(prefix="aws-panel-smoke-", dir="/tmp") as direc
         subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(pg_port), "-U", "aws_panel_migrator", "-d", "aws_panel_test", "-v", "ON_ERROR_STOP=1", "-f", "tests/e2e/lightsail-fixture.sql"], cwd=root, env=migration_environment, check=True, capture_output=True)
         lightsail_plan = subprocess.check_output(["psql", "-h", "127.0.0.1", "-p", str(pg_port), "-U", "aws_panel_migrator", "-d", "aws_panel_test", "-Atc", "SELECT id FROM plans WHERE operation='lightsail.create' AND input_hash='browser-lightsail-preview-only' LIMIT 1"], cwd=root, env=migration_environment, text=True).strip()
         check_lightsail(admin, lightsail_plan)
+        check_compute(admin)
+        check_dashboard(admin)
         restart_job = check_operations(admin)
         for operation in ("status", "rotate", "reencrypt"):
             subprocess.run([str(binary), "vault", operation], cwd=root, env=environment, check=True)

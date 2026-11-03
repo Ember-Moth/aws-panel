@@ -75,7 +75,7 @@ func identityDatabase(t *testing.T) (*gorm.DB, *sql.DB, *sql.DB) {
 	clear := func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if _, err := owner.ExecContext(ctx, "TRUNCATE TABLE lightsail_creations, inventory_schedules, resource_snapshots, inventory_runs, inventory_scopes, operations_diagnostic_effects, operations_outbox, job_events, job_attempts, job_steps, job_items, jobs, plans, account_grants, connections, proxy_profiles, secrets, aws_accounts, sessions, members, audit_events RESTART IDENTITY"); err != nil {
+		if _, err := owner.ExecContext(ctx, "TRUNCATE TABLE dashboard_runs, dashboard_snapshots, operation_effects, operation_target_locks, lightsail_creations, inventory_schedules, resource_snapshots, inventory_runs, inventory_scopes, operations_diagnostic_effects, operations_outbox, job_events, job_attempts, job_steps, job_items, jobs, plans, account_grants, connections, proxy_profiles, secrets, aws_accounts, sessions, members, audit_events RESTART IDENTITY"); err != nil {
 			t.Error("cannot reset identity fixture")
 		}
 	}

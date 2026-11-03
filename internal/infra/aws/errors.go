@@ -32,8 +32,12 @@ func ClassifyError(err error) Failure {
 			result.Code = "AWS_ACCESS_DENIED"
 		case "RegionSetupInProgressException", "OptInRequired", "AccountSetupInProgressException":
 			result.Code = "AWS_REGION_UNAVAILABLE"
-		case "InvalidInputException", "ValidationException", "NotFoundException":
+		case "InvalidInputException", "ValidationException", "NotFoundException", "InvalidParameterValue", "InvalidParameterCombination", "MissingParameter", "InvalidParameter", "InvalidAllocationID.NotFound", "InvalidInstanceID.NotFound", "InvalidSubnetID.NotFound", "InvalidGroup.NotFound", "InvalidAMIID.NotFound", "InvalidInstanceID.Malformed", "InvalidAllocationID.Malformed":
 			result.Code = "AWS_INVALID_REQUEST"
+		case "AddressLimitExceeded", "InstanceLimitExceeded", "VcpuLimitExceeded", "VpcLimitExceeded", "InternetGatewayLimitExceeded", "SubnetLimitExceeded", "SecurityGroupLimitExceeded", "ResourceLimitExceeded", "ResourceLimitExceededException", "QuotaExceededException":
+			result.Code = "AWS_QUOTA_EXCEEDED"
+		case "IncorrectInstanceState", "IncorrectState", "InvalidIPAddress.InUse", "Resource.AlreadyAssociated", "DependencyViolation", "InvalidAssociationID.NotFound":
+			result.Code = "AWS_STATE_CONFLICT"
 		case "Throttling", "ThrottlingException", "TooManyRequestsException", "RequestLimitExceeded":
 			result.Code = "AWS_THROTTLED"
 			result.Transient = true

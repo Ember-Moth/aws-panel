@@ -1,17 +1,2 @@
 {{define "system-status"}}
-<section class="card status-card" id="system-status" aria-live="polite"
-  hx-get="/partials/system-status" hx-trigger="every 30s" hx-swap="outerHTML">
-  <div class="card-header"><h2 class="card-title">服务状态</h2></div>
-  <div class="card-body">
-    {{if .Error}}<div class="alert alert-warning mb-3">服务暂不可用，请稍后重试。</div>{{end}}
-    <dl class="status-list">
-      <div><dt>API 服务</dt><dd>{{if .Error}}<span class="badge bg-red-lt">暂不可用</span>{{else}}<span class="badge bg-green-lt">连接正常</span>{{end}}</dd></div>
-      <div><dt>后台任务</dt><dd>{{if .Error}}<span class="badge bg-secondary-lt">未知</span>{{else if .WorkerHealthy}}<span class="badge bg-green-lt">运行正常</span>{{else}}<span class="badge bg-azure-lt">等待心跳</span>{{end}}</dd></div>
-      <div><dt>应用版本</dt><dd>{{if .Version}}{{.Version}}{{else}}—{{end}}</dd></div>
-      <div><dt>时区</dt><dd>Asia/Shanghai</dd></div>
-      <div class="stacked"><dt>服务器时间</dt><dd>{{if .ServerTime}}{{.ServerTime}}{{else}}—{{end}}</dd></div>
-      <div class="stacked"><dt>最近任务心跳</dt><dd>{{if .Heartbeat}}{{.Heartbeat}}{{else}}—{{end}}</dd></div>
-    </dl>
-  </div>
-</section>
-{{end}}
+<section class="card status-card" id="system-status" aria-live="polite" hx-get="/partials/system-status" hx-trigger="every 30s" hx-swap="outerHTML"><div class="card-header d-flex justify-content-between"><h2 class="card-title">服务状态</h2><button class="btn btn-sm" type="button" hx-get="/partials/system-status" hx-target="#system-status" hx-swap="outerHTML" hx-disabled-elt="this" aria-label="刷新服务状态">{{template "workspace-icon" "sync"}}</button></div><div class="card-body">{{if .Error}}<div class="alert alert-warning">服务暂不可用，请稍后重试。</div>{{end}}<dl class="status-list"><div><dt>API 服务</dt><dd>{{if .Error}}<span class="badge bg-red-lt">暂不可用</span>{{else}}<span class="badge bg-green-lt">连接正常</span>{{end}}</dd></div><div><dt>后台任务</dt><dd>{{if .Error}}<span class="badge bg-secondary-lt">未知</span>{{else if .WorkerHealthy}}<span class="badge bg-green-lt">运行正常</span>{{else}}<span class="badge bg-secondary-lt">等待心跳</span>{{end}}</dd></div></dl><details class="supporting-details mt-4"><summary>版本与运行信息</summary><dl class="status-list mt-3"><div><dt>应用版本</dt><dd>{{if .Version}}{{.Version}}{{else}}—{{end}}</dd></div><div><dt>时区</dt><dd>Asia/Shanghai</dd></div><div class="stacked"><dt>服务器时间</dt><dd>{{if .ServerTime}}{{.ServerTime}}{{else}}—{{end}}</dd></div><div class="stacked"><dt>最近任务心跳</dt><dd>{{if .Heartbeat}}{{.Heartbeat}}{{else}}—{{end}}</dd></div></dl></details></div></section>{{end}}

@@ -6,8 +6,8 @@
 <div class="page-body"><div class="container-xl">
   {{if and .CanManage (not .VaultReady)}}<div class="alert alert-info">凭据存储尚未配置。添加访问凭据前，请先在服务器初始化主密钥并配置密钥文件。</div>{{end}}
   <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table">
-    <thead><tr><th>账号</th><th>AWS ID</th><th>分区</th><th>状态</th><th></th></tr></thead><tbody>
-    {{range .Items}}<tr><td class="text-nowrap">{{.Name}}</td><td><code>{{.AWSAccountID}}</code></td><td>{{.Partition}}</td><td>{{if .Active}}<span class="badge bg-green-lt">已启用</span>{{else}}<span class="badge bg-secondary-lt">已停用</span>{{end}}</td><td class="text-end"><a class="btn btn-sm" href="/accounts/{{.ID}}">查看</a></td></tr>
+    <thead><tr><th>账号</th><th>AWS ID</th><th>默认出口</th><th>状态</th><th></th></tr></thead><tbody>
+    {{range .Items}}<tr><td class="text-nowrap">{{.Name}}</td><td><code>{{.AWSAccountID}}</code></td><td>{{if .DefaultRouteMode}}{{routeMode .DefaultRouteMode}}{{else}}受限{{end}}{{if .DefaultProxyName}}<div class="small text-secondary">{{.DefaultProxyName}}</div>{{end}}</td><td>{{if .Active}}<span class="badge bg-green-lt">已启用</span>{{else}}<span class="badge bg-secondary-lt">已停用</span>{{end}}</td><td class="text-end"><a class="btn btn-sm" href="/accounts/{{.ID}}">查看</a></td></tr>
     {{else}}<tr><td colspan="5" class="text-center text-secondary py-5">暂无可访问的 AWS 账号</td></tr>{{end}}
     </tbody></table></div></div>
 </div></div>
@@ -24,6 +24,7 @@
     <div class="mb-3"><label for="account-name" class="form-label">名称</label><input id="account-name" class="form-control" name="name" value="{{.Account.Name}}" maxlength="80" required></div>
     <div class="mb-3"><label for="aws-id" class="form-label">AWS 账号 ID</label><input id="aws-id" class="form-control" name="aws_account_id" value="{{.Account.AWSAccountID}}" pattern="[0-9]{12}" maxlength="12" required {{if not .New}}readonly{{end}}><div class="form-hint">12 位数字；创建后通过访问凭据验证身份。</div></div>
     <div class="mb-3"><label for="partition" class="form-label">AWS 分区</label>{{if .New}}<select id="partition" class="form-select" name="partition"><option value="aws" {{if eq .Account.Partition "aws"}}selected{{end}}>AWS 商业区域</option><option value="aws-cn" {{if eq .Account.Partition "aws-cn"}}selected{{end}}>AWS 中国</option><option value="aws-us-gov" {{if eq .Account.Partition "aws-us-gov"}}selected{{end}}>AWS GovCloud</option></select>{{else}}<input id="partition" class="form-control" name="partition" value="{{.Account.Partition}}" readonly>{{end}}</div>
+    <div class="mb-3"><label class="form-label" for="account-proxy">账号默认代理</label><select id="account-proxy" class="form-select" name="default_proxy_id" data-account-proxy><option value="">直连（不使用代理）</option>{{range .Proxies}}<option value="{{.ID}}" {{if eq (textptr $.Account.DefaultProxyID) .ID}}selected{{end}}>{{.Name}} · {{routeMode .Protocol}}{{if not .Active}} · 已停用{{end}}</option>{{end}}</select><div class="form-hint mt-2">新建访问连接默认继承账号出口。修改后，继承此设置的连接需要重新验证。</div><div class="d-flex gap-3 mt-2"><a class="small" href="/proxies/new" target="_blank" rel="noopener noreferrer">新建 SOCKS5 / HTTP 代理</a><button class="btn btn-link btn-sm" type="button" data-reload-account-proxies>刷新代理列表</button></div><div class="small text-secondary" role="status" data-account-proxy-status></div></div>
     <label class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox" name="active" value="true" {{if .Account.Active}}checked{{end}}><span class="form-check-label">允许通过此账号访问 AWS</span></label>
     <button class="btn btn-primary" type="submit">保存账号</button>
   </form>
@@ -35,6 +36,7 @@
   {{if .Detail.CanManage}}<div class="col-auto btn-list"><a class="btn" href="/accounts/{{.Detail.Account.ID}}/edit">账号配置</a><a class="btn" href="/accounts/{{.Detail.Account.ID}}/access">访问权限</a>{{if .Detail.VaultReady}}<a class="btn btn-primary" href="/accounts/{{.Detail.Account.ID}}/connections/new">添加连接</a>{{end}}</div>{{end}}
 </div></div></div>
 <div class="page-body"><div class="container-xl">
+ {{if .Detail.CanManage}}<div class="context-note mb-3">账号默认出口：{{routeMode .Detail.Account.DefaultRouteMode}}{{if .Detail.Account.DefaultProxyName}} · {{.Detail.Account.DefaultProxyName}}{{end}}</div>{{end}}
   {{if not .Detail.Account.Active}}<div class="alert alert-warning">此账号已停用，相关连接不会发起 AWS 请求。</div>{{end}}
   {{if and .Detail.CanManage (not .Detail.VaultReady)}}<div class="alert alert-info">请先初始化主密钥，再配置访问凭据。</div>{{end}}
   <div class="card"><div class="card-header"><h2 class="card-title">访问连接</h2></div>

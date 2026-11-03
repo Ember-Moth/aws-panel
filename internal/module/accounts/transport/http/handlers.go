@@ -65,6 +65,7 @@ type accountsView struct {
 	CanManage, VaultReady bool
 }
 type accountForm struct {
+	Proxies             []contract.Proxy
 	Account             contract.Account
 	New                 bool
 	CSRF, Error, Action string
@@ -204,7 +205,7 @@ func (h *Handler) Detail(ctx context.Context, c *app.RequestContext) {
 }
 func (h *Handler) AccountForm(ctx context.Context, c *app.RequestContext) {
 	id := c.Param("id")
-	model := accountForm{New: id == "", Account: contract.Account{Partition: "aws", Active: true}, CSRF: auth.CSRF(ctx), Action: "/accounts"}
+	model := accountForm{New: id == "", Account: contract.Account{Partition: "aws", Active: true, DefaultRouteMode: "direct"}, CSRF: auth.CSRF(ctx), Action: "/accounts"}
 	if id != "" {
 		detail, err := h.service.AccountDetail(ctx, actor(ctx), id)
 		if err != nil {
@@ -214,6 +215,12 @@ func (h *Handler) AccountForm(ctx context.Context, c *app.RequestContext) {
 		model.Account = detail.Account
 		model.Action += "/" + id
 	}
+	proxies, err := h.service.ListProxies(ctx, actor(ctx))
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	model.Proxies = proxies
 	h.render(ctx, c, 200, "账号配置", "account-edit", "", "accounts", model)
 }
 
@@ -236,7 +243,10 @@ func (h *Handler) SaveAccount(ctx context.Context, c *app.RequestContext) {
 			return
 		}
 	} else {
-		req = contract.AccountRequest{Name: c.PostForm("name"), Partition: c.PostForm("partition"), AWSAccountID: c.PostForm("aws_account_id"), Active: active(c), Version: version(c)}
+		req = contract.AccountRequest{Name: c.PostForm("name"), Partition: c.PostForm("partition"), AWSAccountID: c.PostForm("aws_account_id"), Active: active(c), Version: version(c), DefaultProxyID: optional(c.PostForm("default_proxy_id")), DefaultRouteMode: "direct"}
+		if req.DefaultProxyID != nil {
+			req.DefaultRouteMode = "proxy"
+		}
 	}
 	value, err := h.service.SaveAccount(ctx, actor(ctx), id, req, auth.Meta(ctx))
 	if err != nil {
@@ -249,7 +259,12 @@ func (h *Handler) SaveAccount(ctx context.Context, c *app.RequestContext) {
 		if id != "" {
 			action += "/" + id
 		}
-		h.render(ctx, c, code, "账号配置", "account-edit", "account-form", "accounts", accountForm{New: id == "", Account: contract.Account{ID: id, Name: req.Name, Partition: req.Partition, AWSAccountID: req.AWSAccountID, Active: req.Active != nil && *req.Active, Version: req.Version}, Action: action, CSRF: auth.CSRF(ctx), Error: fault.Message})
+		proxies, loadErr := h.service.ListProxies(ctx, actor(ctx))
+		if loadErr != nil {
+			fail(c, loadErr)
+			return
+		}
+		h.render(ctx, c, code, "账号配置", "account-edit", "account-form", "accounts", accountForm{Proxies: proxies, New: id == "", Account: contract.Account{DefaultRouteMode: req.DefaultRouteMode, DefaultProxyID: req.DefaultProxyID, ID: id, Name: req.Name, Partition: req.Partition, AWSAccountID: req.AWSAccountID, Active: req.Active != nil && *req.Active, Version: req.Version}, Action: action, CSRF: auth.CSRF(ctx), Error: fault.Message})
 		return
 	}
 	if api(c) {
@@ -316,7 +331,7 @@ func (h *Handler) GetProxy(ctx context.Context, c *app.RequestContext) {
 }
 func (h *Handler) ProxyForm(ctx context.Context, c *app.RequestContext) {
 	id := c.Param("id")
-	model := proxyForm{New: id == "", Proxy: contract.Proxy{Active: true, Port: 1080}, VaultReady: h.service.VaultReady(), CSRF: auth.CSRF(ctx), Action: "/proxies"}
+	model := proxyForm{New: id == "", Proxy: contract.Proxy{Protocol: "socks5", Active: true, Port: 1080}, VaultReady: h.service.VaultReady(), CSRF: auth.CSRF(ctx), Action: "/proxies"}
 	if id != "" {
 		value, err := h.service.Proxy(ctx, actor(ctx), id)
 		if err != nil {
@@ -349,7 +364,7 @@ func (h *Handler) SaveProxy(ctx context.Context, c *app.RequestContext) {
 		}
 	} else {
 		port, _ := strconv.Atoi(c.PostForm("port"))
-		req = contract.ProxyRequest{Name: c.PostForm("name"), Host: c.PostForm("host"), Port: port, Active: active(c), Version: version(c), ClearAuth: c.PostForm("clear_auth") == "true"}
+		req = contract.ProxyRequest{Protocol: c.PostForm("protocol"), Name: c.PostForm("name"), Host: c.PostForm("host"), Port: port, Active: active(c), Version: version(c), ClearAuth: c.PostForm("clear_auth") == "true"}
 		if user, pass := c.PostForm("username"), c.PostForm("password"); user != "" || pass != "" {
 			req.Auth = &contract.ProxyAuth{Username: user, Password: pass}
 		}
@@ -365,7 +380,7 @@ func (h *Handler) SaveProxy(ctx context.Context, c *app.RequestContext) {
 		if id != "" {
 			action += "/" + id
 		}
-		h.render(ctx, c, code, "代理配置", "proxy-edit", "proxy-form", "proxies", proxyForm{New: id == "", Proxy: contract.Proxy{ID: id, Name: req.Name, Host: req.Host, Port: req.Port, Version: req.Version, Active: req.Active != nil && *req.Active}, VaultReady: h.service.VaultReady(), CSRF: auth.CSRF(ctx), Action: action, Error: fault.Message})
+		h.render(ctx, c, code, "代理配置", "proxy-edit", "proxy-form", "proxies", proxyForm{New: id == "", Proxy: contract.Proxy{Protocol: req.Protocol, ID: id, Name: req.Name, Host: req.Host, Port: req.Port, Version: req.Version, Active: req.Active != nil && *req.Active}, VaultReady: h.service.VaultReady(), CSRF: auth.CSRF(ctx), Action: action, Error: fault.Message})
 		return
 	}
 	if api(c) {
@@ -442,7 +457,7 @@ func (h *Handler) connectionModel(ctx context.Context, c *app.RequestContext, va
 	return connectionForm{Connection: value, Account: detail.Account, Proxies: proxies, Sources: sources, New: value.ID == "", VaultReady: h.service.VaultReady(), CSRF: auth.CSRF(ctx), Action: action}, nil
 }
 func (h *Handler) ConnectionForm(ctx context.Context, c *app.RequestContext) {
-	value := contract.Connection{AccountID: c.Param("account_id"), AuthType: "access_key", Region: "us-east-1", RouteMode: "direct", Active: true}
+	value := contract.Connection{AccountID: c.Param("account_id"), AuthType: "access_key", Region: "us-east-1", RouteMode: "inherit", Active: true}
 	if id := c.Param("id"); id != "" {
 		var err error
 		value, err = h.service.Connection(ctx, actor(ctx), id)
@@ -466,7 +481,7 @@ func connectionInput(c *app.RequestContext) (contract.ConnectionRequest, error) 
 	}
 	req = contract.ConnectionRequest{Name: c.PostForm("name"), AuthType: c.PostForm("auth_type"), Region: c.PostForm("region"), RouteMode: c.PostForm("route_mode"),
 		SourceConnectionID: optional(c.PostForm("source_connection_id")), RoleARN: c.PostForm("role_arn"), Active: active(c), Version: version(c)}
-	if req.RouteMode == "socks5" {
+	if req.RouteMode == "socks5" || req.RouteMode == "http" || req.RouteMode == "proxy" {
 		req.ProxyID = optional(c.PostForm("proxy_id"))
 	}
 	if req.AuthType != "assume_role" {
@@ -587,7 +602,7 @@ func (h *Handler) Verify(ctx context.Context, c *app.RequestContext) {
 }
 
 // ProbeProxy checks a fixed AWS HTTPS endpoint, without sending AWS credentials.
-// @Summary Test SOCKS5 connectivity
+// @Summary Test HTTP or SOCKS5 connectivity
 // @Tags proxies
 // @Produce json
 // @Security SessionCookie && CSRFToken

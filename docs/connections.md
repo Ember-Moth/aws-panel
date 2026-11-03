@@ -70,3 +70,7 @@ docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm vault vaul
 ```
 
 初始化和维护工具输出密钥 ID 与引用数量，不输出密钥内容。禁止把真实凭据放入命令行、测试夹具、提交或截图；使用面板中的密码字段录入。
+
+## 账号默认出口与 HTTP 代理
+
+schema 9 起支持账号默认 SOCKS5 / HTTP CONNECT 代理。添加账号即可绑定代理，新连接默认继承，原有显式出口不被自动改写。默认出口变化参与配置版本与每次请求的校验；协议、超时、认证、删除引用限制和迁移说明见 [仪表盘与账号默认代理](dashboard.md)。代理详情仍仅管理员可见。

@@ -62,3 +62,9 @@ type Schedule struct {
 	LastRunAt            *time.Time
 	CreatedAt, UpdatedAt time.Time
 }
+
+type Overview struct {
+	Scope
+	ObservedCount, RunningCount int64
+	IPJSON, RegionJSON          string
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"regexp"
+	"sort"
 	"strconv"
 	"time"
 
@@ -109,10 +110,24 @@ func (s *Service) Submit(ctx context.Context, actorID int64, req contract.Submit
 		}
 		for i, itemPlan := range items {
 			item := entity.Item{ID: uuid.NewString(), JobID: job.ID, Ordinal: i, TargetKey: itemPlan.Target.Key, Label: itemPlan.Target.Label, ConnectionID: itemPlan.Target.Binding.ConnectionID, Region: itemPlan.Target.Binding.Region, Binding: encode(itemPlan.Target.Binding), Status: contract.Queued}
+			locks := map[string]bool{}
 			if !d.Diagnostic && itemPlan.Target.LockKey != "" {
 				digest := sha256.Sum256([]byte(itemPlan.Target.Binding.Partition + "\x00" + itemPlan.Target.Binding.AWSAccountID + "\x00" + item.Region + "\x00" + itemPlan.Target.LockKey))
 				item.LockKey = hex.EncodeToString(digest[:])
+				locks[item.LockKey] = true
 			}
+			if !d.Diagnostic {
+				for _, value := range itemPlan.Target.LockKeys {
+					digest := sha256.Sum256([]byte(itemPlan.Target.Binding.Partition + "\x00" + itemPlan.Target.Binding.AWSAccountID + "\x00" + item.Region + "\x00" + value))
+					locks[hex.EncodeToString(digest[:])] = true
+				}
+			}
+			keys := make([]string, 0, len(locks))
+			for value := range locks {
+				keys = append(keys, value)
+			}
+			sort.Strings(keys)
+			item.LockKeys = encode(keys)
 			if itemPlan.Target.Binding.AccountID != "" {
 				id := itemPlan.Target.Binding.AccountID
 				item.AccountID = &id

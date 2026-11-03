@@ -41,7 +41,7 @@ func convert(err error) error {
 }
 func (s *Store) Account(ctx context.Context, id string) (entity.Account, error) {
 	var v entity.Account
-	err := s.db.WithContext(ctx).Table("aws_accounts").Where("id = ?", id).Take(&v).Error
+	err := s.db.WithContext(ctx).Table("aws_accounts a").Select("a.*,p.name AS default_proxy_name").Joins("LEFT JOIN proxy_profiles p ON p.id=a.default_proxy_id").Where("a.id = ?", id).Take(&v).Error
 	return v, convert(err)
 }
 func (s *Store) Accounts(ctx context.Context, ids []string, all bool) ([]entity.Account, error) {
@@ -49,11 +49,11 @@ func (s *Store) Accounts(ctx context.Context, ids []string, all bool) ([]entity.
 	if !all && len(ids) == 0 {
 		return values, nil
 	}
-	q := s.db.WithContext(ctx).Table("aws_accounts").Where("deleted_at IS NULL")
+	q := s.db.WithContext(ctx).Table("aws_accounts a").Select("a.*,p.name AS default_proxy_name").Joins("LEFT JOIN proxy_profiles p ON p.id=a.default_proxy_id").Where("a.deleted_at IS NULL")
 	if !all {
-		q = q.Where("id IN ? AND active = true", ids)
+		q = q.Where("a.id IN ? AND a.active = true", ids)
 	}
-	err := q.Order("created_at DESC, id").Find(&values).Error
+	err := q.Order("a.created_at DESC, a.id").Find(&values).Error
 	return values, convert(err)
 }
 func (s *Store) Proxy(ctx context.Context, id string) (entity.Proxy, error) {
@@ -71,12 +71,17 @@ func (s *Store) ProxyUsage(ctx context.Context, id string) (int64, error) {
 	err := s.db.WithContext(ctx).Table("connections").Where("proxy_id = ?", id).Count(&count).Error
 	return count, convert(err)
 }
+func (s *Store) ProxyAccountUsage(ctx context.Context, id string) (int64, error) {
+	var count int64
+	err := s.db.WithContext(ctx).Table("aws_accounts").Where("default_proxy_id=? AND deleted_at IS NULL", id).Count(&count).Error
+	return count, convert(err)
+}
 func (s *Store) ProxyImpact(ctx context.Context, id string) ([]entity.Connection, error) {
 	values := []entity.Connection{}
 	err := s.db.WithContext(ctx).Raw(`WITH RECURSIVE affected AS (
-		SELECT * FROM connections WHERE proxy_id = ?
+		SELECT c.* FROM connections c JOIN aws_accounts a ON a.id=c.account_id WHERE c.proxy_id = ? OR (c.route_mode='inherit' AND a.default_proxy_id=? AND a.deleted_at IS NULL)
 		UNION SELECT child.* FROM connections child JOIN affected parent ON child.source_connection_id = parent.id
-	) SELECT * FROM affected ORDER BY account_id, name, id`, id).Scan(&values).Error
+	) SELECT * FROM affected ORDER BY account_id, name, id`, id, id).Scan(&values).Error
 	return values, convert(err)
 }
 func (s *Store) Connection(ctx context.Context, id string) (entity.Connection, error) {
@@ -122,10 +127,25 @@ func (s *Store) Graph(ctx context.Context, id string) ([]entity.Node, error) {
 				return err
 			}
 			node := entity.Node{Connection: connection, Account: account, Secret: secret}
-			if connection.ProxyID != nil {
-				proxy, err := store.Proxy(ctx, *connection.ProxyID)
+			proxyID := connection.ProxyID
+			mode := connection.RouteMode
+			if mode == "inherit" {
+				proxyID = account.DefaultProxyID
+				mode = account.DefaultRouteMode
+			}
+			if mode != "direct" && mode != "socks5" && mode != "http" {
+				return contract.ErrInvalid
+			}
+			if (mode == "direct") != (proxyID == nil) {
+				return contract.ErrInvalid
+			}
+			if proxyID != nil {
+				proxy, err := store.Proxy(ctx, *proxyID)
 				if err != nil {
 					return err
+				}
+				if proxy.Protocol != mode {
+					return contract.Invalid("代理协议与出口不匹配")
 				}
 				node.Proxy = &proxy
 				if proxy.SecretID != nil {

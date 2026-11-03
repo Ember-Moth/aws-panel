@@ -76,7 +76,7 @@ func (s *Store) Scopes(ctx context.Context, q entity.Query) ([]entity.Scope, err
 		db = db.Where("kind=?", q.Kind)
 	}
 	if q.Region != "" {
-		db = db.Where("(kind<>'lightsail_instance' OR region=?)", q.Region)
+		db = db.Where("(kind IN ('account_region','lightsail_region') OR region=?)", q.Region)
 	}
 	err := db.Order("account_id,kind,region").Offset((q.Page - 1) * q.Limit).Limit(q.Limit + 1).Find(&rows).Error
 	return rows, convert(err)

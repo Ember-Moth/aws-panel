@@ -13,6 +13,12 @@ import (
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/herta-network/aws-panel/internal/module/accounts"
 	accountshttp "github.com/herta-network/aws-panel/internal/module/accounts/transport/http"
+	"github.com/herta-network/aws-panel/internal/module/addresses"
+	addresseshttp "github.com/herta-network/aws-panel/internal/module/addresses/transport/http"
+	"github.com/herta-network/aws-panel/internal/module/compute"
+	computehttp "github.com/herta-network/aws-panel/internal/module/compute/transport/http"
+	"github.com/herta-network/aws-panel/internal/module/dashboard"
+	dashboardhttp "github.com/herta-network/aws-panel/internal/module/dashboard/transport/http"
 	"github.com/herta-network/aws-panel/internal/module/identity"
 	identitycontract "github.com/herta-network/aws-panel/internal/module/identity/contract"
 	identityhttp "github.com/herta-network/aws-panel/internal/module/identity/transport/http"
@@ -24,6 +30,8 @@ import (
 	operationshttp "github.com/herta-network/aws-panel/internal/module/operations/transport/http"
 	"github.com/herta-network/aws-panel/internal/module/platform"
 	platformhttp "github.com/herta-network/aws-panel/internal/module/platform/transport/http"
+	"github.com/herta-network/aws-panel/internal/module/quotas"
+	quotashttp "github.com/herta-network/aws-panel/internal/module/quotas/transport/http"
 	"github.com/herta-network/aws-panel/internal/module/regions"
 	regionshttp "github.com/herta-network/aws-panel/internal/module/regions/transport/http"
 	"github.com/herta-network/aws-panel/internal/transport/http/middleware"
@@ -39,6 +47,10 @@ type Dependencies struct {
 	Inventory   inventory.Service
 	Regions     regions.Service
 	Lightsail   lightsail.Service
+	Addresses   addresses.Service
+	Compute     compute.Service
+	Dashboard   dashboard.Service
+	Quotas      quotas.Service
 	Diagnostics bool
 	Shutdown    <-chan struct{}
 	Policy      *security.Policy
@@ -54,6 +66,10 @@ func Register(h *server.Hertz, deps Dependencies) {
 	resources := inventoryhttp.New(deps.Inventory, deps.Renderer)
 	regionOps := regionshttp.New(deps.Regions, deps.Renderer)
 	launch := lightsailhttp.New(deps.Lightsail, deps.Renderer)
+	dashboardViews := dashboardhttp.New(deps.Dashboard, deps.Platform, deps.Renderer)
+	computeOps := computehttp.New(deps.Compute, deps.Renderer)
+	addressOps := addresseshttp.New(deps.Addresses, deps.Renderer)
+	quotaViews := quotashttp.New(deps.Quotas, deps.Renderer)
 	require := func(action string) app.HandlerFunc {
 		return middleware.RequireSession(deps.Identity, deps.Policy, action)
 	}
@@ -91,7 +107,7 @@ func Register(h *server.Hertz, deps Dependencies) {
 	h.GET("/audit", require(identitycontract.ActionAuditRead), platformhttp.Audit(deps.Platform, deps.Renderer))
 	h.GET("/api/v1/audit", require(identitycontract.ActionAuditRead), platformhttp.Audit(deps.Platform, deps.Renderer))
 	h.GET("/api/v1/system", require(identitycontract.ActionSystemRead), platformhttp.SystemStatus(deps.Platform))
-	h.GET("/", require(identitycontract.ActionSystemRead), platformhttp.Dashboard(deps.Platform, deps.Renderer))
+	h.GET("/", require(identitycontract.ActionSystemRead), dashboardViews.Page)
 	h.GET("/partials/system-status", require(identitycontract.ActionSystemRead), platformhttp.StatusPartial(deps.Platform, deps.Renderer))
 	h.GET("/static/*path", static(web.Static()))
 	readAccounts := func() app.HandlerFunc { return require(identitycontract.ActionAccountsRead) }
@@ -156,7 +172,12 @@ func Register(h *server.Hertz, deps Dependencies) {
 	h.GET("/api/v1/jobs/:id/stream", readJobs(), jobs.Stream)
 	h.GET("/api/v1/plans/:id", readJobs(), jobs.GetPlan)
 	h.POST("/api/v1/operations/diagnostics/plans", diagnoseJobs(), csrf, jobs.PrepareDiagnostic)
+	h.GET("/partials/dashboard", readAccounts(), dashboardViews.Partial)
+	h.POST("/dashboard/refresh", readAccounts(), csrf, dashboardViews.Refresh)
+	h.GET("/api/v1/dashboard", readAccounts(), dashboardViews.Read)
+	h.POST("/api/v1/dashboard/refresh", readAccounts(), csrf, dashboardViews.Refresh)
 	h.GET("/resources", readAccounts(), resources.Resources)
+	h.GET("/lightsail", readAccounts(), resources.Resources)
 	h.GET("/resources/scopes", readAccounts(), resources.Scopes)
 	h.GET("/resources/refresh", readAccounts(), resources.RefreshForm)
 	h.POST("/resources/refresh", readAccounts(), csrf, resources.Refresh)
@@ -197,6 +218,30 @@ func Register(h *server.Hertz, deps Dependencies) {
 	h.POST("/api/v1/lightsail/plans", operateCloud(), csrf, launch.Prepare)
 	h.GET("/api/v1/lightsail/plans/:id", operateCloud(), launch.Plan)
 	h.POST("/api/v1/lightsail/plans/:id/submit", operateCloud(), csrf, launch.Submit)
+
+	h.GET("/ec2", operateCloud(), computeOps.Form)
+	h.POST("/ec2/plans", operateCloud(), csrf, computeOps.Prepare)
+	h.GET("/ec2/plans/:id", operateCloud(), computeOps.Plan)
+	h.POST("/ec2/plans/:id/submit", operateCloud(), csrf, computeOps.Submit)
+	h.GET("/api/v1/ec2/options", operateCloud(), computeOps.Options)
+	h.GET("/api/v1/ec2/catalogue", operateCloud(), computeOps.Catalogue)
+	h.GET("/api/v1/ec2/instances", operateCloud(), computeOps.Instances)
+	h.POST("/api/v1/ec2/plans", operateCloud(), csrf, computeOps.Prepare)
+	h.GET("/api/v1/ec2/plans/:id", operateCloud(), computeOps.Plan)
+	h.POST("/api/v1/ec2/plans/:id/submit", operateCloud(), csrf, computeOps.Submit)
+	h.GET("/addresses", operateCloud(), addressOps.Form)
+	h.POST("/addresses/plans", operateCloud(), csrf, addressOps.Prepare)
+	h.GET("/addresses/plans/:id", operateCloud(), addressOps.Plan)
+	h.POST("/addresses/plans/:id/submit", operateCloud(), csrf, addressOps.Submit)
+	h.GET("/api/v1/addresses/options", operateCloud(), addressOps.Options)
+	h.GET("/api/v1/addresses/catalogue", operateCloud(), addressOps.Catalogue)
+	h.POST("/api/v1/addresses/plans", operateCloud(), csrf, addressOps.Prepare)
+	h.GET("/api/v1/addresses/plans/:id", operateCloud(), addressOps.Plan)
+	h.POST("/api/v1/addresses/plans/:id/submit", operateCloud(), csrf, addressOps.Submit)
+	h.GET("/quotas", readAccounts(), quotaViews.Page)
+	h.GET("/api/v1/quotas", readAccounts(), quotaViews.Read)
+	h.GET("/api/v1/quotas/options", readAccounts(), quotaViews.Options)
+	h.GET("/api/v1/quotas/regions", readAccounts(), quotaViews.Regions)
 
 }
 

@@ -18,15 +18,20 @@ import (
 
 type Route struct {
 	Mode  string
-	Proxy *SOCKS5
+	Proxy *Proxy
 }
 
-type SOCKS5 struct {
+type Proxy struct {
 	Host     string
 	Port     int
 	Username string
 	Password string
 }
+
+// SOCKS5 remains an alias for callers using the original proxy transport.
+type SOCKS5 = Proxy
+
+var ErrProxyAuthentication = errors.New("proxy authentication failed")
 
 // NewHTTPClient always owns its Transport and connection pool. SOCKS target
 // names are resolved by the proxy; no ProxyFromEnvironment is consulted.
@@ -76,8 +81,18 @@ func NewHTTPClient(route Route) (*http.Client, error) {
 			defer cancel()
 			return contextDialer.DialContext(ctx, network, address)
 		}
+	case "http":
+		profile := route.Proxy
+		if profile == nil || profile.Host == "" || profile.Port < 1 || profile.Port > 65535 {
+			return nil, errors.New("HTTP route requires a valid proxy address")
+		}
+		if (profile.Username == "") != (profile.Password == "") || len(profile.Username) > 255 || len(profile.Password) > 255 {
+			return nil, errors.New("invalid HTTP proxy authentication configuration")
+		}
+		transport.DialContext = httpProxyDialer(dialer, *profile)
+
 	default:
-		return nil, errors.New("explicit direct or socks5 route is required")
+		return nil, errors.New("explicit direct, socks5 or http route is required")
 	}
 	return &http.Client{
 		Transport: transport,

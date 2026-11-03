@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -175,7 +176,21 @@ func (f *inventoryAWS) handler(expectedAccount string) http.Handler {
 			return
 		}
 		var input map[string]any
-		if json.Unmarshal(body, &input) != nil {
+		if service == "ec2" {
+			values, err := url.ParseQuery(string(body))
+			if err != nil {
+				f.t.Error("invalid EC2 query")
+				w.WriteHeader(400)
+				return
+			}
+			input = map[string]any{}
+			for key, values := range values {
+				if len(values) != 1 {
+					f.t.Error("repeated EC2 query key")
+				}
+				input[key] = values[0]
+			}
+		} else if json.Unmarshal(body, &input) != nil {
 			f.t.Error("invalid inventory request body")
 			w.WriteHeader(400)
 			return
@@ -336,6 +351,7 @@ func (b inventoryBindings) Inspect(ctx context.Context, actor int64, id, region 
 }
 
 type inventoryHarness struct {
+	runtime                  kernel.Connection
 	op                       *operationHarness
 	service                  inventory.Service
 	store                    repository.InventoryStore
@@ -413,7 +429,7 @@ func newInventory(t *testing.T) *inventoryHarness {
 		t.Fatal(err)
 	}
 	invService := inventory.New(inventory.Deps{Store: invStore, Accounts: accountService, Access: members, Jobs: jobService, Observer: operations.NewObserver(opStore)})
-	return &inventoryHarness{op: &operationHarness{store: opStore, service: jobService, members: members, admin: admin.ID, queue: queue, owner: owner}, service: invService, store: invStore, accounts: accountService, accountA: a, accountB: b, connectionA: ca, connectionB: cb, proxyA: pa, proxyB: pb, cloud: cloud, db: owner, stopProxyA: proxyA.stop, accountStore: accountStore, keyringPath: path}
+	return &inventoryHarness{op: &operationHarness{store: opStore, service: jobService, members: members, admin: admin.ID, queue: queue, owner: owner}, service: invService, store: invStore, accounts: accountService, accountA: a, accountB: b, connectionA: ca, connectionB: cb, proxyA: pa, proxyB: pb, cloud: cloud, db: owner, stopProxyA: proxyA.stop, runtime: kernel.Connection{DB: db}, accountStore: accountStore, keyringPath: path}
 }
 func (h *inventoryHarness) refresh(t *testing.T, targets ...iv.RefreshTarget) oc.Job {
 	t.Helper()

@@ -90,7 +90,7 @@ func decode(c *app.RequestContext, value any) error {
 	return nil
 }
 func (h *Handler) render(ctx context.Context, c *app.RequestContext, code int, name string, model any) {
-	body, err := h.renderer.Page(name, view.Layout(ctx, "启用 AWS 区域", "resources"), model)
+	body, err := h.renderer.Page(name, view.Layout(ctx, "启用 AWS 区域", "regions"), model)
 	view.HTML(c, code, body, err)
 }
 func (h *Handler) fail(ctx context.Context, c *app.RequestContext, err error) {

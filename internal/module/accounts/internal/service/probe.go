@@ -29,7 +29,7 @@ func (s *Service) ProbeProxy(ctx context.Context, actorID int64, id string, meta
 	if !profile.Active {
 		return contract.Verification{}, contract.ErrDisabled
 	}
-	route := awsnet.Route{Mode: "socks5", Proxy: &awsnet.SOCKS5{Host: profile.Host, Port: profile.Port}}
+	route := awsnet.Route{Mode: profile.Protocol, Proxy: &awsnet.SOCKS5{Host: profile.Host, Port: profile.Port}}
 	if profile.SecretID != nil {
 		secret, err := s.deps.Store.Secret(ctx, *profile.SecretID)
 		if err != nil {

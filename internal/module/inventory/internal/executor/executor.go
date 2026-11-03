@@ -81,7 +81,7 @@ func (*Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.Tar
 		seen[target.Key] = true
 		target.LockKey = "inventory/" + request.Kind + "/" + scope.Region(request.Kind, request.Region)
 		target.Label = target.Binding.AWSAccountID + " · " + scope.Label(request.Kind)
-		if request.Kind == contract.LightsailInstance {
+		if scope.Regional(request.Kind) {
 			target.Label += " · " + request.Region
 		}
 		body, _ := json.Marshal(request)
@@ -171,9 +171,24 @@ func validate(data source.Snapshot, request contract.RefreshTarget) ([]entity.Sn
 			return nil, contract.ErrIncomplete
 		}
 		seen[resource.ID] = true
-		if request.Kind == contract.LightsailInstance && (resource.Region != request.Region || resource.Details.Instance == nil) || request.Kind != contract.LightsailInstance && resource.Details.Region == nil {
+		if scope.Regional(request.Kind) && resource.Region != request.Region {
 			return nil, contract.ErrResponse
 		}
+		valid := false
+		switch request.Kind {
+		case contract.LightsailInstance:
+			valid = resource.Details.Instance != nil
+		case contract.EC2Instance:
+			valid = resource.Details.EC2 != nil
+		case contract.LightsailStaticIP, contract.EC2Address:
+			valid = resource.Details.Address != nil
+		default:
+			valid = resource.Details.Region != nil
+		}
+		if !valid {
+			return nil, contract.ErrResponse
+		}
+
 		details, err := json.Marshal(resource.Details)
 		if err != nil || len(details) > 64<<10 {
 			return nil, contract.ErrResponse

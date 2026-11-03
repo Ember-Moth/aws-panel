@@ -420,6 +420,339 @@
                 }
             }
         },
+        "/addresses/catalogue": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "addresses"
+                ],
+                "summary": "List addresses and eligible instances",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Connection UUID",
+                        "name": "connection_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AWS region",
+                        "name": "region",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "lightsail or ec2",
+                        "name": "service",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.CatalogueResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/addresses/options": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "addresses"
+                ],
+                "summary": "Get address management choices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.OptionsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/addresses/plans": {
+            "post": {
+                "security": [
+                    {
+                        "CSRFToken": [],
+                        "SessionCookie": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "addresses"
+                ],
+                "summary": "Preview address operations",
+                "parameters": [
+                    {
+                        "description": "Address allocation and association targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.PreviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/addresses/plans/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "addresses"
+                ],
+                "summary": "Get address operation preview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.PreviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/addresses/plans/{id}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "CSRFToken": [],
+                        "SessionCookie": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "addresses"
+                ],
+                "summary": "Submit address operation task",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Idempotency key",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.SubmitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_transport_http.JobResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
         "/audit": {
             "get": {
                 "security": [
@@ -956,6 +1289,533 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/http.VerificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Get account-pool dashboard",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter account UUID",
+                        "name": "account_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter AWS region",
+                        "name": "region",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.OverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "CSRFToken": [],
+                        "SessionCookie": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Refresh resource and quota aggregates",
+                "parameters": [
+                    {
+                        "description": "Account-pool collection scope",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_transport_http.RefreshResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/ec2/catalogue": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ec2"
+                ],
+                "summary": "List EC2 launch choices",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Connection UUID",
+                        "name": "connection_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AWS region",
+                        "name": "region",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.CatalogueResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/ec2/instances": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ec2"
+                ],
+                "summary": "List EC2 instances",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Connection UUID",
+                        "name": "connection_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AWS region",
+                        "name": "region",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ListingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/ec2/options": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ec2"
+                ],
+                "summary": "Get EC2 management choices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.OptionsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/ec2/plans": {
+            "post": {
+                "security": [
+                    {
+                        "CSRFToken": [],
+                        "SessionCookie": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ec2"
+                ],
+                "summary": "Preview EC2 operations",
+                "parameters": [
+                    {
+                        "description": "EC2 create and lifecycle targets",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Request"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.PreviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/ec2/plans/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ec2"
+                ],
+                "summary": "Get EC2 operation preview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.PreviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/ec2/plans/{id}/submit": {
+            "post": {
+                "security": [
+                    {
+                        "CSRFToken": [],
+                        "SessionCookie": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ec2"
+                ],
+                "summary": "Submit EC2 operation task",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Plan UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Idempotency key",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.SubmitRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_transport_http.JobResponse"
                         }
                     },
                     "400": {
@@ -2160,7 +3020,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/http.RegionsResponse"
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.RegionsResponse"
                         }
                     },
                     "400": {
@@ -3005,7 +3865,7 @@
                 "tags": [
                     "proxies"
                 ],
-                "summary": "Test SOCKS5 connectivity",
+                "summary": "Test HTTP or SOCKS5 connectivity",
                 "parameters": [
                     {
                         "type": "string",
@@ -3020,6 +3880,194 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/http.VerificationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/quotas": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quotas"
+                ],
+                "summary": "Inspect compute and address quotas",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Connection UUID",
+                        "name": "connection_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AWS region",
+                        "name": "region",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "lightsail, ec2, vpc or bedrock",
+                        "name": "service",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/http.ReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/quotas/options": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quotas"
+                ],
+                "summary": "Get quota query choices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_transport_http.OptionsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.Envelope"
+                        }
+                    }
+                }
+            }
+        },
+        "/quotas/regions": {
+            "get": {
+                "security": [
+                    {
+                        "SessionCookie": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quotas"
+                ],
+                "summary": "Get quota region choices",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Connection UUID",
+                        "name": "connection_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_transport_http.RegionsResponse"
                         }
                     },
                     "400": {
@@ -3403,7 +4451,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "account_region, lightsail_region or lightsail_instance",
+                        "description": "account_region, lightsail_region, lightsail_instance, lightsail_static_ip, ec2_instance or ec2_address",
                         "name": "kind",
                         "in": "query"
                     },
@@ -3539,7 +4587,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/contract.RefreshRequest"
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_contract.RefreshRequest"
                         }
                     }
                 ],
@@ -3547,7 +4595,7 @@
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/http.RefreshResponse"
+                            "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_transport_http.RefreshResponse"
                         }
                     },
                     "400": {
@@ -3802,6 +4850,9 @@
                         "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Connection"
                     }
                 },
+                "preferred_connection_id": {
+                    "type": "string"
+                },
                 "vault_ready": {
                     "type": "boolean"
                 }
@@ -3830,6 +4881,12 @@
                 "aws_account_id": {
                     "type": "string"
                 },
+                "default_proxy_id": {
+                    "type": "string"
+                },
+                "default_route_mode": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -3838,6 +4895,70 @@
                 },
                 "version": {
                     "type": "integer"
+                }
+            }
+        },
+        "contract.Address": {
+            "type": "object",
+            "properties": {
+                "arn": {
+                    "type": "string"
+                },
+                "association_id": {
+                    "type": "string"
+                },
+                "attached": {
+                    "type": "boolean"
+                },
+                "border_group": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "network_interface_id": {
+                    "type": "string"
+                },
+                "private_ip": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.AddressDetails": {
+            "type": "object",
+            "properties": {
+                "association_id": {
+                    "type": "string"
+                },
+                "attached": {
+                    "type": "boolean"
+                },
+                "border_group": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "network_interface_id": {
+                    "type": "string"
                 }
             }
         },
@@ -4173,6 +5294,12 @@
         "contract.Details": {
             "type": "object",
             "properties": {
+                "address": {
+                    "$ref": "#/definitions/contract.AddressDetails"
+                },
+                "ec2": {
+                    "$ref": "#/definitions/contract.EC2Details"
+                },
                 "instance": {
                     "$ref": "#/definitions/contract.InstanceDetails"
                 },
@@ -4203,6 +5330,59 @@
                 }
             }
         },
+        "contract.EC2Details": {
+            "type": "object",
+            "properties": {
+                "availability_zone": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "delete_root_on_termination": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image_id": {
+                    "type": "string"
+                },
+                "instance_type": {
+                    "type": "string"
+                },
+                "ipv6": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "primary_eni": {
+                    "type": "string"
+                },
+                "private_ip": {
+                    "type": "string"
+                },
+                "public_ip": {
+                    "type": "string"
+                },
+                "root_volume_id": {
+                    "type": "string"
+                },
+                "security_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "subnet_id": {
+                    "type": "string"
+                },
+                "vpc_id": {
+                    "type": "string"
+                }
+            }
+        },
         "contract.EnableRequest": {
             "type": "object",
             "properties": {
@@ -4211,6 +5391,50 @@
                     "items": {
                         "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_regions_contract.Target"
                     }
+                }
+            }
+        },
+        "contract.Entry": {
+            "type": "object",
+            "properties": {
+                "adjustable": {
+                    "type": "boolean"
+                },
+                "available": {
+                    "type": "number"
+                },
+                "global": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "limit": {
+                    "type": "number"
+                },
+                "limit_known": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "quota_code": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "usage_known": {
+                    "type": "boolean"
+                },
+                "used": {
+                    "type": "number"
                 }
             }
         },
@@ -4264,6 +5488,101 @@
                     "type": "string"
                 },
                 "account_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.Image": {
+            "type": "object",
+            "properties": {
+                "architecture": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "family": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "min_disk_gb": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "root_device": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.InputTarget": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "disk_gb": {
+                    "type": "integer"
+                },
+                "image_id": {
+                    "type": "string"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "instance_type": {
+                    "type": "string"
+                },
+                "ipv6": {
+                    "type": "boolean"
+                },
+                "key_pair_name": {
+                    "type": "string"
+                },
+                "launch_secret_id": {
+                    "type": "string"
+                },
+                "login_method": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "public_ipv4": {
+                    "type": "boolean"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "root_password": {
+                    "type": "string",
+                    "format": "password"
+                },
+                "security_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ssh_ipv4_cidr": {
+                    "type": "string"
+                },
+                "ssh_ipv6_cidr": {
+                    "type": "string"
+                },
+                "subnet_id": {
+                    "type": "string"
+                },
+                "zone": {
                     "type": "string"
                 }
             }
@@ -4327,6 +5646,29 @@
                 },
                 "username": {
                     "type": "string"
+                }
+            }
+        },
+        "contract.InstanceType": {
+            "type": "object",
+            "properties": {
+                "architectures": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ipv6": {
+                    "type": "boolean"
+                },
+                "memory_mib": {
+                    "type": "integer"
+                },
+                "vcpu": {
+                    "type": "integer"
                 }
             }
         },
@@ -4437,6 +5779,26 @@
                 }
             }
         },
+        "contract.Listing": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Instance"
+                    }
+                },
+                "region": {
+                    "type": "string"
+                }
+            }
+        },
         "contract.LoginRequest": {
             "type": "object",
             "properties": {
@@ -4497,6 +5859,85 @@
                 }
             }
         },
+        "contract.Metric": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "expected_scopes": {
+                    "type": "integer"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "known": {
+                    "type": "boolean"
+                },
+                "known_scopes": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "partial": {
+                    "type": "boolean"
+                },
+                "running": {
+                    "type": "integer"
+                },
+                "stale": {
+                    "type": "boolean"
+                },
+                "unknown_accounts": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.Network": {
+            "type": "object",
+            "properties": {
+                "gateway_id": {
+                    "type": "string"
+                },
+                "ipv4_cidr": {
+                    "type": "string"
+                },
+                "ipv6_cidr": {
+                    "type": "string"
+                },
+                "route_table_id": {
+                    "type": "string"
+                },
+                "security_group_id": {
+                    "type": "string"
+                },
+                "ssh_ipv4_cidr": {
+                    "type": "string"
+                },
+                "ssh_ipv6_cidr": {
+                    "type": "string"
+                },
+                "subnet_id": {
+                    "type": "string"
+                },
+                "subnet_ipv4_cidr": {
+                    "type": "string"
+                },
+                "subnet_ipv6_cidr": {
+                    "type": "string"
+                },
+                "vpc_id": {
+                    "type": "string"
+                },
+                "zone": {
+                    "type": "string"
+                }
+            }
+        },
         "contract.Output": {
             "type": "object",
             "properties": {
@@ -4508,6 +5949,71 @@
                 },
                 "summary": {
                     "type": "string"
+                }
+            }
+        },
+        "contract.Overview": {
+            "type": "object",
+            "properties": {
+                "account_count": {
+                    "type": "integer"
+                },
+                "account_options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.Account"
+                    }
+                },
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.Account"
+                    }
+                },
+                "active_accounts": {
+                    "type": "integer"
+                },
+                "bedrock_coverage": {
+                    "$ref": "#/definitions/contract.Metric"
+                },
+                "can_refresh": {
+                    "type": "boolean"
+                },
+                "checked_at": {
+                    "type": "string"
+                },
+                "distinct_regions": {
+                    "type": "integer"
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.Metric"
+                    }
+                },
+                "query": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_dashboard_contract.Query"
+                },
+                "quotas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.PoolQuota"
+                    }
+                },
+                "ready_accounts": {
+                    "type": "integer"
+                },
+                "regions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -4552,6 +6058,71 @@
                 }
             }
         },
+        "contract.PoolQuota": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "number"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "complete": {
+                    "type": "boolean"
+                },
+                "expected_scopes": {
+                    "type": "integer"
+                },
+                "global": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "known": {
+                    "type": "boolean"
+                },
+                "known_scopes": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "percent": {
+                    "type": "number"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "stale": {
+                    "type": "boolean"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "unknown_accounts": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usage_known": {
+                    "type": "boolean"
+                },
+                "usage_scopes": {
+                    "type": "integer"
+                },
+                "used": {
+                    "type": "number"
+                }
+            }
+        },
         "contract.Port": {
             "type": "object",
             "properties": {
@@ -4581,6 +6152,9 @@
         "contract.Proxy": {
             "type": "object",
             "properties": {
+                "accounts": {
+                    "type": "integer"
+                },
                 "active": {
                     "type": "boolean"
                 },
@@ -4589,6 +6163,9 @@
                     "items": {
                         "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_accounts_contract.Connection"
                     }
+                },
+                "bindings": {
+                    "type": "integer"
                 },
                 "connections": {
                     "type": "integer"
@@ -4607,6 +6184,9 @@
                 },
                 "port": {
                     "type": "integer"
+                },
+                "protocol": {
+                    "type": "string"
                 },
                 "version": {
                     "type": "integer"
@@ -4645,39 +6225,39 @@
                 "port": {
                     "type": "integer"
                 },
+                "protocol": {
+                    "type": "string"
+                },
                 "version": {
                     "type": "integer"
                 }
             }
         },
-        "contract.Quota": {
+        "contract.Refresh": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "string"
+                "jobs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.RefreshJob"
+                    }
                 },
-                "known": {
-                    "type": "boolean"
-                },
-                "limit_vcpu": {
-                    "type": "integer"
-                },
-                "used_vcpu": {
-                    "type": "integer"
+                "skipped": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.Skipped"
+                    }
                 }
             }
         },
-        "contract.RefreshRequest": {
+        "contract.RefreshJob": {
             "type": "object",
             "properties": {
-                "idempotency_key": {
-                    "type": "string"
+                "accounts": {
+                    "type": "integer"
                 },
-                "targets": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/contract.RefreshTarget"
-                    }
+                "id": {
+                    "type": "string"
                 }
             }
         },
@@ -4712,19 +6292,40 @@
                 }
             }
         },
-        "contract.Regions": {
+        "contract.Report": {
             "type": "object",
             "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "aws_account_id": {
+                    "type": "string"
+                },
                 "checked_at": {
                     "type": "string"
                 },
                 "connection_id": {
                     "type": "string"
                 },
-                "items": {
+                "entries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Region"
+                        "$ref": "#/definitions/contract.Entry"
+                    }
+                },
+                "limits_read": {
+                    "type": "boolean"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
                     }
                 }
             }
@@ -4984,6 +6585,46 @@
                 }
             }
         },
+        "contract.SecurityGroup": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "ssh_ipv4": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ssh_ipv6": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "vpc_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.Skipped": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "contract.Step": {
             "type": "object",
             "properties": {
@@ -5049,6 +6690,38 @@
                     "type": "string"
                 },
                 "plan_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.Subnet": {
+            "type": "object",
+            "properties": {
+                "available_ips": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ipv4_cidr": {
+                    "type": "string"
+                },
+                "ipv6_cidr": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "public_ipv4_route": {
+                    "type": "boolean"
+                },
+                "public_ipv6_route": {
+                    "type": "boolean"
+                },
+                "vpc_id": {
+                    "type": "string"
+                },
+                "zone": {
                     "type": "string"
                 }
             }
@@ -5148,6 +6821,15 @@
                 "created_at": {
                     "type": "string"
                 },
+                "default_proxy_id": {
+                    "type": "string"
+                },
+                "default_proxy_name": {
+                    "type": "string"
+                },
+                "default_route_mode": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
@@ -5232,6 +6914,768 @@
                 }
             }
         },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Account": {
+            "type": "object",
+            "properties": {
+                "aws_account_id": {
+                    "type": "string"
+                },
+                "connections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Connection"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Catalogue": {
+            "type": "object",
+            "properties": {
+                "addresses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.Address"
+                    }
+                },
+                "aws_account_id": {
+                    "type": "string"
+                },
+                "checked_at": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "instances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Instance"
+                    }
+                },
+                "region": {
+                    "type": "string"
+                },
+                "service": {
+                    "type": "string"
+                },
+                "writes_enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Connection": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Instance": {
+            "type": "object",
+            "properties": {
+                "address_id": {
+                    "type": "string"
+                },
+                "arn": {
+                    "type": "string"
+                },
+                "border_group": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip_type": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "network_interface_id": {
+                    "type": "string"
+                },
+                "private_ip": {
+                    "type": "string"
+                },
+                "public_ip": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Options": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Account"
+                    }
+                },
+                "writes_enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Preview": {
+            "type": "object",
+            "properties": {
+                "can_submit": {
+                    "type": "boolean"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.PreviewTarget"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.PreviewTarget": {
+            "type": "object",
+            "properties": {
+                "aws_account_id": {
+                    "type": "string"
+                },
+                "spec": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Spec"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Quota": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "number"
+                },
+                "limit_known": {
+                    "type": "boolean"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "usage_known": {
+                    "type": "boolean"
+                },
+                "used": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Request": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Target"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Spec": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "$ref": "#/definitions/contract.Address"
+                },
+                "checked_at": {
+                    "type": "string"
+                },
+                "instance": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Instance"
+                },
+                "new_name": {
+                    "type": "string"
+                },
+                "previous": {
+                    "$ref": "#/definitions/contract.Address"
+                },
+                "quota": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Quota"
+                },
+                "target": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Target"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_contract.Target": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "address_id": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "name_prefix": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "release_previous": {
+                    "type": "boolean"
+                },
+                "service": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.CatalogueResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Catalogue"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.JobResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.Job"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.OptionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Options"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.PreviewResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_addresses_contract.Preview"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_addresses_transport_http.SubmitRequest": {
+            "type": "object",
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Account": {
+            "type": "object",
+            "properties": {
+                "aws_account_id": {
+                    "type": "string"
+                },
+                "connections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Connection"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Catalogue": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.Image"
+                    }
+                },
+                "key_pairs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "region": {
+                    "type": "string"
+                },
+                "security_groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.SecurityGroup"
+                    }
+                },
+                "subnets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.Subnet"
+                    }
+                },
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.InstanceType"
+                    }
+                },
+                "writes_enabled": {
+                    "type": "boolean"
+                },
+                "zones": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Connection": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Instance": {
+            "type": "object",
+            "properties": {
+                "arn": {
+                    "type": "string"
+                },
+                "delete_root_on_termination": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "image_id": {
+                    "type": "string"
+                },
+                "ipv6": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "key_name": {
+                    "type": "string"
+                },
+                "launch_time": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "primary_eni": {
+                    "type": "string"
+                },
+                "private_ip": {
+                    "type": "string"
+                },
+                "public_ip": {
+                    "type": "string"
+                },
+                "root_device": {
+                    "type": "string"
+                },
+                "root_volume_id": {
+                    "type": "string"
+                },
+                "security_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "state": {
+                    "type": "string"
+                },
+                "subnet_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "vpc_id": {
+                    "type": "string"
+                },
+                "zone": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Options": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Account"
+                    }
+                },
+                "writes_enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Preview": {
+            "type": "object",
+            "properties": {
+                "can_submit": {
+                    "type": "boolean"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.PreviewTarget"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.PreviewTarget": {
+            "type": "object",
+            "properties": {
+                "aws_account_id": {
+                    "type": "string"
+                },
+                "spec": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Spec"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Quota": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "limit": {
+                    "type": "number"
+                },
+                "limit_known": {
+                    "type": "boolean"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "usage_known": {
+                    "type": "boolean"
+                },
+                "used": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Request": {
+            "type": "object",
+            "properties": {
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.InputTarget"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Spec": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string"
+                },
+                "image": {
+                    "$ref": "#/definitions/contract.Image"
+                },
+                "instance": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Instance"
+                },
+                "network": {
+                    "$ref": "#/definitions/contract.Network"
+                },
+                "network_quotas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Quota"
+                    }
+                },
+                "quota": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Quota"
+                },
+                "security_groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.SecurityGroup"
+                    }
+                },
+                "subnet": {
+                    "$ref": "#/definitions/contract.Subnet"
+                },
+                "target": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Target"
+                },
+                "type": {
+                    "$ref": "#/definitions/contract.InstanceType"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_contract.Target": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "disk_gb": {
+                    "type": "integer"
+                },
+                "image_id": {
+                    "type": "string"
+                },
+                "instance_id": {
+                    "type": "string"
+                },
+                "instance_type": {
+                    "type": "string"
+                },
+                "ipv6": {
+                    "type": "boolean"
+                },
+                "key_pair_name": {
+                    "type": "string"
+                },
+                "launch_secret_id": {
+                    "type": "string"
+                },
+                "login_method": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "public_ipv4": {
+                    "type": "boolean"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "security_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ssh_ipv4_cidr": {
+                    "type": "string"
+                },
+                "ssh_ipv6_cidr": {
+                    "type": "string"
+                },
+                "subnet_id": {
+                    "type": "string"
+                },
+                "zone": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.CatalogueResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Catalogue"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.JobResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.Job"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.OptionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Options"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.PreviewResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_compute_contract.Preview"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_compute_transport_http.SubmitRequest": {
+            "type": "object",
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_dashboard_contract.Account": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "aws_account_id": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "connection_name": {
+                    "type": "string"
+                },
+                "enabled_regions": {
+                    "type": "integer"
+                },
+                "failed_scopes": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "proxy_name": {
+                    "type": "string"
+                },
+                "regions_known": {
+                    "type": "boolean"
+                },
+                "route_mode": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_dashboard_contract.Query": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_dashboard_contract.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_dashboard_transport_http.RefreshResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.Refresh"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_herta-network_aws-panel_internal_module_inventory_contract.Options": {
             "type": "object",
             "properties": {
@@ -5245,6 +7689,20 @@
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_inventory_contract.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.RefreshTarget"
                     }
                 }
             }
@@ -5273,6 +7731,17 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_inventory_contract.Options"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_inventory_transport_http.RefreshResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.Job"
                 },
                 "request_id": {
                     "type": "string"
@@ -5327,7 +7796,7 @@
                     }
                 },
                 "quota": {
-                    "$ref": "#/definitions/contract.Quota"
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Quota"
                 },
                 "region": {
                     "type": "string"
@@ -5408,6 +7877,23 @@
                 }
             }
         },
+        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Quota": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "known": {
+                    "type": "boolean"
+                },
+                "limit_vcpu": {
+                    "type": "integer"
+                },
+                "used_vcpu": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Region": {
             "type": "object",
             "properties": {
@@ -5425,6 +7911,23 @@
                 }
             }
         },
+        "github_com_herta-network_aws-panel_internal_module_lightsail_contract.Regions": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string"
+                },
+                "connection_id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Region"
+                    }
+                }
+            }
+        },
         "github_com_herta-network_aws-panel_internal_module_lightsail_contract.StepSpec": {
             "type": "object",
             "properties": {
@@ -5438,7 +7941,7 @@
                     "type": "string"
                 },
                 "quota": {
-                    "$ref": "#/definitions/contract.Quota"
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Quota"
                 },
                 "target": {
                     "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Target"
@@ -5524,6 +8027,17 @@
                 }
             }
         },
+        "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.RegionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_lightsail_contract.Regions"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_herta-network_aws-panel_internal_module_lightsail_transport_http.SubmitRequest": {
             "type": "object",
             "properties": {
@@ -5564,6 +8078,13 @@
                 "lock_key": {
                     "description": "Write plans provide a stable cloud-target key shared across operations.\nThe engine adds account and region before acquiring the target lock.",
                     "type": "string"
+                },
+                "lock_keys": {
+                    "description": "Additional keys protect multi-resource operations such as attaching an\naddress to an instance. They share the primary key's account/region scope.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -5583,6 +8104,101 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/contract.Job"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Account": {
+            "type": "object",
+            "properties": {
+                "aws_account_id": {
+                    "type": "string"
+                },
+                "connections": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Connection"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Connection": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Options": {
+            "type": "object",
+            "properties": {
+                "accounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Account"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Region": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_quotas_contract.Regions": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Region"
+                    }
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_quotas_transport_http.OptionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Options"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_herta-network_aws-panel_internal_module_quotas_transport_http.RegionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/github_com_herta-network_aws-panel_internal_module_quotas_contract.Regions"
                 },
                 "request_id": {
                     "type": "string"
@@ -5917,6 +8533,28 @@
                 }
             }
         },
+        "http.ListingResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.Listing"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "http.OverviewResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/contract.Overview"
+                },
+                "request_id": {
+                    "type": "string"
+                }
+            }
+        },
         "http.PlanResponse": {
             "type": "object",
             "properties": {
@@ -5953,22 +8591,11 @@
                 }
             }
         },
-        "http.RefreshResponse": {
+        "http.ReportResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/contract.Job"
-                },
-                "request_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "http.RegionsResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/contract.Regions"
+                    "$ref": "#/definitions/contract.Report"
                 },
                 "request_id": {
                     "type": "string"

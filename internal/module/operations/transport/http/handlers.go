@@ -92,7 +92,7 @@ func status(err error) (int, *contract.Error) {
 		return 403, fault
 	case contract.ErrNotFound.Code:
 		return 404, fault
-	case contract.ErrConflict.Code, contract.ErrExpired.Code, contract.ErrBinding.Code, contract.ErrCancelled.Code, contract.ErrWritesDisabled.Code:
+	case contract.ErrTargetBusy.Code, contract.ErrEffect.Code, contract.ErrConflict.Code, contract.ErrExpired.Code, contract.ErrBinding.Code, contract.ErrCancelled.Code, contract.ErrWritesDisabled.Code:
 		return 409, fault
 	default:
 		return 503, fault

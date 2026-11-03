@@ -9,6 +9,7 @@ import (
 )
 
 type InventoryStore interface {
+	Overview(context.Context, []string) ([]entity.Overview, error)
 	EnsureScopes(context.Context, []entity.Scope) error
 	Scopes(context.Context, entity.Query) ([]entity.Scope, error)
 	Scope(context.Context, string) (entity.Scope, error)

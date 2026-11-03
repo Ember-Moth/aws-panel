@@ -70,6 +70,7 @@ type listView struct {
 	Previous, Next string
 	Pending        bool
 	CanOperate     bool
+	Lightsail      bool
 }
 type scopesView struct {
 	List           contract.ScopeList
@@ -128,7 +129,11 @@ func (h *Handler) fail(ctx context.Context, c *app.RequestContext, err error) {
 	h.render(ctx, c, code, "资源查询", "inventory-error", fault.Message)
 }
 func (h *Handler) render(ctx context.Context, c *app.RequestContext, code int, title, name string, model any) {
-	body, err := h.renderer.Page(name, view.Layout(ctx, title, "resources"), model)
+	active := "resources"
+	if string(c.Path()) == "/lightsail" {
+		active = "lightsail"
+	}
+	body, err := h.renderer.Page(name, view.Layout(ctx, title, active), model)
 	view.HTML(c, code, body, err)
 }
 func decode(c *app.RequestContext, value any) error {
@@ -203,7 +208,7 @@ func pageURL(path string, filter contract.Filter, page int) string {
 // @Produce json
 // @Security SessionCookie
 // @Param account_id query string false "Account UUID"
-// @Param kind query string false "account_region, lightsail_region or lightsail_instance"
+// @Param kind query string false "account_region, lightsail_region, lightsail_instance, lightsail_static_ip, ec2_instance or ec2_address"
 // @Param region query string false "AWS Region"
 // @Param state query string false "AWS state"
 // @Param q query string false "Name or resource ID substring"
@@ -214,6 +219,9 @@ func pageURL(path string, filter contract.Filter, page int) string {
 // @Router /resources [get]
 func (h *Handler) Resources(ctx context.Context, c *app.RequestContext) {
 	f := filter(c, contract.LightsailInstance)
+	if string(c.Path()) == "/lightsail" {
+		f.Kind = contract.LightsailInstance
+	}
 	result, err := h.service.Resources(ctx, actor(ctx), f)
 	if err != nil {
 		h.fail(ctx, c, err)
@@ -231,6 +239,11 @@ func (h *Handler) Resources(ctx context.Context, c *app.RequestContext) {
 	model := listView{List: result, Options: options, Filter: f, Scopes: map[string]contract.Scope{}, Previous: pageURL("/resources", f, result.Previous), Next: pageURL("/resources", f, result.Next)}
 	principal, _ := auth.Current(ctx)
 	model.CanOperate = principal.Role == "admin" || principal.Role == "operator"
+	model.Lightsail = string(c.Path()) == "/lightsail"
+	if model.Lightsail {
+		model.Previous = pageURL("/lightsail", f, result.Previous)
+		model.Next = pageURL("/lightsail", f, result.Next)
+	}
 	preserveRegion(&model.Options, f.Region)
 	for _, scope := range result.Scopes {
 		model.Scopes[scope.ID] = scope
@@ -241,7 +254,11 @@ func (h *Handler) Resources(ctx context.Context, c *app.RequestContext) {
 			model.Pending = true
 		}
 	}
-	h.render(ctx, c, 200, "资源工作台", "resources", model)
+	title := "资源快照"
+	if model.Lightsail {
+		title = "Lightsail 实例"
+	}
+	h.render(ctx, c, 200, title, "resources", model)
 }
 
 // Scopes returns sync outcomes independently from cached resource presence.

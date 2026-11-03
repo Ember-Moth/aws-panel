@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	dc "github.com/herta-network/aws-panel/internal/module/dashboard/contract"
 	"html/template"
 	"io/fs"
+	"strconv"
 	"time"
 
 	"github.com/herta-network/aws-panel/internal/infra/clock"
@@ -15,6 +17,7 @@ import (
 var assets embed.FS
 
 type SystemView struct {
+	CanOperate    bool
 	Name          string
 	Version       string
 	ServerTime    string
@@ -93,6 +96,12 @@ func ResourceKind(value string) string {
 		return "Lightsail 可用区域"
 	case "lightsail_instance":
 		return "Lightsail 实例"
+	case "lightsail_static_ip":
+		return "Lightsail 静态 IP"
+	case "ec2_instance":
+		return "EC2 实例"
+	case "ec2_address":
+		return "EC2 弹性 IP"
 	default:
 		return value
 	}
@@ -206,6 +215,47 @@ func JobColor(value string) string {
 
 func NewRenderer() (*Renderer, error) {
 	templates, err := template.New("pages").Funcs(template.FuncMap{
+		"dashboardMetric": func(values []dc.Metric, key string) dc.Metric {
+			for _, v := range values {
+				if v.Key == key {
+					return v
+				}
+			}
+			return dc.Metric{Key: key}
+		},
+		"dashboardQuota": func(values []dc.PoolQuota, key string) dc.PoolQuota {
+			for _, v := range values {
+				if v.Key == key {
+					return v
+				}
+			}
+			return dc.PoolQuota{Key: key}
+		},
+		"number": func(value any) string {
+			switch v := value.(type) {
+			case float64:
+				return strconv.FormatFloat(v, 'f', -1, 64)
+			case int64:
+				return strconv.FormatInt(v, 10)
+			case int:
+				return strconv.Itoa(v)
+			default:
+				return "—"
+			}
+		},
+		"dashboardAccountStatus": func(value string) string {
+			return map[string]string{"ready": "可刷新", "disabled": "已停用", "unsupported": "暂不支持的分区", "needs_verification": "待验证连接"}[value]
+		},
+
+		"ec2Actions": func() []string {
+			return []string{"create", "network", "start", "stop", "reboot", "terminate", "enable_ipv6"}
+		},
+		"ec2Action": func(v string) string {
+			return map[string]string{"network": "准备双栈网络", "create": "创建实例", "start": "启动实例", "stop": "停止实例", "reboot": "重启实例", "terminate": "终止实例", "enable_ipv6": "启用 IPv6"}[v]
+		},
+		"addressAction": func(value string) string {
+			return map[string]string{"allocate": "创建静态 IP", "replace": "更换实例 IP", "attach": "绑定地址", "detach": "解绑地址", "release": "释放地址"}[value]
+		},
 		"usd":           func(cents int64) string { return fmt.Sprintf("%d.%02d", cents/100, cents%100) },
 		"roleLabel":     RoleLabel,
 		"actionLabel":   ActionLabel,
@@ -227,7 +277,7 @@ func NewRenderer() (*Renderer, error) {
 			return map[string]string{"access_key": "Access Key", "temporary": "临时凭据", "assume_role": "AssumeRole"}[value]
 		},
 		"routeMode": func(value string) string {
-			return map[string]string{"direct": "直连", "socks5": "SOCKS5 代理"}[value]
+			return map[string]string{"direct": "直连", "socks5": "SOCKS5 代理", "http": "HTTP 代理", "proxy": "指定代理", "inherit": "账号默认出口"}[value]
 		},
 		"verificationStage": func(value string) string {
 			return map[string]string{"configuration": "配置检查", "proxy": "代理连接", "network": "网络连接", "tls": "TLS 链路", "aws": "AWS 响应", "identity": "账号身份"}[value]

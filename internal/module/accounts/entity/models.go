@@ -6,6 +6,9 @@ import (
 )
 
 type Account struct {
+	DefaultProxyName     string  `json:"-" gorm:"->"`
+	DefaultRouteMode     string  `json:"-"`
+	DefaultProxyID       *string `json:"-"`
 	ID                   string
 	Partition            string
 	AWSAccountID         string
@@ -16,6 +19,7 @@ type Account struct {
 	DeletedAt            *time.Time
 }
 type Proxy struct {
+	Protocol             string `json:"-"`
 	ID, Name, Host       string
 	Port                 int
 	SecretID             *string

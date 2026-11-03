@@ -125,7 +125,7 @@ func regionOK(partition, region string) bool {
 	return !strings.HasPrefix(region, "cn-") && !strings.HasPrefix(region, "us-gov-")
 }
 func accountView(v entity.Account) contract.Account {
-	return contract.Account{ID: v.ID, Partition: v.Partition, AWSAccountID: v.AWSAccountID, Name: v.Name, Active: v.Active, Version: v.Version, CreatedAt: clock.In(v.CreatedAt), UpdatedAt: clock.In(v.UpdatedAt)}
+	return contract.Account{DefaultRouteMode: v.DefaultRouteMode, DefaultProxyName: v.DefaultProxyName, DefaultProxyID: v.DefaultProxyID, ID: v.ID, Partition: v.Partition, AWSAccountID: v.AWSAccountID, Name: v.Name, Active: v.Active, Version: v.Version, CreatedAt: clock.In(v.CreatedAt), UpdatedAt: clock.In(v.UpdatedAt)}
 }
 func timeView(value *time.Time) *time.Time {
 	if value == nil {
@@ -150,8 +150,8 @@ func connectionView(v entity.Connection, admin bool) contract.Connection {
 	}
 	return result
 }
-func proxyView(v entity.Proxy, count int64) contract.Proxy {
-	return contract.Proxy{ID: v.ID, Name: v.Name, Host: v.Host, Port: v.Port, HasAuth: v.SecretID != nil, Active: v.Active, Version: v.Version, Connections: count}
+func proxyView(v entity.Proxy, count, accountCount int64) contract.Proxy {
+	return contract.Proxy{Protocol: v.Protocol, Accounts: accountCount, Bindings: count + accountCount, ID: v.ID, Name: v.Name, Host: v.Host, Port: v.Port, HasAuth: v.SecretID != nil, Active: v.Active, Version: v.Version, Connections: count}
 }
 func audit(meta auth.RequestMeta, actor auth.Principal, action, kind, id string, details map[string]string) kernel.AuditEntry {
 	var actorID *int64
@@ -206,7 +206,13 @@ func (s *Service) ListAccounts(ctx context.Context, actorID int64) ([]contract.A
 	}
 	result := make([]contract.Account, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, accountView(row))
+		value := accountView(row)
+		if actor.Role != "admin" {
+			value.DefaultRouteMode = ""
+			value.DefaultProxyID = nil
+			value.DefaultProxyName = ""
+		}
+		result = append(result, value)
 	}
 	return result, nil
 }
@@ -236,8 +242,16 @@ func (s *Service) AccountDetail(ctx context.Context, actorID int64, id string) (
 		return nil, err
 	}
 	result := &contract.AccountDetail{Account: accountView(account), Connections: []contract.Connection{}, CanManage: actor.Role == "admin", VaultReady: s.VaultReady()}
+	if !result.CanManage {
+		result.Account.DefaultRouteMode = ""
+		result.Account.DefaultProxyID = nil
+		result.Account.DefaultProxyName = ""
+	}
 	for _, row := range rows {
 		row = s.currentStatus(ctx, row)
+		if row.VerificationStatus == "verified" && (result.PreferredConnectionID == "" || row.RouteMode == "inherit") {
+			result.PreferredConnectionID = row.ID
+		}
 		result.Connections = append(result.Connections, connectionView(row, result.CanManage))
 	}
 	return result, nil
@@ -260,7 +274,7 @@ func (s *Service) SaveAccount(ctx context.Context, actorID int64, id string, req
 		now := clock.Now()
 		action := "accounts.account.created"
 		if id == "" {
-			record = entity.Account{ID: uuid.NewString(), Partition: req.Partition, AWSAccountID: req.AWSAccountID, Active: true, Version: 1, CreatedAt: now}
+			record = entity.Account{DefaultRouteMode: "direct", ID: uuid.NewString(), Partition: req.Partition, AWSAccountID: req.AWSAccountID, Active: true, Version: 1, CreatedAt: now}
 		} else {
 			if !validID(id) || req.Active == nil {
 				return contract.ErrInvalid
@@ -283,6 +297,24 @@ func (s *Service) SaveAccount(ctx context.Context, actorID int64, id string, req
 			record.Version++
 			record.Active = *req.Active
 			action = "accounts.account.updated"
+		}
+		if req.DefaultRouteMode != "" {
+			mode, proxyID, err := resolveRoute(ctx, tx, req.DefaultRouteMode, req.DefaultProxyID)
+			if err != nil {
+				return err
+			}
+			record.DefaultRouteMode = mode
+			record.DefaultProxyID = proxyID
+			record.DefaultProxyName = ""
+			if proxyID != nil {
+				profile, err := tx.Proxy(ctx, *proxyID)
+				if err != nil {
+					return err
+				}
+				record.DefaultProxyName = profile.Name
+			}
+		} else if req.DefaultProxyID != nil {
+			return contract.Invalid("请选择账号的代理出口模式")
 		}
 		record.Name = req.Name
 		if expected == 0 && req.Active != nil {
@@ -310,7 +342,11 @@ func (s *Service) ListProxies(ctx context.Context, actorID int64) ([]contract.Pr
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, proxyView(row, count))
+		accountCount, err := s.deps.Store.ProxyAccountUsage(ctx, row.ID)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, proxyView(row, count, accountCount))
 	}
 	return result, nil
 }
@@ -333,7 +369,11 @@ func (s *Service) Proxy(ctx context.Context, actorID int64, id string) (contract
 	if err != nil {
 		return contract.Proxy{}, err
 	}
-	result := proxyView(row, count)
+	accountCount, err := s.deps.Store.ProxyAccountUsage(ctx, row.ID)
+	if err != nil {
+		return contract.Proxy{}, err
+	}
+	result := proxyView(row, count, accountCount)
 	for _, connection := range impact {
 		result.Affected = append(result.Affected, connectionView(connection, true))
 	}
@@ -397,7 +437,7 @@ func (s *Service) SaveProxy(ctx context.Context, actorID int64, id string, req c
 		now := clock.Now()
 		action := "accounts.proxy.created"
 		if id == "" {
-			record = entity.Proxy{ID: uuid.NewString(), Active: true, Version: 1, CreatedAt: now}
+			record = entity.Proxy{Protocol: "socks5", ID: uuid.NewString(), Active: true, Version: 1, CreatedAt: now}
 		} else {
 			if !validID(id) || req.Active == nil {
 				return contract.ErrInvalid
@@ -414,6 +454,23 @@ func (s *Service) SaveProxy(ctx context.Context, actorID int64, id string, req c
 			record.Version++
 			record.Active = *req.Active
 			action = "accounts.proxy.updated"
+		}
+		if req.Protocol != "" && req.Protocol != "socks5" && req.Protocol != "http" {
+			return contract.Invalid("代理协议只支持 SOCKS5 或 HTTP")
+		}
+		if req.Protocol != "" && req.Protocol != record.Protocol {
+			connections, err := tx.ProxyUsage(ctx, record.ID)
+			if err != nil {
+				return err
+			}
+			accounts, err := tx.ProxyAccountUsage(ctx, record.ID)
+			if err != nil {
+				return err
+			}
+			if expected > 0 && connections+accounts > 0 {
+				return contract.Invalid("正在使用的代理不能直接更换协议，请新建代理后切换账号绑定")
+			}
+			record.Protocol = req.Protocol
 		}
 		record.Name = req.Name
 		record.Host = req.Host
@@ -447,7 +504,8 @@ func (s *Service) SaveProxy(ctx context.Context, actorID int64, id string, req c
 		return tx.AppendAudit(ctx, audit(meta, actor, action, "proxy", record.ID, map[string]string{"version": strconv.FormatInt(record.Version, 10)}))
 	})
 	count, _ := s.deps.Store.ProxyUsage(ctx, record.ID)
-	return proxyView(record, count), err
+	accountCount, _ := s.deps.Store.ProxyAccountUsage(ctx, record.ID)
+	return proxyView(record, count, accountCount), err
 }
 func credentialsOK(kind string, value *contract.Credentials) bool {
 	if value == nil {
@@ -489,11 +547,11 @@ func (s *Service) SaveConnection(ctx context.Context, actorID int64, accountID, 
 	if !validID(accountID) || !nameOK(req.Name) || (req.AuthType != "access_key" && req.AuthType != "temporary" && req.AuthType != "assume_role") {
 		return contract.Connection{}, contract.ErrInvalid
 	}
-	if req.RouteMode != "direct" && req.RouteMode != "socks5" {
-		return contract.Connection{}, contract.Invalid("请选择明确的直连或 SOCKS5 出口")
+	if req.RouteMode != "direct" && req.RouteMode != "socks5" && req.RouteMode != "http" && req.RouteMode != "proxy" && req.RouteMode != "inherit" {
+		return contract.Connection{}, contract.Invalid("请选择账号默认出口、直连或代理")
 	}
-	if req.RouteMode == "direct" && req.ProxyID != nil || req.RouteMode == "socks5" && (req.ProxyID == nil || !validID(*req.ProxyID)) {
-		return contract.Connection{}, contract.Invalid("代理引用与出口模式不匹配")
+	if (req.RouteMode == "direct" || req.RouteMode == "inherit") && req.ProxyID != nil {
+		return contract.Connection{}, contract.Invalid("继承账号或直连模式不能指定独立代理")
 	}
 	if req.Credentials != nil && !credentialsOK(req.AuthType, req.Credentials) {
 		return contract.Connection{}, contract.Invalid("凭据不完整、已过期或与认证类型不匹配")
@@ -513,11 +571,15 @@ func (s *Service) SaveConnection(ctx context.Context, actorID int64, accountID, 
 		if !regionOK(account.Partition, req.Region) {
 			return contract.Invalid("区域与 AWS 分区不匹配")
 		}
-		if req.ProxyID != nil {
-			if _, err := tx.Proxy(ctx, *req.ProxyID); err != nil {
+		if req.RouteMode != "inherit" {
+			mode, proxyID, err := resolveRoute(ctx, tx, req.RouteMode, req.ProxyID)
+			if err != nil {
 				return err
 			}
+			req.RouteMode = mode
+			req.ProxyID = proxyID
 		}
+
 		if req.AuthType == "assume_role" {
 			role, err := arn.Parse(req.RoleARN)
 			if err != nil || role.Partition != account.Partition || role.AccountID != account.AWSAccountID || role.Service != "iam" || !strings.HasPrefix(role.Resource, "role/") ||
@@ -604,4 +666,27 @@ func (s *Service) SaveConnection(ctx context.Context, actorID int64, accountID, 
 		return tx.AppendAudit(ctx, audit(meta, actor, action, "connection", record.ID, map[string]string{"version": strconv.FormatInt(record.Version, 10)}))
 	})
 	return connectionView(record, true), err
+}
+
+func resolveRoute(ctx context.Context, store repository.AccountsStore, mode string, proxyID *string) (string, *string, error) {
+	if mode == "direct" {
+		if proxyID != nil {
+			return "", nil, contract.Invalid("直连模式不能绑定代理")
+		}
+		return mode, nil, nil
+	}
+	if (mode != "proxy" && mode != "socks5" && mode != "http") || proxyID == nil || !validID(*proxyID) {
+		return "", nil, contract.Invalid("请选择一个有效的账号代理")
+	}
+	p, err := store.Proxy(ctx, *proxyID)
+	if err != nil {
+		return "", nil, err
+	}
+	if mode != "proxy" && mode != p.Protocol {
+		return "", nil, contract.Invalid("代理协议与所选出口不匹配")
+	}
+	if p.Protocol != "socks5" && p.Protocol != "http" {
+		return "", nil, contract.ErrInvalid
+	}
+	return p.Protocol, proxyID, nil
 }

@@ -6,6 +6,9 @@ const (
 	AccountRegion     = "account_region"
 	LightsailRegion   = "lightsail_region"
 	LightsailInstance = "lightsail_instance"
+	LightsailStaticIP = "lightsail_static_ip"
+	EC2Instance       = "ec2_instance"
+	EC2Address        = "ec2_address"
 )
 
 type RefreshTarget struct {
@@ -99,7 +102,35 @@ type InstanceDetails struct {
 	Disks            []Disk     `json:"disks,omitempty"`
 	Ports            []Port     `json:"ports,omitempty"`
 }
+type EC2Details struct {
+	ID                      string    `json:"id"`
+	ImageID                 string    `json:"image_id"`
+	InstanceType            string    `json:"instance_type"`
+	AvailabilityZone        string    `json:"availability_zone"`
+	VPCID                   string    `json:"vpc_id"`
+	SubnetID                string    `json:"subnet_id"`
+	SecurityGroupIDs        []string  `json:"security_group_ids"`
+	PrimaryENI              string    `json:"primary_eni"`
+	PublicIP                string    `json:"public_ip"`
+	PrivateIP               string    `json:"private_ip"`
+	IPv6                    []string  `json:"ipv6"`
+	RootVolumeID            string    `json:"root_volume_id"`
+	DeleteRootOnTermination bool      `json:"delete_root_on_termination"`
+	CreatedAt               time.Time `json:"created_at"`
+}
+type AddressDetails struct {
+	ID                 string `json:"id"`
+	IP                 string `json:"ip"`
+	InstanceID         string `json:"instance_id"`
+	NetworkInterfaceID string `json:"network_interface_id,omitempty"`
+	AssociationID      string `json:"association_id,omitempty"`
+	BorderGroup        string `json:"border_group,omitempty"`
+	Attached           bool   `json:"attached"`
+}
 type Details struct {
+	EC2     *EC2Details     `json:"ec2,omitempty"`
+	Address *AddressDetails `json:"address,omitempty"`
+
 	Region   *RegionDetails   `json:"region,omitempty"`
 	Instance *InstanceDetails `json:"instance,omitempty"`
 }
@@ -182,3 +213,18 @@ var (
 	ErrIncomplete  = &Error{"PAGINATION_INCOMPLETE", "分页不完整，本次同步未替换已有快照"}
 	ErrResponse    = &Error{"INVALID_AWS_RESPONSE", "AWS 返回的数据无法完整校验，本次同步未替换快照"}
 )
+
+// Observation is a permission-scoped aggregate of a previously completed snapshot.
+type Observation struct {
+	AccountID     string     `json:"account_id"`
+	Kind          string     `json:"kind"`
+	Region        string     `json:"region"`
+	Count         int64      `json:"count"`
+	Running       int64      `json:"running"`
+	IPv4          []string   `json:"ipv4"`
+	Regions       []string   `json:"regions"`
+	Status        string     `json:"status"`
+	Code          string     `json:"code,omitempty"`
+	LastAttemptAt *time.Time `json:"last_attempt_at,omitempty"`
+	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
+}

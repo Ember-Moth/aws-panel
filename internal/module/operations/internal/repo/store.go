@@ -2,8 +2,10 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/herta-network/aws-panel/internal/module/operations/contract"
@@ -153,7 +155,13 @@ func (s *Store) CreateJob(ctx context.Context, row entity.Job) error {
 	return convert(s.db.WithContext(ctx).Table("jobs").Create(&row).Error)
 }
 func (s *Store) CreateItem(ctx context.Context, row entity.Item) error {
-	return convert(s.db.WithContext(ctx).Table("job_items").Create(&row).Error)
+	if row.LockKeys == "" {
+		row.LockKeys = "[]"
+	}
+	if err := convert(s.db.WithContext(ctx).Table("job_items").Create(&row).Error); err != nil {
+		return err
+	}
+	return s.syncTargetLocks(ctx, row)
 }
 func (s *Store) CreateStep(ctx context.Context, row entity.Step) error {
 	return convert(s.db.WithContext(ctx).Table("job_steps").Create(&row).Error)
@@ -172,7 +180,47 @@ func (s *Store) SaveJob(ctx context.Context, row entity.Job) error {
 	return s.save(ctx, "jobs", row.ID, &row)
 }
 func (s *Store) SaveItem(ctx context.Context, row entity.Item) error {
-	return s.save(ctx, "job_items", row.ID, &row)
+	if row.LockKeys == "" {
+		row.LockKeys = "[]"
+	}
+	if err := s.save(ctx, "job_items", row.ID, &row); err != nil {
+		return err
+	}
+	return s.syncTargetLocks(ctx, row)
+}
+
+// Call only inside the surrounding job transaction. Sorted acquisition avoids
+// lock-order inversions when two operations share more than one resource.
+func (s *Store) syncTargetLocks(ctx context.Context, row entity.Item) error {
+	if row.Status != contract.Queued && row.Status != contract.Running && row.Status != contract.Waiting && row.Status != contract.Attention {
+		return convert(s.db.WithContext(ctx).Exec("DELETE FROM operation_target_locks WHERE item_id=?", row.ID).Error)
+	}
+	var keys []string
+	if json.Unmarshal([]byte(row.LockKeys), &keys) != nil {
+		return contract.ErrUnavailable
+	}
+	if row.LockKey != "" {
+		keys = append(keys, row.LockKey)
+	}
+	sort.Strings(keys)
+	seen := map[string]bool{}
+	for _, key := range keys {
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		if err := s.db.WithContext(ctx).Exec("INSERT INTO operation_target_locks(lock_key,item_id) VALUES(?,?) ON CONFLICT(lock_key) DO NOTHING", key, row.ID).Error; err != nil {
+			return convert(err)
+		}
+		var owner string
+		if err := s.db.WithContext(ctx).Raw("SELECT item_id::text FROM operation_target_locks WHERE lock_key=?", key).Scan(&owner).Error; err != nil {
+			return convert(err)
+		}
+		if owner != row.ID {
+			return contract.ErrTargetBusy
+		}
+	}
+	return nil
 }
 func (s *Store) SaveStep(ctx context.Context, row entity.Step) error {
 	return s.save(ctx, "job_steps", row.ID, &row)

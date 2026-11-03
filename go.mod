@@ -6,6 +6,7 @@ require (
 	github.com/GehirnInc/crypt v0.0.0-20230320061759-8cc1b52080c5
 	github.com/aws/aws-sdk-go-v2 v1.47.5
 	github.com/aws/aws-sdk-go-v2/service/account v1.42.7
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.343.0
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.70.1
 	github.com/aws/aws-sdk-go-v2/service/servicequotas v1.43.8
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.6

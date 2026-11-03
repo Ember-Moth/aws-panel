@@ -17,11 +17,15 @@ import (
 	"github.com/herta-network/aws-panel/internal/infra/postgres"
 	"github.com/herta-network/aws-panel/internal/infra/taskqueue"
 	"github.com/herta-network/aws-panel/internal/module/accounts"
+	"github.com/herta-network/aws-panel/internal/module/addresses"
+	"github.com/herta-network/aws-panel/internal/module/compute"
+	"github.com/herta-network/aws-panel/internal/module/dashboard"
 	"github.com/herta-network/aws-panel/internal/module/inventory"
 	"github.com/herta-network/aws-panel/internal/module/lightsail"
 	"github.com/herta-network/aws-panel/internal/module/operations"
 	oc "github.com/herta-network/aws-panel/internal/module/operations/contract"
 	"github.com/herta-network/aws-panel/internal/module/platform"
+	"github.com/herta-network/aws-panel/internal/module/quotas"
 	"github.com/herta-network/aws-panel/internal/module/regions"
 	"github.com/herta-network/aws-panel/internal/repository/kernel"
 	"github.com/herta-network/aws-panel/internal/transport/http/routes"
@@ -83,14 +87,19 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	defer client.Close()
 	operationStore := operations.NewRepository(kernel.Connection{DB: db}, platform.NewAuditAppender, accounts.NewBindingGuard)
 	inventoryStore := inventory.NewRepository(kernel.Connection{DB: db}, platform.NewAuditAppender, operations.NewExecutionGuard)
+	dashboardStore := dashboard.NewRepository(kernel.Connection{DB: db}, operations.NewExecutionGuard)
 	lightsailStore := lightsail.NewRepository(kernel.Connection{DB: db}, operations.NewExecutionGuard)
-	operationService, err := operations.New(operations.Deps{Store: operationStore, Access: identityService, Connections: jobConnections{accounts: accountService}, Publisher: task.Publisher{Client: client}, CloudWritesEnabled: cfg.Cloud.WritesEnabled, Executors: []oc.Executor{operations.NewDiagnostic(operationStore), inventory.NewExecutor(inventory.ExecutorDeps{Store: inventoryStore, Clients: accountService}), regions.NewExecutor(regions.ExecutorDeps{Clients: accountService}), lightsail.NewExecutor(lightsail.ExecutorDeps{Store: lightsailStore, Clients: accountService, LaunchSecrets: accountService})}})
+	operationService, err := operations.New(operations.Deps{Store: operationStore, Access: identityService, Connections: jobConnections{accounts: accountService}, Publisher: task.Publisher{Client: client}, CloudWritesEnabled: cfg.Cloud.WritesEnabled, Executors: []oc.Executor{operations.NewDiagnostic(operationStore), dashboard.NewExecutor(dashboard.ExecutorDeps{Clients: accountService, Store: dashboardStore}), inventory.NewExecutor(inventory.ExecutorDeps{Store: inventoryStore, Clients: accountService}), regions.NewExecutor(regions.ExecutorDeps{Clients: accountService}), lightsail.NewExecutor(lightsail.ExecutorDeps{Store: lightsailStore, Clients: accountService, LaunchSecrets: accountService}), addresses.NewExecutor(addresses.ExecutorDeps{Clients: accountService, Effects: operations.NewEffectStore(kernel.Connection{DB: db})}), compute.NewExecutor(compute.ExecutorDeps{Clients: accountService, LaunchSecrets: accountService, Effects: operations.NewEffectStore(kernel.Connection{DB: db})})}})
 	if err != nil {
 		return err
 	}
 	inventoryService := inventory.New(inventory.Deps{Store: inventoryStore, Accounts: accountService, Access: identityService, Jobs: operationService, Observer: operations.NewObserver(operationStore)})
+	dashboardService := dashboard.New(dashboard.Deps{Accounts: accountService, Access: identityService, Inventory: inventoryService, Store: dashboardStore, Jobs: operationService})
 	regionService := regions.New(regions.Deps{Accounts: accountService, Access: identityService, Jobs: operationService, WritesEnabled: cfg.Cloud.WritesEnabled})
 	lightsailService := lightsail.New(lightsail.Deps{Accounts: accountService, Access: identityService, Jobs: operationService, WritesEnabled: cfg.Cloud.WritesEnabled})
+	addressService := addresses.New(addresses.Deps{Accounts: accountService, Access: identityService, Jobs: operationService, WritesEnabled: cfg.Cloud.WritesEnabled})
+	computeService := compute.New(compute.Deps{Accounts: accountService, Access: identityService, Jobs: operationService, WritesEnabled: cfg.Cloud.WritesEnabled})
+	quotaService := quotas.New(quotas.Deps{Accounts: accountService, Access: identityService})
 	policy, err := security.New(cfg)
 	if err != nil {
 		return err
@@ -112,8 +121,8 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 		Operations: operationService, Diagnostics: cfg.Worker.Diagnostics,
 		Inventory: inventoryService,
 		Regions:   regionService,
-		Lightsail: lightsailService,
-		Shutdown:  ctx.Done(),
+		Lightsail: lightsailService, Addresses: addressService, Quotas: quotaService, Compute: computeService, Dashboard: dashboardService,
+		Shutdown: ctx.Done(),
 		Ready: func(ctx context.Context) bool {
 			if !ready.Ready() || !worker.Ready() {
 				return false

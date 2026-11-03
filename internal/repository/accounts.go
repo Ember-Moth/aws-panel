@@ -12,6 +12,7 @@ type AccountsStore interface {
 	Proxy(context.Context, string) (entity.Proxy, error)
 	Proxies(context.Context) ([]entity.Proxy, error)
 	ProxyUsage(context.Context, string) (int64, error)
+	ProxyAccountUsage(context.Context, string) (int64, error)
 	ProxyImpact(context.Context, string) ([]entity.Connection, error)
 	Connection(context.Context, string) (entity.Connection, error)
 	Connections(context.Context, string) ([]entity.Connection, error)

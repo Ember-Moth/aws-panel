@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/herta-network/aws-panel/internal/auth"
 	"github.com/herta-network/aws-panel/internal/module/platform"
 	"github.com/herta-network/aws-panel/internal/transport/http/view"
 	"github.com/herta-network/aws-panel/web"
@@ -19,7 +20,8 @@ func StatusPartial(service platform.Service, renderer *web.Renderer) app.Handler
 
 func render(service platform.Service, renderer *web.Renderer, name string) app.HandlerFunc {
 	return func(ctx context.Context, c *app.RequestContext) {
-		model := web.SystemView{}
+		principal, _ := auth.Current(ctx)
+		model := web.SystemView{CanOperate: principal.Role == "admin" || principal.Role == "operator"}
 		status := 200
 		value, err := service.Status(ctx)
 		if err != nil {

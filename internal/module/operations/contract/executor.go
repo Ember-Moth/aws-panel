@@ -36,8 +36,11 @@ type Target struct {
 	Label string `json:"label"`
 	// Write plans provide a stable cloud-target key shared across operations.
 	// The engine adds account and region before acquiring the target lock.
-	LockKey string  `json:"lock_key,omitempty"`
-	Binding Binding `json:"binding"`
+	LockKey string `json:"lock_key,omitempty"`
+	// Additional keys protect multi-resource operations such as attaching an
+	// address to an instance. They share the primary key's account/region scope.
+	LockKeys []string `json:"lock_keys,omitempty"`
+	Binding  Binding  `json:"binding"`
 }
 type StepPlan struct {
 	Kind        string          `json:"kind"`

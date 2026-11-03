@@ -47,4 +47,7 @@ func NewReferenceGuard(connection kernel.Connection) kernel.ReferenceGuard {
 func NewExecutionGuard(connection kernel.Connection) kernel.ExecutionGuard {
 	return repo.New(connection, nil)
 }
+func NewEffectStore(connection kernel.Connection) repository.EffectStore {
+	return repo.NewEffects(connection)
+}
 func NewDiagnostic(store repository.OperationsStore) contract.Executor { return diagnostic.New(store) }

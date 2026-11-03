@@ -1,6 +1,7 @@
 package web
 
 import (
+	dc "github.com/herta-network/aws-panel/internal/module/dashboard/contract"
 	"strings"
 	"testing"
 )
@@ -12,7 +13,15 @@ func TestTemplatesEscapeDataAndRenderPartial(t *testing.T) {
 	}
 	view := SystemView{Version: "<script>alert(1)</script>", ServerTime: "2026-11-02 12:00:00"}
 	for _, name := range []string{"dashboard", "system-status"} {
-		body, err := renderer.Render(name, view)
+		var model any = view
+		if name == "dashboard" {
+			model = struct {
+				Overview              dc.Overview
+				System                SystemView
+				CSRF, Key, PartialURL string
+			}{System: view}
+		}
+		body, err := renderer.Render(name, model)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -38,7 +47,11 @@ func TestLayoutEscapesIdentityAndCSRFFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	attack := `"><script>alert(1)</script>`
-	body, err := renderer.Page("dashboard", Layout{Title: attack, CSRF: attack, User: &UserView{DisplayName: attack, Role: "viewer"}}, SystemView{})
+	body, err := renderer.Page("dashboard", Layout{Title: attack, CSRF: attack, User: &UserView{DisplayName: attack, Role: "viewer"}}, struct {
+		Overview              dc.Overview
+		System                SystemView
+		CSRF, Key, PartialURL string
+	}{})
 	if err != nil {
 		t.Fatal(err)
 	}

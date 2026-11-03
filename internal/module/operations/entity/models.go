@@ -29,6 +29,7 @@ type Item struct {
 	ID, JobID                             string
 	Ordinal                               int
 	TargetKey, Label, LockKey             string
+	LockKeys                              string
 	AccountID                             *string
 	ConnectionID, Region, Binding, Status string
 }

@@ -82,9 +82,11 @@ GORM PostgreSQL 驱动使用 pgx，业务不再同时维护一套独立 pgx 仓�
 | operations | 操作注册、计划、任务、步骤、租约、执行记录、outbox 与进度事件 |
 | inventory | 云端资源快照、同步时间与刷新状态 |
 | platform | 系统设置、审计读取与事务内追加审计的公共能力 |
-| AWS 服务模块 | 各服务的领域输入、资源映射、操作步骤和结果核对 |
+| lightsail / regions | Lightsail 创建、区域启用及结果核对 |
+| dashboard | 按授权账号聚合资源与配额，持有聚合快照和分区域采集进度 |
+| compute / addresses / quotas | EC2 与双栈网络、静态 IP 工作流、适用配额和用量查询 |
 
-模块按数据和事务归属划分：凭据生命周期归 accounts，任务执行归 operations，审计与设置归 platform。platform 作为共享内核不依赖其他业务模块。模块内部再按需要拆包，避免每个辅助能力都变成必须跨事务协作的独立模块。
+模块按数据和事务归属划分：凭据生命周期归 accounts，任务执行、通用云请求记录和多资源锁归 operations，审计与设置归 platform。platform 作为共享内核不依赖其他业务模块。模块内部再按需要拆包，避免每个辅助能力都变成必须跨事务协作的独立模块。
 
 每个模块沿用 PPanel 的结构：根包提供 Service 门面和 New(deps)，contract 放命令、查询和返回值，entity 放持久化实体，internal 放业务实现与仓储，transport/http 放本模块的 Hertz handler。Go 编译器限制其他模块导入其嵌套 internal 包。
 

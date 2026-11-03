@@ -276,6 +276,9 @@ func (s *Service) configForGuard(ctx context.Context, actorID int64, id, region 
 			return awssdk.Config{}, contract.ErrVault
 		}
 		route := awsnet.Route{Mode: node.Connection.RouteMode}
+		if route.Mode == "inherit" {
+			route.Mode = node.Account.DefaultRouteMode
+		}
 		if node.Proxy != nil {
 			route.Proxy = &awsnet.SOCKS5{Host: node.Proxy.Host, Port: node.Proxy.Port}
 			if node.ProxySecret != nil {
@@ -399,7 +402,7 @@ func verificationFailure(err error, proxy bool) (string, string, string) {
 	if errors.As(err, &certificate) || errors.As(err, &tlsVerification) || errors.As(err, &hostname) || errors.As(err, &invalidCertificate) {
 		return "tls", "TLS_VALIDATION_FAILED", "AWS TLS 证书验证失败"
 	}
-	if proxy && strings.Contains(strings.ToLower(err.Error()), "username/password authentication failed") {
+	if proxy && (errors.Is(err, awsnet.ErrProxyAuthentication) || strings.Contains(strings.ToLower(err.Error()), "username/password authentication failed")) {
 		return "proxy", "PROXY_AUTH_FAILED", "代理用户名或密码验证失败"
 	}
 	var network net.Error
@@ -458,7 +461,7 @@ func (s *Service) Verify(ctx context.Context, actorID int64, id string, meta aut
 		}
 	}
 	if callErr != nil {
-		result.Stage, result.Code, result.Message = verificationFailure(callErr, record.RouteMode == "socks5")
+		result.Stage, result.Code, result.Message = verificationFailure(callErr, len(nodes) > 0 && nodes[0].Proxy != nil)
 	}
 	result.CheckedAt = clock.Now()
 	persist, persistCancel := context.WithTimeout(parent, 5*time.Second)

@@ -11,14 +11,25 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/common/ut"
+	"github.com/herta-network/aws-panel/internal/auth"
 	"github.com/herta-network/aws-panel/internal/auth/token"
 	"github.com/herta-network/aws-panel/internal/config"
+	dc "github.com/herta-network/aws-panel/internal/module/dashboard/contract"
 	"github.com/herta-network/aws-panel/internal/module/identity"
 	identitycontract "github.com/herta-network/aws-panel/internal/module/identity/contract"
 	"github.com/herta-network/aws-panel/internal/module/platform/contract"
 	"github.com/herta-network/aws-panel/internal/transport/http/security"
 	"github.com/herta-network/aws-panel/web"
 )
+
+type dashboardStub struct{ err error }
+
+func (d dashboardStub) Read(context.Context, int64, dc.Query) (dc.Overview, error) {
+	return dc.Overview{}, d.err
+}
+func (dashboardStub) Refresh(context.Context, int64, dc.RefreshRequest, auth.RequestMeta) (dc.Refresh, error) {
+	return dc.Refresh{}, dc.ErrNoConnection
+}
 
 type platformStub struct{ fail bool }
 
@@ -59,7 +70,7 @@ func testDependencies(t *testing.T, fail bool) (Dependencies, *identityStub) {
 	}
 	raw, _ := token.New()
 	authenticator := &identityStub{raw: raw, role: identitycontract.RoleAdmin}
-	return Dependencies{Platform: &platformStub{fail: fail}, Identity: authenticator, Policy: policy, Renderer: renderer, Ready: func(context.Context) bool { return !fail }}, authenticator
+	return Dependencies{Dashboard: dashboardStub{}, Platform: &platformStub{fail: fail}, Identity: authenticator, Policy: policy, Renderer: renderer, Ready: func(context.Context) bool { return !fail }}, authenticator
 }
 func authenticatedHeaders(deps Dependencies, stub *identityStub) []ut.Header {
 	return []ut.Header{
@@ -160,5 +171,16 @@ func TestViewerCannotManageMembersOrReadAudit(t *testing.T) {
 	response := ut.PerformRequest(h.Engine, "GET", deps.Policy.Origin+"/", nil, authenticatedHeaders(deps, stub)...)
 	if response.Code != 200 || strings.Contains(response.Body.String(), `href="/members"`) {
 		t.Fatal("viewer dashboard must omit member administration")
+	}
+}
+
+func TestDashboardPartialFailureKeepsPreviousDOM(t *testing.T) {
+	deps, stub := testDependencies(t, false)
+	deps.Dashboard = dashboardStub{err: dc.ErrUnavailable}
+	h := server.New()
+	Register(h, deps)
+	response := ut.PerformRequest(h.Engine, "GET", deps.Policy.Origin+"/partials/dashboard", nil, authenticatedHeaders(deps, stub)...)
+	if response.Code != 503 || response.Header().Get("HX-Reswap") != "none" || response.Header().Get("HX-Trigger") != "dashboard:error" || response.Body.Len() != 0 {
+		t.Fatal("partial failure would erase the dashboard", response.Code, response.Header())
 	}
 }

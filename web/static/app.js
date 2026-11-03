@@ -1,14 +1,8 @@
-document.addEventListener("htmx:sendError", () => {
-  document.getElementById("connection-error")?.classList.remove("d-none");
-});
-document.addEventListener("htmx:timeout", () => {
-  document.getElementById("connection-error")?.classList.remove("d-none");
-});
-document.addEventListener("htmx:afterRequest", (event) => {
-  if (event.detail.successful) {
-    document.getElementById("connection-error")?.classList.add("d-none");
-  }
-});
+function connectionNotice(event){const notice=document.getElementById('connection-error');if(notice?.hasAttribute('data-dashboard-poll-error')&&event.detail?.target?.id!=='dashboard-content')return null;return notice;}
+document.addEventListener('htmx:sendError',event=>connectionNotice(event)?.classList.remove('d-none'));
+document.addEventListener('htmx:timeout',event=>connectionNotice(event)?.classList.remove('d-none'));
+document.addEventListener('htmx:afterRequest',event=>{if(event.detail.successful)connectionNotice(event)?.classList.add('d-none');});
+document.addEventListener('dashboard:error',()=>document.querySelector('[data-dashboard-poll-error]')?.classList.remove('d-none'));
 document.addEventListener("htmx:configRequest", (event) => {
   const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
   if (csrf) event.detail.headers["X-CSRF-Token"] = csrf;
@@ -27,8 +21,8 @@ function configureCredentialForms(root = document) {
         });
       });
       const proxy = form.querySelector("[data-proxy-section]");
-      proxy.hidden = form.elements.route_mode.value !== "socks5";
-      form.elements.proxy_id.required = !proxy.hidden;
+      proxy.hidden = !["socks5","http","proxy"].includes(form.elements.route_mode.value);
+      form.elements.proxy_id.required = !proxy.hidden;form.elements.proxy_id.disabled=proxy.hidden;
     };
     if (!form.dataset.initialized) { form.addEventListener("change", update); form.dataset.initialized = "true"; }
     update();
@@ -93,10 +87,11 @@ function configureInventoryTargets(root = document) {
     rows.forEach((row) => {
       const kind = row.querySelector('[name="kind"]').value;
       const region = row.querySelector('[name="region"]');
-      if (row.dataset.previousKind === "lightsail_instance" && kind !== "lightsail_instance") row.dataset.instanceRegion = region.value;
-      if (kind !== "lightsail_instance") region.value = "us-east-1";
+      const regional = !["account_region","lightsail_region"].includes(kind);
+      if (row.dataset.previousKind && !["account_region","lightsail_region"].includes(row.dataset.previousKind) && !regional) row.dataset.instanceRegion = region.value;
+      if (!regional) region.value = "us-east-1";
       else if (row.dataset.previousKind && row.dataset.previousKind !== kind) region.value = row.dataset.instanceRegion || "us-east-1";
-      region.readOnly = kind !== "lightsail_instance";
+      region.readOnly = !regional;
       row.dataset.previousKind = kind;
       row.querySelector("[data-inventory-remove]").disabled = rows.length <= 1;
     });
@@ -348,3 +343,211 @@ const awsRegionNames = Object.freeze({
  "eu-central-1":"欧洲（法兰克福）","eu-central-2":"欧洲（苏黎世）","eu-west-1":"欧洲（爱尔兰）","eu-west-2":"欧洲（伦敦）","eu-west-3":"欧洲（巴黎）","eu-south-1":"欧洲（米兰）","eu-south-2":"欧洲（西班牙）","eu-north-1":"欧洲（斯德哥尔摩）",
  "il-central-1":"以色列（特拉维夫）","mx-central-1":"墨西哥（中部）","me-south-1":"中东（巴林）","me-central-1":"中东（阿联酋）","sa-east-1":"南美洲（圣保罗）"
 });
+
+const cloudRegionRequests = new WeakMap();
+const addressCatalogues = new WeakMap();
+function cloudField(form,name){return form.querySelector(`[name="${name}"]`);}
+async function loadCloudRegions(form){
+ cloudRegionRequests.get(form)?.abort();const request=new AbortController();cloudRegionRequests.set(form,request);
+ const connection=cloudField(form,"connection_id").value,region=cloudField(form,"region"),previous=region.value;
+ const kind=cloudField(form,"service")?.value;
+ const accountLabel=cloudField(form,"connection_id").selectedOptions[0]?.parentElement?.label||"";
+ const status=form.querySelector("[data-cloud-region-status]");region.replaceChildren(new Option(connection?"正在加载区域…":"先选择连接",""));
+ if(!connection){status.textContent="";return;}
+ const path=form.hasAttribute("data-address-picker")&&kind==="lightsail"?"/api/v1/lightsail/regions":"/api/v1/quotas/regions";
+ status.textContent=accountLabel?`${accountLabel} · 正在查询区域…`:"正在查询区域…";
+ try{
+  const response=await fetch(`${path}?${new URLSearchParams({connection_id:connection})}`,{credentials:"same-origin",signal:request.signal});
+  if(response.status===401){window.location.assign("/login");return;}
+  const envelope=await response.json();if(!response.ok)throw new Error(envelope.error?.message||"无法读取区域列表");
+  if(!form.isConnected||cloudRegionRequests.get(form)!==request)return;
+  region.replaceChildren(new Option("请选择区域",""));
+  for(const value of envelope.data.items){const option=new Option(`${value.code} · ${awsRegionNames[value.code]||value.name||value.code}${value.available?"":" · "+awsRegionState(value.state)}`,value.code);option.disabled=!value.available;region.append(option);}
+  if(envelope.data.items.some(value=>value.code===previous&&value.available))region.value=previous;
+  status.textContent=accountLabel||"区域状态已更新。";
+  if(form.matches("[data-address-form]")&&region.value)loadAddressCatalogue(form);
+  if(form.matches("[data-ec2-form]")&&region.value)loadEC2(form);
+ }catch(error){if(error.name!=="AbortError"){status.textContent=error.message;region.replaceChildren(new Option("区域加载失败",""));}}
+}
+function openAddressEditor(form,action,addressID='',instanceID=''){
+ form.dataset.addressView='editor';cloudField(form,'action').value=action;cloudField(form,'address_id').value=addressID;cloudField(form,'instance_id').value=instanceID;cloudField(form,'release_previous').checked=false;configureAddressAction(form);form.querySelector('[data-address-editor-title]').focus({preventScroll:true});
+}
+function configureAddressAction(form){
+ const action=cloudField(form,"action").value,editing=form.dataset.addressView==='editor';
+ form.querySelector('[data-address-editor]').hidden=!editing;form.closest('#address-form').querySelector('[data-address-list]').hidden=editing;
+ cloudField(form,'address_action').value=action;cloudField(form,'address_action').disabled=!editing;
+ const newAddress=action==="allocate"||action==="replace",instance=newAddress||action==="attach",existing=["attach","detach","release"].includes(action);
+ for(const [selector,name,enabled,required] of [["[data-address-instance-field]","instance_id",instance,action!=="allocate"],["[data-address-existing-field]","address_id",existing,true],["[data-address-name-field]","name_prefix",newAddress,false]]){
+  form.querySelector(selector).hidden=!enabled;const field=cloudField(form,name);field.disabled=!editing||!enabled;field.required=editing&&enabled&&required;
+ }
+ const emptyInstance=[...cloudField(form,"instance_id").options].find(option=>option.value==="");if(emptyInstance)emptyInstance.textContent=action==="allocate"?"只创建，暂不绑定":"选择目标实例";
+ const release=cloudField(form,"release_previous");form.querySelector("[data-address-release-field]").hidden=!instance;release.disabled=!editing||!instance;
+ const titles={allocate:'创建静态 IP',replace:'更换实例 IP',attach:'绑定已有地址',detach:'解绑地址',release:'释放地址'};
+ form.querySelector('[data-address-editor-title]').textContent=titles[action]||'地址操作';
+ const submit=form.querySelector('[data-address-submit]');submit.disabled=!editing;submit.textContent=action==='release'?'预览释放操作':'预览地址操作';submit.classList.toggle('btn-danger',action==='release');submit.classList.toggle('btn-primary',action!=='release');
+ form.querySelector("[data-address-action-hint]").textContent=action==="release"?"释放后地址离开本账号，不能保证找回。已绑定地址需先解绑。":action==="detach"?"解绑会影响实例公网连接。地址仍保留并占用配额。":"先分配新地址，再切换绑定，需要一个空余配额。切换会影响现有连接，DNS 不会自动修改。";
+}
+async function loadAddressCatalogue(form){
+ const connection=cloudField(form,"connection_id").value,region=cloudField(form,"region").value,service=cloudField(form,"service").value;
+ if(!connection||!region)return;
+ const key=JSON.stringify([connection,region,service]);form.dataset.addressLoading=key;
+ const status=form.querySelector("[data-address-status]");status.textContent="正在查询实例与地址…";addressCatalogues.delete(form);
+ try{
+  const response=await fetch(`/api/v1/addresses/catalogue?${new URLSearchParams({connection_id:connection,region,service})}`,{credentials:"same-origin"});
+  if(response.status===401){window.location.assign("/login");return;}
+  const envelope=await response.json();if(!response.ok)throw new Error(envelope.error?.message||"地址数据暂不可用");
+  if(!form.isConnected||form.dataset.addressLoading!==key||JSON.stringify([cloudField(form,"connection_id").value,cloudField(form,"region").value,cloudField(form,"service").value])!==key)return;
+  const catalogue=envelope.data;addressCatalogues.set(form,catalogue);
+  launchChoices(cloudField(form,"instance_id"),[{id:"",name:"只创建，暂不绑定"},...catalogue.instances],value=>value.id?`${value.name} · ${value.id} · ${value.public_ip||"无公网 IPv4"}`:value.name,value=>value.id);
+  launchChoices(cloudField(form,"address_id"),[{id:"",name:"请选择地址"},...catalogue.addresses],value=>value.id?`${value.ip} · ${value.name} · ${value.attached?"已绑定":"未绑定"}`:value.name,value=>value.id);
+  const table=document.createElement("table");table.className="table table-vcenter card-table resource-table";
+  const head=document.createElement("thead"),headRow=document.createElement("tr");for(const title of ["名称 / ID","IPv4","绑定对象","操作"]){const cell=document.createElement("th");cell.textContent=title;headRow.append(cell);}head.append(headRow);table.append(head);
+  const body=document.createElement("tbody");
+  for(const address of catalogue.addresses){const row=document.createElement("tr");
+   const name=document.createElement('td'),strong=document.createElement('strong'),id=document.createElement('div');strong.textContent=address.name;id.textContent=address.id;id.className='data-id mt-1';name.append(strong,id);row.append(name);
+   const ip=document.createElement('td');ip.textContent=address.ip;ip.className='data-id ip-address';row.append(ip);
+   const binding=document.createElement('td'),statusBadge=document.createElement('span');statusBadge.className=`badge ${address.attached?'bg-green-lt':'bg-secondary-lt'}`;statusBadge.textContent=address.attached?'已绑定':'未绑定';binding.append(statusBadge);if(address.attached){const target=document.createElement('div');target.textContent=address.instance_id||address.network_interface_id;target.className='data-id mt-1';binding.append(target);}row.append(binding);
+   const actions=document.createElement('td');actions.className='text-end';const button=document.createElement('button');button.type='button';button.className='btn btn-sm';button.textContent='管理';button.addEventListener('click',()=>openAddressEditor(form,address.attached?'detach':'attach',address.id));actions.append(button);row.append(actions);body.append(row);
+  }
+  if(!catalogue.addresses.length){const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=4;cell.className="text-secondary text-center py-4";cell.textContent="此范围暂无静态 IP，可选择创建。";row.append(cell);body.append(row);}
+  table.append(body);form.querySelector("[data-address-table]")?.replaceChildren(table);
+  // The table is adjacent to the form inside the same card.
+  if(!form.querySelector("[data-address-table]"))form.closest("#address-form").querySelector("[data-address-table]").replaceChildren(table);
+  status.textContent=`已更新 ${catalogue.addresses.length} 个地址 · ${catalogue.instances.length} 个可选实例`;form.closest("#address-form").querySelector("[data-address-count]").textContent=`(${catalogue.addresses.length})`;configureAddressAction(form);
+ }catch(error){if(form.dataset.addressLoading===key)status.textContent=error.message;}
+}
+function configureCloudForms(){
+ document.querySelectorAll("[data-cloud-region-picker]").forEach(form=>{
+  if(form.dataset.cloudInitialized)return;form.dataset.cloudInitialized="true";
+  if(form.matches("[data-address-form]"))configureAddressAction(form);
+  if(cloudField(form,"connection_id").value)loadCloudRegions(form);
+ });
+}
+document.addEventListener("change",event=>{
+ const form=event.target.closest("[data-cloud-region-picker]");if(!form)return;
+ if(["connection_id","service"].includes(event.target.name)){
+  if(form.matches("[data-address-form]")){addressCatalogues.delete(form);cloudField(form,"release_previous").checked=false;form.dataset.addressLoading="";form.closest("#address-form").querySelector("[data-address-table]").textContent="范围已变化，请重新加载。";for(const name of ["instance_id","address_id"])cloudField(form,name).replaceChildren(new Option("等待加载",""));}
+  loadCloudRegions(form);
+ }else if(event.target.name==="region"&&form.matches("[data-address-form]"))loadAddressCatalogue(form);
+ else if(event.target.name==="address_action"&&form.matches("[data-address-form]")){cloudField(form,"action").value=event.target.value;cloudField(form,"release_previous").checked=false;configureAddressAction(form);}
+});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-address-load]");if(button)loadAddressCatalogue(button.closest("form"));});
+document.addEventListener("submit",event=>{
+ const form=event.target.closest("[data-address-form]");if(!form)return;
+ if(form.dataset.addressView!=="editor"){event.preventDefault();event.stopImmediatePropagation();loadAddressCatalogue(form);return;}
+ if(addressCatalogues.has(form))return;
+ event.preventDefault();event.stopImmediatePropagation();form.querySelector("[data-address-status]").textContent="请先加载当前实例与地址，再生成预览。";
+},true);
+document.addEventListener("DOMContentLoaded",configureCloudForms);
+document.addEventListener("htmx:afterSwap",configureCloudForms);
+
+const ec2Catalogues=new WeakMap();
+function ec2Scope(form){return JSON.stringify([cloudField(form,"connection_id").value,cloudField(form,"region").value]);}
+function ec2Options(form){
+ const data=ec2Catalogues.get(form);if(!data)return;
+ const image=data.images.find(v=>v.id===cloudField(form,"image_id").value);
+ launchChoices(cloudField(form,"instance_type"),data.types.filter(v=>v.architectures.includes(image?.architecture)),v=>`${v.id} · ${v.vcpu} vCPU / ${(v.memory_mib/1024).toFixed(1)} GiB`,v=>v.id);
+ const disk=cloudField(form,"disk_gb");disk.min=String(Math.max(8,image?.min_disk_gb||8));if(Number(disk.value)<Number(disk.min))disk.value=disk.min;
+ const subnet=data.subnets.find(v=>v.id===cloudField(form,"subnet_id").value);
+ launchChoices(cloudField(form,"security_group_ids"),data.security_groups.filter(v=>v.vpc_id===subnet?.vpc_id),v=>`${v.name} · ${v.id} · SSH IPv4:${v.ssh_ipv4.length?'允许':'无'} / IPv6:${v.ssh_ipv6.length?'允许':'无'}`,v=>v.id);
+ const group=data.security_groups.find(v=>v.id===cloudField(form,"security_group_ids").value);
+ form.querySelector("[data-ec2-network-hint]").textContent=subnet?`${subnet.vpc_id} · ${subnet.zone} · IPv6 前缀：${subnet.ipv6_cidr||'未配置'} · 公网路由 IPv4:${subnet.public_ipv4_route?'有':'无'} / IPv6:${subnet.public_ipv6_route?'有':'无'}。SSH 允许来源 IPv4：${group?.ssh_ipv4.join(', ')||'无'}；IPv6：${group?.ssh_ipv6.join(', ')||'无'}。`:'此区域没有可用子网，请先准备网络。';
+}
+function setEC2View(form,view){
+ form.dataset.ec2View=view;if(view==='create'||view==='network')cloudField(form,'action').value=view;
+ configureEC2(form);if(view!=='instances')form.querySelector('[data-ec2-editor-title]').focus({preventScroll:true});else form.closest('#ec2-form').querySelector('[data-ec2-list] h2').focus({preventScroll:true});
+}
+function configureEC2(form){
+ const view=form.dataset.ec2View||'instances',editing=view!=='instances',action=cloudField(form,'action').value,create=editing&&view==='create',network=editing&&view==='network',manage=editing&&view==='manage',root=cloudField(form,'login_method').value==='root_password';
+ const workspace=form.closest('#ec2-form');form.querySelector('[data-ec2-editor]').hidden=!editing;workspace.querySelector('[data-ec2-list]').hidden=editing;
+ workspace.querySelectorAll('.workspace-tabs [data-ec2-open]').forEach(button=>{if(button.dataset.ec2Open===view)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');});
+ form.querySelector('[data-ec2-create]').hidden=!create;form.querySelector('[data-ec2-network]').hidden=!network;form.querySelector('[data-ec2-existing]').hidden=!manage;
+ cloudField(form,'instance_id').disabled=!manage;cloudField(form,'instance_id').required=manage;cloudField(form,'management_action').disabled=!manage;cloudField(form,'management_action').required=manage;if(manage)cloudField(form,'management_action').value=action;
+ for(const field of form.querySelectorAll('[data-ec2-network] input,[data-ec2-network] select'))field.disabled=!network;
+ for(const field of form.querySelectorAll('[data-ec2-create] input,[data-ec2-create] select'))field.disabled=!create;
+ for(const field of form.querySelectorAll('[data-ec2-password]'))field.hidden=!root;
+ form.querySelector('[data-ec2-key]').hidden=root;
+ for(const name of ['root_password','root_password_confirm']){const field=cloudField(form,name);field.disabled=!create||!root;field.required=create&&root;if(field.disabled){field.value='';field.setCustomValidity('');}}
+ cloudField(form,'key_pair_name').disabled=!create||root;cloudField(form,'key_pair_name').required=create&&!root;
+ const title=network?'准备双栈网络':create?'创建 EC2 实例':'管理实例';form.querySelector('[data-ec2-editor-title]').textContent=title;
+ const hints={terminate:'终止不可撤销。标记随实例删除的卷会被删除，弹性 IP 需单独处理。',stop:'停止会中断服务，磁盘和保留的公网 IPv4 仍可能计费。',reboot:'任务确认 AWS 接受重启请求，系统是否恢复需另行核对。',enable_ipv6:'为主网卡添加 IPv6，需要现有子网、路由和安全组支持。'};
+ form.querySelector('[data-ec2-action-hint]').textContent=manage?(hints[action]||''):'';form.querySelector('[data-ec2-action-notice]').hidden=!manage||!hints[action];form.querySelector('[data-ec2-action-hint]').classList.toggle('alert',action==='terminate');form.querySelector('[data-ec2-action-hint]').classList.toggle('alert-danger',action==='terminate');
+ const submit=form.querySelector('[data-ec2-submit]');submit.disabled=!editing;submit.textContent=create?'预览创建配置':network?'预览网络配置':action==='terminate'?'预览终止操作':'预览实例操作';submit.classList.toggle('btn-danger',action==='terminate');submit.classList.toggle('btn-primary',action!=='terminate');
+}
+function ec2StateLabel(value){return {running:'运行中',stopped:'已停止',pending:'启动中',stopping:'停止中','shutting-down':'终止中',terminated:'已终止'}[value]||value;}
+function renderEC2Instances(form,rows){
+ const table=document.createElement('table');table.className='table table-vcenter card-table resource-table';const head=document.createElement('thead'),tr=document.createElement('tr');for(const name of ['实例','状态','公网地址','操作']){const th=document.createElement('th');th.textContent=name;tr.append(th);}head.append(tr);table.append(head);const body=document.createElement('tbody');
+ for(const v of rows){const row=document.createElement('tr');const identity=document.createElement('td'),name=document.createElement('strong'),meta=document.createElement('div');name.textContent=v.name;meta.textContent=`${v.id} · ${v.type}`;meta.className='data-id mt-1';identity.append(name,meta);
+  const details=document.createElement('details');details.className='supporting-details mt-1';const summary=document.createElement('summary');summary.textContent='配置详情';const text=document.createElement('p');text.className='text-break';text.textContent=`AMI ${v.image_id} · VPC ${v.vpc_id} · 子网 ${v.subnet_id} · 安全组 ${v.security_group_ids.join(', ')} · 根卷 ${v.root_volume_id||'未知'} · 随终止删除：${v.delete_root_on_termination?'是':'否'}`;details.append(summary,text);identity.append(details);row.append(identity);
+  const status=document.createElement('td'),badge=document.createElement('span');badge.className=`badge ${v.state==='running'?'bg-green-lt':'bg-secondary-lt'}`;badge.textContent=ec2StateLabel(v.state);status.append(badge);row.append(status);
+  const ip=document.createElement('td');ip.className='data-id';const ipv4=document.createElement('div');ipv4.textContent=v.public_ip||'无公网 IPv4';const ipv6=document.createElement('div');ipv6.className='mt-1';ipv6.textContent=v.ipv6.join(' / ')||'无 IPv6';ip.append(ipv4,ipv6);row.append(ip);
+  const actions=document.createElement('td'),controls=document.createElement('div');controls.className='d-flex gap-2 justify-content-end';const manage=document.createElement('button');manage.type='button';manage.className='btn btn-sm';manage.textContent='管理';manage.disabled=['terminated','shutting-down'].includes(v.state);manage.addEventListener('click',()=>{cloudField(form,'instance_id').value=v.id;cloudField(form,'action').value='';setEC2View(form,'manage');});controls.append(manage);
+  const address=document.createElement('a');address.className='btn btn-sm';address.textContent='IP 地址';address.href=`/addresses?${new URLSearchParams({connection_id:cloudField(form,'connection_id').value,region:cloudField(form,'region').value,service:'ec2',action:'allocate',instance_id:v.id})}`;controls.append(address);actions.append(controls);row.append(actions);body.append(row);
+ }
+ if(!rows.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=4;cell.className='text-secondary text-center py-5';cell.textContent='此区域暂无 EC2 实例，可以创建一个新实例。';row.append(cell);body.append(row);}table.append(body);form.closest('#ec2-form').querySelector('[data-ec2-table]').replaceChildren(table);form.closest('#ec2-form').querySelector('[data-ec2-count]').textContent=`(${rows.length})`;
+}
+async function loadEC2(form){
+ const connection=cloudField(form,"connection_id").value,region=cloudField(form,"region").value;if(!connection||!region)return;
+ const scope=ec2Scope(form),generation=String(Number(form.dataset.ec2Generation||0)+1);form.dataset.ec2Generation=generation;ec2Catalogues.delete(form);const status=form.querySelector("[data-ec2-status]");status.textContent="正在读取实例、官方镜像、规格和网络…";
+ try{
+  const query=new URLSearchParams({connection_id:connection,region});const values=await Promise.all(["catalogue","instances"].map(async part=>{const response=await fetch(`/api/v1/ec2/${part}?${query}`,{credentials:"same-origin"});if(response.status===401){window.location.assign('/login');throw new Error('请重新登录');}const result=await response.json();if(!response.ok)throw new Error(result.error?.message||'EC2 查询失败');return result.data;}));
+  if(!form.isConnected||form.dataset.ec2Generation!==generation||ec2Scope(form)!==scope)return;
+  const [catalogue,listing]=values;ec2Catalogues.set(form,catalogue);
+  launchChoices(cloudField(form,"zone"),catalogue.zones,v=>v);
+  launchChoices(cloudField(form,"image_id"),catalogue.images,v=>`${v.name} · ${v.architecture} · ${v.id}`,v=>v.id);
+  launchChoices(cloudField(form,"subnet_id"),catalogue.subnets,v=>`${v.name||v.id} · ${v.vpc_id} · ${v.zone} · IPv6:${v.ipv6_cidr?'有':'无'}`,v=>v.id);
+  launchChoices(cloudField(form,"key_pair_name"),catalogue.key_pairs,v=>v);
+  launchChoices(cloudField(form,"instance_id"),listing.items,v=>`${v.name} · ${v.id} · ${ec2StateLabel(v.state)}`,v=>v.id);
+  renderEC2Instances(form,listing.items);ec2Options(form);configureEC2(form);status.textContent=`已更新 ${listing.items.length} 个实例，创建配置已就绪。`;
+ }catch(error){if(form.dataset.ec2Generation===generation&&ec2Scope(form)===scope)status.textContent=error.message;}
+}
+function configureEC2Forms(){document.querySelectorAll("[data-ec2-form]").forEach(form=>{if(form.dataset.ec2Initialized)return;form.dataset.ec2Initialized="true";configureEC2(form);});}
+document.addEventListener("change",event=>{const form=event.target.closest("[data-ec2-form]");if(!form)return;const name=event.target.name;if(["connection_id","region"].includes(name)){ec2Catalogues.delete(form);for(const name of ["root_password","root_password_confirm"]){cloudField(form,name).value="";cloudField(form,name).setCustomValidity("");}form.dataset.ec2Generation=String(Number(form.dataset.ec2Generation||0)+1);form.closest("#ec2-form").querySelector("[data-ec2-table]").textContent="范围已变化，请重新加载。";if(name==="region")loadEC2(form);}else if(["image_id","subnet_id","security_group_ids"].includes(name))ec2Options(form);else if(name==="management_action"){cloudField(form,"action").value=event.target.value;configureEC2(form);}else if(name==="login_method")configureEC2(form);});
+document.addEventListener("input",event=>{const form=event.target.closest("[data-ec2-form]");if(!form||!["root_password","root_password_confirm"].includes(event.target.name))return;const password=cloudField(form,"root_password"),confirm=cloudField(form,"root_password_confirm");confirm.setCustomValidity(confirm.value&&confirm.value!==password.value?'两次密码不一致':'');});
+document.addEventListener("click",event=>{const button=event.target.closest("[data-ec2-load]");if(button)loadEC2(button.closest("form"));});
+document.addEventListener("submit",event=>{const form=event.target.closest("[data-ec2-form]");if(!form)return;if(form.dataset.ec2View==="instances"){event.preventDefault();event.stopImmediatePropagation();loadEC2(form);return;}if(ec2Catalogues.has(form))return;event.preventDefault();event.stopImmediatePropagation();form.querySelector("[data-ec2-status]").textContent="请先加载当前区域的实例与创建选项。";},true);
+document.addEventListener("DOMContentLoaded",configureEC2Forms);document.addEventListener("htmx:afterSwap",configureEC2Forms);
+
+function configureWorkspaceNavigation(){
+ const toggle=document.querySelector('[data-nav-toggle]'),sidebar=document.getElementById('workspace-sidebar');
+ if(!toggle||!sidebar||toggle.dataset.navReady)return;
+ toggle.dataset.navReady='true';document.documentElement.classList.add('has-workspace-js');
+ const setOpen=open=>{sidebar.classList.toggle('is-open',open);toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'收起导航':'打开导航');};
+ toggle.addEventListener('click',()=>setOpen(!sidebar.classList.contains('is-open')));
+ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&sidebar.classList.contains('is-open')){setOpen(false);toggle.focus();}});
+ window.matchMedia('(min-width: 992px)').addEventListener('change',()=>setOpen(false));
+}
+document.addEventListener('DOMContentLoaded',configureWorkspaceNavigation);
+
+document.addEventListener('click',event=>{
+ const ec2=event.target.closest('[data-ec2-open]');if(ec2){const form=ec2.closest('#ec2-form').querySelector('[data-ec2-form]');setEC2View(form,ec2.dataset.ec2Open);}
+ const address=event.target.closest('[data-address-open]');if(address){const form=address.closest('#address-form').querySelector('[data-address-form]');openAddressEditor(form,address.dataset.addressOpen);}
+ const back=event.target.closest('[data-address-back]');if(back){const form=back.closest('[data-address-form]');form.dataset.addressView='list';configureAddressAction(form);form.closest('#address-form').querySelector('[data-address-list] h2').focus({preventScroll:true});}
+});
+
+document.addEventListener('htmx:afterSwap',event=>{
+ const root=event.detail.target;if(!root)return;
+ const current=root.id?document.getElementById(root.id):root;
+ if(current?.matches('#ec2-form,#address-form'))current.querySelector('[role="alert"][tabindex="-1"]')?.focus();
+});
+
+document.addEventListener('click',async event=>{
+ const button=event.target.closest('[data-reload-account-proxies]');if(!button)return;
+ const form=button.closest('form'),select=form.querySelector('[data-account-proxy]'),status=form.querySelector('[data-account-proxy-status]'),selected=select.value;button.disabled=true;status.textContent='正在读取代理列表…';
+ try{const response=await fetch('/api/v1/proxies',{credentials:'same-origin'});const result=await response.json();if(!response.ok)throw new Error(result.error?.message||'代理列表暂不可用');select.replaceChildren(new Option('直连（不使用代理）',''));for(const proxy of result.data)select.append(new Option(`${proxy.name} · ${proxy.protocol==='http'?'HTTP':'SOCKS5'}${proxy.active?'':' · 已停用'}`,proxy.id));if(result.data.some(proxy=>proxy.id===selected))select.value=selected;else if(selected){select.append(new Option('原绑定代理当前不可用，请重新选择',selected));select.value=selected;}status.textContent='代理列表已更新。';}catch(error){status.textContent=error.message;}finally{button.disabled=false;}
+});
+
+const dashboardViewState={bedrockFilter:'',breakdownOpen:false,bedrockScroll:0};
+function filterBedrock(){const field=document.querySelector('[data-bedrock-filter]');if(!field)return;field.value=dashboardViewState.bedrockFilter;const value=field.value.trim().toLowerCase();let matches=0;document.querySelectorAll('[data-bedrock-row]').forEach(row=>{row.hidden=!!value&&!row.textContent.toLowerCase().includes(value);if(!row.hidden)matches++;});const message=document.querySelector('[data-bedrock-no-match]');if(message)message.hidden=!value||matches>0;}
+document.addEventListener('input',event=>{if(event.target.matches('[data-bedrock-filter]')){dashboardViewState.bedrockFilter=event.target.value;filterBedrock();}});
+document.addEventListener('change',event=>{const form=event.target.closest('[data-dashboard-filter]');if(form&&event.target.matches('select'))form.requestSubmit();});
+document.addEventListener('htmx:beforeSwap',event=>{if(event.detail.target?.id!=='dashboard-content')return;if(event.detail.xhr?.status>=400){event.detail.shouldSwap=false;document.querySelector('[data-dashboard-poll-error]')?.classList.remove('d-none');return;}dashboardViewState.breakdownOpen=!!document.querySelector('[data-quota-breakdown]')?.open;dashboardViewState.bedrockScroll=document.querySelector('[data-bedrock-table]')?.scrollTop||0;});
+document.addEventListener('htmx:afterSwap',event=>{if(event.detail.target?.id!=='dashboard-content')return;filterBedrock();const details=document.querySelector('[data-quota-breakdown]');if(details)details.open=dashboardViewState.breakdownOpen;const table=document.querySelector('[data-bedrock-table]');if(table)table.scrollTop=dashboardViewState.bedrockScroll;});
+
+function syncDashboardControls(){
+ const content=document.getElementById('dashboard-content');if(!content)return;
+ const ready=content.dataset.canRefresh==='true',button=document.querySelector('[data-dashboard-refresh]'),note=document.querySelector('[data-dashboard-no-connection]');if(button)button.disabled=!ready;if(note)note.hidden=ready;
+ const form=document.querySelector('[data-dashboard-filter]');if(!form)return;
+ for(const [name,selector] of [['account_id','[data-dashboard-account-options]'],['region','[data-dashboard-region-options]']]){const field=form.elements[name],source=document.querySelector(selector);if(!field||!source||document.activeElement===field)continue;const value=field.value;field.replaceChildren(...Array.from(source.content.querySelectorAll('option')).map(option=>option.cloneNode(true)));if(Array.from(field.options).some(option=>option.value===value))field.value=value;}
+}
+document.addEventListener('DOMContentLoaded',syncDashboardControls);document.addEventListener('htmx:afterSwap',syncDashboardControls);

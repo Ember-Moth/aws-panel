@@ -142,4 +142,6 @@ var (
 	ErrCancelled      = &Error{"CANCEL_REQUESTED", "已请求停止新的执行步骤"}
 	ErrBinding        = &Error{"CONNECTION_CHANGED", "连接配置已变化，请检查后恢复任务"}
 	ErrWritesDisabled = &Error{"CLOUD_WRITES_DISABLED", "云端写入尚未启用，当前仅可预览和读取"}
+	ErrTargetBusy     = &Error{"TARGET_BUSY", "相关实例或地址正在被其他任务处理，请等待后重试"}
+	ErrEffect         = &Error{"EFFECT_MISMATCH", "操作记录与目标不一致，已停止新的写入"}
 )

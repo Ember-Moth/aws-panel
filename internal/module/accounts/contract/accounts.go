@@ -3,27 +3,33 @@ package contract
 import "time"
 
 type Account struct {
-	ID           string    `json:"id"`
-	Partition    string    `json:"partition"`
-	AWSAccountID string    `json:"aws_account_id"`
-	Name         string    `json:"name"`
-	Active       bool      `json:"active"`
-	Version      int64     `json:"version"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	DefaultProxyName string    `json:"default_proxy_name,omitempty"`
+	DefaultRouteMode string    `json:"default_route_mode,omitempty"`
+	DefaultProxyID   *string   `json:"default_proxy_id,omitempty"`
+	ID               string    `json:"id"`
+	Partition        string    `json:"partition"`
+	AWSAccountID     string    `json:"aws_account_id"`
+	Name             string    `json:"name"`
+	Active           bool      `json:"active"`
+	Version          int64     `json:"version"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 type AccountRequest struct {
-	Partition    string `json:"partition"`
-	AWSAccountID string `json:"aws_account_id"`
-	Name         string `json:"name"`
-	Active       *bool  `json:"active,omitempty"`
-	Version      int64  `json:"version,omitempty"`
+	DefaultRouteMode string  `json:"default_route_mode,omitempty"`
+	DefaultProxyID   *string `json:"default_proxy_id,omitempty"`
+	Partition        string  `json:"partition"`
+	AWSAccountID     string  `json:"aws_account_id"`
+	Name             string  `json:"name"`
+	Active           *bool   `json:"active,omitempty"`
+	Version          int64   `json:"version,omitempty"`
 }
 type ProxyAuth struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 type ProxyRequest struct {
+	Protocol  string     `json:"protocol,omitempty"`
 	Name      string     `json:"name"`
 	Host      string     `json:"host"`
 	Port      int        `json:"port"`
@@ -33,6 +39,9 @@ type ProxyRequest struct {
 	Version   int64      `json:"version,omitempty"`
 }
 type Proxy struct {
+	Protocol    string       `json:"protocol"`
+	Accounts    int64        `json:"accounts"`
+	Bindings    int64        `json:"bindings"`
 	ID          string       `json:"id"`
 	Name        string       `json:"name"`
 	Host        string       `json:"host"`
@@ -93,10 +102,11 @@ type Verification struct {
 	CheckedAt    time.Time `json:"checked_at"`
 }
 type AccountDetail struct {
-	Account     Account      `json:"account"`
-	Connections []Connection `json:"connections"`
-	CanManage   bool         `json:"can_manage"`
-	VaultReady  bool         `json:"vault_ready"`
+	PreferredConnectionID string       `json:"preferred_connection_id,omitempty"`
+	Account               Account      `json:"account"`
+	Connections           []Connection `json:"connections"`
+	CanManage             bool         `json:"can_manage"`
+	VaultReady            bool         `json:"vault_ready"`
 }
 type ConnectionVersion struct {
 	ID           string

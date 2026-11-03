@@ -84,3 +84,7 @@ tests/integration/inventory_test.go 在真实 PostgreSQL 上使用实际 AWS SDK
 tests/e2e/inventory-fixture.sql 只给临时测试库注入可识别的缓存样例；HTTP/浏览器验收用这些样例检查列表、详情、过滤、错误提示、转义和定时配置。测试连接保持停用，不向真实 AWS 发送请求。该夹具不能作为真实资源同步成功的证据。
 
 真实验收还需指定测试账号与代理，在 AWS 中核对资源 ARN、数量、状态，并验证真实权限不足与代理故障场景。该项与 M2.6 一起保留为待验收，不据此开放未经验证的资源写操作。
+
+## 计算与地址扩展
+
+schema 8 增加 ec2_instance、ec2_address、lightsail_static_ip 三类区域快照，与原有类型共享账号授权、完整读取后替换、失败保留旧快照、定时刷新和租约保护。EC2 详情包含 AMI/规格、VPC/子网、安全组、主网卡、IPv4/IPv6 与根卷删除策略；地址详情包含分配 ID、绑定对象和网络边界组。实时修改入口见 [计算与地址管理](compute.md)。

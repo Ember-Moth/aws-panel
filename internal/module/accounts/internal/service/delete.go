@@ -57,8 +57,12 @@ func (s *Service) Delete(ctx context.Context, actorID int64, kind, id string, ve
 			if err != nil {
 				return err
 			}
-			if count > 0 {
-				return contract.Invalid("代理仍被连接引用，请先修改这些连接的出口")
+			accountCount, err := tx.ProxyAccountUsage(ctx, id)
+			if err != nil {
+				return err
+			}
+			if count+accountCount > 0 {
+				return contract.Invalid("代理仍被账号或连接引用，请先修改其出口")
 			}
 			if err := tx.DeleteProxy(ctx, id); err != nil {
 				return err
@@ -98,6 +102,8 @@ func (s *Service) Delete(ctx context.Context, actorID int64, kind, id string, ve
 				}
 			}
 			now := clock.Now()
+			row.DefaultProxyID = nil
+			row.DefaultRouteMode = "direct"
 			row.DeletedAt = &now
 			row.Active = false
 			row.Version++

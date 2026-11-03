@@ -1,12 +1,12 @@
 {{define "proxies"}}
-<div class="page-header"><div class="container-xl"><div class="row align-items-center g-3"><div class="col"><div class="page-pretitle">NETWORK</div><h1 class="page-title">SOCKS5 代理</h1><p class="text-secondary mt-2 mb-0">为不同连接选择独立出口，故障时不会自动回退直连。</p></div><div class="col-auto"><a class="btn btn-primary" href="/proxies/new">添加代理</a></div></div></div></div>
+<div class="page-header"><div class="container-xl"><div class="row align-items-center g-3"><div class="col"><div class="page-pretitle">NETWORK</div><h1 class="page-title">代理配置</h1><p class="text-secondary mt-2 mb-0">为账号配置 SOCKS5 或 HTTP 出口，故障时不会自动回退直连。</p></div><div class="col-auto"><a class="btn btn-primary" href="/proxies/new">添加代理</a></div></div></div></div>
 <div class="page-body"><div class="container-xl"><div class="card"><div class="table-responsive"><table class="table table-vcenter card-table">
-  <thead><tr><th>名称</th><th>地址</th><th>认证</th><th>直接绑定</th><th>状态</th><th></th></tr></thead><tbody>
-  {{range .Items}}<tr><td class="text-nowrap">{{.Name}}</td><td>{{.Host}}:{{.Port}}</td><td>{{if .HasAuth}}已配置{{else}}无{{end}}</td><td>{{.Connections}}</td><td>{{if .Active}}已启用{{else}}已停用{{end}}</td><td><a class="btn btn-sm" href="/proxies/{{.ID}}/edit">编辑</a></td></tr>{{else}}<tr><td colspan="6" class="text-center text-secondary py-5">暂无代理配置</td></tr>{{end}}
+  <thead><tr><th>名称</th><th>协议 / 地址</th><th>认证</th><th>账号 / 连接引用</th><th>状态</th><th></th></tr></thead><tbody>
+  {{range .Items}}<tr><td class="text-nowrap">{{.Name}}</td><td>{{routeMode .Protocol}}<div class="small text-secondary">{{.Host}}:{{.Port}}</div></td><td>{{if .HasAuth}}已配置{{else}}无{{end}}</td><td>{{.Accounts}} / {{.Connections}}</td><td>{{if .Active}}已启用{{else}}已停用{{end}}</td><td><a class="btn btn-sm" href="/proxies/{{.ID}}/edit">编辑</a></td></tr>{{else}}<tr><td colspan="6" class="text-center text-secondary py-5">暂无代理配置</td></tr>{{end}}
   </tbody></table></div></div></div></div>
 {{end}}
 {{define "proxy-edit"}}
-<div class="page-header"><div class="container-xl"><a class="text-secondary small" href="/proxies">返回代理列表</a><h1 class="page-title mt-2">{{if .New}}添加 SOCKS5 代理{{else}}编辑代理{{end}}</h1></div></div>
+<div class="page-header"><div class="container-xl"><a class="text-secondary small" href="/proxies">返回代理列表</a><h1 class="page-title mt-2">{{if .New}}添加代理{{else}}编辑代理{{end}}</h1></div></div>
 <div class="page-body"><div class="container-xl"><div class="form-width">{{template "proxy-form" .}}</div></div></div>
 {{end}}
 {{define "proxy-form"}}
@@ -16,12 +16,13 @@
   <form method="post" action="{{.Action}}" hx-post="{{.Action}}" hx-target="#proxy-form" hx-swap="outerHTML">
     <input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Proxy.Version}}">
     <div class="mb-3"><label class="form-label" for="proxy-name">名称</label><input id="proxy-name" class="form-control" name="name" value="{{.Proxy.Name}}" maxlength="80" required></div>
+    <div class="mb-3"><label class="form-label" for="proxy-protocol">代理协议</label><select id="proxy-protocol" class="form-select" name="protocol"><option value="socks5" {{if eq .Proxy.Protocol "socks5"}}selected{{end}}>SOCKS5</option><option value="http" {{if eq .Proxy.Protocol "http"}}selected{{end}}>HTTP（CONNECT）</option></select></div>
     <div class="row"><div class="col-8 mb-3"><label class="form-label" for="proxy-host">服务器地址</label><input id="proxy-host" class="form-control" name="host" value="{{.Proxy.Host}}" placeholder="域名或 IP，不含协议" required></div><div class="col-4 mb-3"><label class="form-label" for="proxy-port">端口</label><input id="proxy-port" class="form-control" name="port" type="number" value="{{.Proxy.Port}}" min="1" max="65535" required></div></div>
     {{if .VaultReady}}<div class="mb-3"><label class="form-label" for="proxy-user">代理用户名</label><input id="proxy-user" class="form-control" name="username" autocomplete="off" maxlength="255"></div><div class="mb-3"><label class="form-label" for="proxy-password">代理密码</label><input id="proxy-password" class="form-control" name="password" type="password" autocomplete="new-password" maxlength="255"><div class="form-hint">留空保留已有认证；填写时须同时提供用户名和密码。</div></div>{{else}}<div class="alert alert-info">主密钥未配置，暂时只能创建无认证代理。</div>{{end}}
     {{if .Proxy.HasAuth}}<label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="clear_auth" value="true"><span class="form-check-label">移除已有代理认证</span></label>{{end}}
     <label class="form-check form-switch mb-4"><input class="form-check-input" type="checkbox" name="active" value="true" {{if .Proxy.Active}}checked{{end}}><span class="form-check-label">启用代理</span></label>
     <button class="btn btn-primary" type="submit">保存代理</button>
   </form>
-  {{if not .New}}<hr><form class="mb-3" method="post" action="/proxies/{{.Proxy.ID}}/test" hx-post="/proxies/{{.Proxy.ID}}/test" hx-target="#proxy-test" hx-swap="innerHTML" hx-disabled-elt="find button"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="btn btn-sm" type="submit">检测到 AWS 的链路</button></form><div id="proxy-test" class="mb-3"></div><form method="post" action="/proxies/{{.Proxy.ID}}/delete" hx-post="/proxies/{{.Proxy.ID}}/delete" hx-confirm="删除此代理配置及保存的认证信息？仍有连接引用时会拒绝删除。"><input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Proxy.Version}}"><button class="btn btn-outline-danger btn-sm" type="submit">删除代理</button></form>{{end}}
+  {{if not .New}}<hr><form class="mb-3" method="post" action="/proxies/{{.Proxy.ID}}/test" hx-post="/proxies/{{.Proxy.ID}}/test" hx-target="#proxy-test" hx-swap="innerHTML" hx-disabled-elt="find button"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="btn btn-sm" type="submit">检测到 AWS 的链路</button></form><div id="proxy-test" class="mb-3"></div><form method="post" action="/proxies/{{.Proxy.ID}}/delete" hx-post="/proxies/{{.Proxy.ID}}/delete" hx-confirm="删除此代理配置及保存的认证信息？仍有账号或连接引用时会拒绝删除。"><input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="version" value="{{.Proxy.Version}}"><button class="btn btn-outline-danger btn-sm" type="submit">删除代理</button></form>{{end}}
 </div></section>
 {{end}}
