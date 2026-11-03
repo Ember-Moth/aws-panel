@@ -8,6 +8,10 @@
         "description": "AWS Panel foundation API. Cloud operations are not yet exposed.",
         "title": "AWS Panel API",
         "contact": {},
+        "license": {
+            "name": "MIT OR Apache-2.0",
+            "url": "https://github.com/Ember-Moth/aws-panel#license"
+        },
         "version": "0.1.0"
     },
     "basePath": "/api/v1",

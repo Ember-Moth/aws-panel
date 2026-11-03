@@ -10,6 +10,8 @@ import (
 // @title AWS Panel API
 // @version 0.1.0
 // @description AWS Panel foundation API. Cloud operations are not yet exposed.
+// @license.name MIT OR Apache-2.0
+// @license.url https://github.com/Ember-Moth/aws-panel#license
 // @BasePath /api/v1
 // @schemes http https
 // @securityDefinitions.apikey SessionCookie

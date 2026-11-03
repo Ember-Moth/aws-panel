@@ -78,3 +78,13 @@ Docker 环境可运行 `make compose-smoke`，验证隔离容器初始化、升�
 实例创建时自动配置全放行的云端流量规则并绑定固定 IP，换址后自动释放旧地址，不设独立公网 IP 页面。Wavelength 的开通、双子网网络准备、gp2 业务实例、父区域 EIP 入口与 Carrier IP 出站见 [Wavelength 使用说明](docs/wavelength.md)。
 
 创建选项自动复用服务端目录，并支持后台更新和手动刷新；详见[创建目录缓存](docs/catalogue-cache.md)。
+
+## License
+
+Copyright (c) 2026 Ember Moth
+
+本项目采用 [MIT License](LICENSE-MIT) 或 [Apache License 2.0](LICENSE-APACHE) 双许可证，使用者可任选其一。
+
+SPDX-License-Identifier: `MIT OR Apache-2.0`
+
+第三方依赖和随附资源保留各自的许可证与版权声明；前端资源的许可证位于 [web/static/vendor](web/static/vendor)。
