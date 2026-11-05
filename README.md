@@ -1,83 +1,72 @@
 # AWS Panel
 
-面向小团队、自托管的 AWS 账号与资源管理面板。通过统一的账号接入、成员权限和后台任务，把常用 AWS 操作组织成可追踪、可复用的工作流程。
+面向小团队的自托管 AWS 多账号管理面板。团队成员用各自的面板账号登录，在授权范围内查看和管理多个 AWS 账号的实例、地址、区域与配额；所有云端修改都先生成预览，再作为可追踪、可恢复的任务执行。
 
-当前已完成工程骨架、M1 身份权限、M2 账号接入、M3 可靠任务，以及 M4 查询、M5 区域启用与 Lightsail 创建，并扩展 EC2、双栈网络、静态 IP 与配额管理。M6 容器与备份恢复已通过本地验收；真实 AWS 验收仍待完成，云端写入开关默认关闭。
+## 功能
 
-界面视觉与交互规范见根目录 [DESIGN.md](DESIGN.md)，共享样式位于 web/static/app.css。
+- **概览**：账号池的实例、公网 IPv4、已启用区域，以及 EC2 / Lightsail vCPU 与 Bedrock 模型配额汇总；集中列出需要处理的连接、采集和配额问题。
+- **实例**：EC2、Lightsail 与 Wavelength 实例的统一列表和详情面板，支持手动与定时同步。
+- **创建与管理**：批量创建 Lightsail；创建并启动、停止、重启、终止 EC2；SSH 密钥或 root 密码登录；双栈网络准备；固定 IP 自动绑定与一键更换。
+- **Wavelength**：Zone Group 开通、双子网网络准备、业务实例与父区域入口，入站 EIP 与出站 Carrier IP 分别管理。
+- **区域与配额**：批量启用 AWS 区域；按账号、区域查询适用配额与用量。
+- **任务中心**：逐目标、逐步骤的执行结果，实时进度、取消与选择性恢复。
+- **账号与代理**：静态密钥、临时凭据和 AssumeRole 连接；账号默认 SOCKS5 / HTTP 代理，连接可单独覆盖，代理故障不回退直连。
+- **团队与安全**：管理员 / 操作员 / 只读成员三种角色与按账号授权；凭据 AES-256-GCM 加密存储，主密钥外置并支持轮换；完整审计记录。
 
-## 设计方向
-
-- 一个部署服务一个团队，成员使用各自的面板账号。
-- 集中接入多个 AWS 账号，由后端管理凭据并调用 AWS API。
-- 添加 AWS 账号时可绑定默认 SOCKS5/HTTP 代理，访问连接默认继承并可单独覆盖；代理故障时不自动回退直连。
-- 参考 PPanel 后端的模块化单体：模块门面、独立契约、内部实现和模块自己的 HTTP handler。
-- 单个 Go 进程运行 API、Worker、调度器和 outbox 发布器，由统一组装根注入依赖并管理生命周期。
-- 项目统一使用北京时间（Asia/Shanghai），覆盖界面、日志、数据库会话和定时调度。
-- PostgreSQL 是唯一业务数据库；Redis 用于队列、缓存和限流。
-- 以持久化任务承载长时间操作，支持进度查看、失败处理和重启恢复。
-- 以 AWS 服务模块扩展业务能力，共用权限、凭据、任务和审计机制。
-
-## 建议技术栈
+## 技术栈
 
 | 部分 | 选择 |
 | --- | --- |
-| 前端 | Go html/template、htmx、Tabler，本地静态资源嵌入二进制 |
-| 后端 | Go、Hertz、Cobra、AWS SDK for Go v2 |
-| AWS 出口 | 账号默认代理、连接级隔离客户端、SOCKS5 / HTTP CONNECT |
-| 数据 | 仅 PostgreSQL，使用 GORM 与 golang-migrate |
-| 异步与缓存 | Redis、Asynq、go-redis，PostgreSQL 保存业务任务状态与 outbox |
-| 接口 | REST、模块 contract、Swaggo 生成文档、SSE 任务事件 |
-| 可观测性 | 结构化日志、OpenTelemetry |
-| 部署 | Docker Compose：一个应用容器，加 PostgreSQL 与 Redis；页面和 API 同源 |
+| 应用 | Go 单进程：Hertz HTTP、Asynq Worker、调度器与 outbox 发布器 |
+| 页面 | Go html/template、htmx、Tabler，静态资源嵌入二进制，无需 Node.js |
+| 数据 | PostgreSQL（GORM、golang-migrate）；Redis 用于队列、缓存和限流 |
+| AWS | AWS SDK for Go v2，每个连接独立的 HTTP 客户端与出口 |
+| 部署 | Docker Compose：应用、PostgreSQL、Redis |
 
-单进程、北京时间、仅使用 PostgreSQL 和按连接配置 SOCKS5 出口已确定。Go 依赖由 go.mod/go.sum 锁定，前端资源版本与校验值记录在 web/static/vendor/manifest.json。
+界面、日志、数据库会话和调度统一使用北京时间（Asia/Shanghai）。
 
-## 本地运行
+## 快速开始
 
-需要 Go（版本见 go.mod）、PostgreSQL 和 Redis。前端无需 Node.js 或独立构建。
+使用 Docker Compose 部署：
 
 ```sh
-cp etc/aws-panel.example.yaml etc/aws-panel.yaml
-# 按本地环境编辑数据库和 Redis 配置
-make build
-./bin/aws-panel --config etc/aws-panel.yaml migrate up
-# 仅首次安装：交互式输入初始管理员密码
-./bin/aws-panel --config etc/aws-panel.yaml admin init --username admin
-./bin/aws-panel --config etc/aws-panel.yaml run
+cp deploy/.env.example deploy/.env
+# 在 deploy/.env 中设置两组不同的随机数据库密码
+docker compose --env-file deploy/.env -f deploy/compose.yaml up -d postgres redis
+docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm --build migrate
+docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm vault vault init
+docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm app admin init --username admin
+docker compose --env-file deploy/.env -f deploy/compose.yaml up -d --build app
 ```
 
-打开 http://127.0.0.1:8080。完整配置、Compose 和验证方式见 [开发与运行](docs/development.md)。
+打开 http://127.0.0.1:8080，用初始化时设置的管理员登录。随后：
 
-## 当前范围
+1. 在“账号与代理”中添加 AWS 账号，按需添加代理，为账号添加访问连接并验证身份。
+2. 在“成员”中添加团队成员，并在账号的“访问权限”中授予 read 或 operate。
+3. 在“概览”中刷新账号池，或在“实例”中同步资源。
 
-- 已有：首页账号池仪表盘、登录、个人设置、成员管理与审计页面；成员会话、角色权限、CSRF、登录限流；版本化迁移、健康探针、队列心跳、日志、追踪和架构检查。
-- 仪表盘：资源/IP/区域数量、EC2/Lightsail vCPU 与 Bedrock 模型配额、后台分区采集、覆盖率和旧数据保留。见 [仪表盘与账号默认代理](docs/dashboard.md)。
-- 已有账号接入：账号范围授权、连接与代理管理、AES-256-GCM 秘密存储、主密钥轮换、静态/临时凭据、AssumeRole 刷新和身份验证。
-- 已有任务基础设施：持久化计划与任务、outbox、租约与恢复、取消、选择性重试、任务中心、SSE 和本地自检。
-- 已有资源查询：区域启用状态、Lightsail 区域/实例/静态 IP、EC2 实例/弹性 IP、快照筛选/详情、手动与定时同步，失败时保留旧数据。
-- 已有区域操作：实时预览、批量启用执行器、异步状态核对；默认关闭云端写入。
-- 已有 Lightsail 创建：实时镜像/套餐目录、费用和配额预检、跨账号区域批次、创建归属核对、运行状态与失败恢复。
-- 已有 EC2 与网络：官方 Linux AMI、加密 gp3、IMDSv2、root 密码/SSH 密钥、IPv6、生命周期管理与独立双栈 VPC 准备。
-- 已有地址与配额：Lightsail 静态 IP / EC2 弹性 IP 创建、绑定、更换及旧地址处理；按账号区域查询当前配额和用量。见 [计算与地址管理](docs/compute.md)。
-- 已有部署恢复：Compose 初始化与隔离验收、数据库/主密钥配对备份、空卷恢复、会话撤销和队列重建。
-- 待验收：真实账号、独立代理出口和 AWS 资源生命周期。
+云端写入默认关闭：面板可以查询并生成预览，但不会修改 AWS 资源。确认 IAM 权限后，在 `deploy/.env` 中设置 `AWS_PANEL_CLOUD_WRITES_ENABLED=true` 并重启应用。
 
-## 项目设计
+不使用容器的安装方式、配置项与反向代理设置见[部署与配置](docs/deployment.md)。
 
-开发顺序、阶段交付和验收标准见 [开发计划](docs/roadmap.md)。M6 本地部署与恢复已验收，真实 AWS 闭环仍待完成；运行说明见 [凭据与代理](docs/connections.md)、[任务中心](docs/tasks.md)、[资源同步](docs/inventory.md)、[Lightsail 创建](docs/lightsail.md)和[部署恢复](docs/operations.md)。
+## 文档
 
-完整设计见 [架构与工程规划](docs/architecture.md)，包含模块边界、账号与凭据模型、任务执行机制、前后端组织方式、部署和基础建设顺序。
+| 文档 | 内容 |
+| --- | --- |
+| [部署与配置](docs/deployment.md) | 安装、配置项、环境变量、HTTPS 反向代理、云端写入开关、升级 |
+| [备份、恢复与运维](docs/operations.md) | 配对备份、空卷恢复、主密钥轮换、故障定位 |
+| [账号、代理与成员权限](docs/accounts.md) | 账号接入、认证方式、代理出口、角色与账号授权 |
+| [IAM 权限](docs/iam.md) | 各功能所需的 AWS 动作与策略示例 |
+| [概览](docs/dashboard.md) | 账号池统计口径、刷新与配额汇总 |
+| [实例](docs/instances.md) | 资源同步、Lightsail 与 EC2 创建管理、网络、固定 IP、配额、目录缓存 |
+| [Wavelength](docs/wavelength.md) | Zone 开通、网络准备、双实例入口与 Carrier IP |
+| [区域启用](docs/regions.md) | 批量启用区域与状态核对 |
+| [任务中心](docs/tasks.md) | 任务状态、取消、恢复与可靠性保证 |
+| [架构](docs/architecture.md) | 模块划分、任务执行模型、凭据与出口、数据与时区约定 |
+| [开发](docs/development.md) | 本地构建、测试、接口生成、扩展执行器 |
+| [界面设计规范](DESIGN.md) | 视觉 token、布局与组件规则 |
 
-后端技术栈与工程约定的参考依据见 [PPanel 后端参考与取舍](docs/ppanel-reference.md)。
-
-基础检查使用 `make check` 和 `make test-race`；安装本地 PostgreSQL/Redis 工具后可运行 `make smoke`，它只使用自动创建的临时实例。
-
-Docker 环境可运行 `make compose-smoke`，验证隔离容器初始化、升级、备份恢复和任务恢复；不使用真实 AWS。
-
-实例创建时自动配置全放行的云端流量规则并绑定固定 IP，换址后自动释放旧地址，不设独立公网 IP 页面。Wavelength 的开通、双子网网络准备、gp2 业务实例、父区域 EIP 入口与 Carrier IP 出站见 [Wavelength 使用说明](docs/wavelength.md)。
-
-创建选项自动复用服务端目录，并支持后台更新和手动刷新；详见[创建目录缓存](docs/catalogue-cache.md)。
+JSON API 的 Swagger 文档位于 [api/generated/swagger.json](api/generated/swagger.json)。
 
 ## License
 

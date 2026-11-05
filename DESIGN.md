@@ -193,9 +193,9 @@ components:
 
 面向中文小团队的日常 AWS 运维。视觉基调是安静、清晰、紧凑：浅色平面、细分隔线、适中的数据密度和克制的蓝色。页面首先回答“我在管理哪类资源、哪个账号、哪个区域”，随后才展示当前流程需要的操作。
 
-主参考为 [VoltAgent 的 Supabase 设计分析](https://github.com/VoltAgent/awesome-design-md/blob/main/design-md/supabase/DESIGN.md)：采用中性表面、克制的强调色、细边界与小圆角。这是第三方逆向分析，不是官方设计规范。比较过 Linear 的分析，其深色营销画布不适合本次浅色运维需求。产品导航、列表优先与操作分离来自本项目的工作流程；不复制参考品牌、绿色主题、专有字体、图片或文案。
+视觉方向参考 [VoltAgent 的 Supabase 设计分析](https://github.com/VoltAgent/awesome-design-md/blob/main/design-md/supabase/DESIGN.md)（第三方分析，非官方规范）：中性表面、克制的强调色、细边界与小圆角。产品导航、列表与详情并排、操作与列表分离来自本项目的工作流程；不复制参考品牌、绿色主题、专有字体、图片或文案。
 
-本文件为视觉契约，`web/static/app.css` 是对应实现。保留 Go template、htmx 与已有 Tabler 基础组件，不引入新的 UI 框架、外部 CDN 或装饰性资产。此轮支持浅色主题；深色主题在定义完整语义色及验证全部状态前不自动启用。
+本文件为视觉契约，`web/static/app.css` 是对应实现。保留 Go template、htmx 与已有 Tabler 基础组件，不引入新的 UI 框架、外部 CDN 或装饰性资产。只提供浅色主题；增加深色主题前需要先定义完整的语义色并覆盖全部状态。
 
 ## Colors
 
