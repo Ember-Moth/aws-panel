@@ -21,11 +21,15 @@ fmt-check:
 vet:
 	go vet ./...
 
+# The PostgreSQL/Redis integration package runs well past go test's 10-minute default.
+TEST_TIMEOUT ?= 30m
+RACE_TEST_TIMEOUT ?= 60m
+
 test:
-	go test ./...
+	go test -timeout $(TEST_TIMEOUT) ./...
 
 test-race:
-	go test -race ./...
+	go test -race -timeout $(RACE_TEST_TIMEOUT) ./...
 
 assets:
 	python3 scripts/check-assets.py
