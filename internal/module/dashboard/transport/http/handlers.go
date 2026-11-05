@@ -100,7 +100,7 @@ func (h *Handler) page(ctx context.Context, c *app.RequestContext, partial bool)
 			c.Data(code, "text/html; charset=utf-8", nil)
 			return
 		}
-		body, e := h.renderer.Page("inventory-error", view.Layout(ctx, "仪表盘", "dashboard"), message)
+		body, e := h.renderer.Page("inventory-error", view.Layout(ctx, "概览", "dashboard"), message)
 		view.HTML(c, code, body, e)
 		return
 	}
@@ -130,7 +130,7 @@ func (h *Handler) page(ctx context.Context, c *app.RequestContext, partial bool)
 				model.System.Heartbeat = system.WorkerHeartbeat.Format("2006-01-02 15:04:05")
 			}
 		}
-		body, renderErr = h.renderer.Page("dashboard", view.Layout(ctx, "仪表盘", "dashboard"), model)
+		body, renderErr = h.renderer.Page("dashboard", view.Layout(ctx, "概览", "dashboard"), model)
 	}
 	view.HTML(c, 200, body, renderErr)
 }

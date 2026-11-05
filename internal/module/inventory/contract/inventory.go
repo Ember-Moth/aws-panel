@@ -9,6 +9,8 @@ const (
 	LightsailStaticIP = "lightsail_static_ip"
 	EC2Instance       = "ec2_instance"
 	EC2Address        = "ec2_address"
+	// Instances is a read-only filter covering both EC2 and Lightsail instances.
+	Instances = "instances"
 )
 
 type RefreshTarget struct {

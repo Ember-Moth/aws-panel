@@ -111,6 +111,7 @@ func Run(ctx context.Context, cfg config.Config, logger *slog.Logger) error {
 	if err != nil {
 		return errors.New("cannot load embedded page templates")
 	}
+	renderer.PreviewMode = !cfg.Cloud.WritesEnabled
 	bootCancel()
 
 	ready := &lifecycle.Readiness{}

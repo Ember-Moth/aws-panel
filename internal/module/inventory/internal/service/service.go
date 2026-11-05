@@ -145,7 +145,7 @@ func (s *Service) query(ctx context.Context, actorID int64, filter contract.Filt
 	if err != nil {
 		return entity.Query{}, nil, err
 	}
-	if filter.Page < 1 || filter.Page > 10000 || filter.Kind != "" && !scope.KindOK(filter.Kind) || filter.Region != "" && !scope.RegionOK(filter.Region) || len(filter.State) > 80 || len(filter.Query) > 160 {
+	if filter.Page < 1 || filter.Page > 10000 || filter.Kind != "" && filter.Kind != contract.Instances && !scope.KindOK(filter.Kind) || filter.Region != "" && !scope.RegionOK(filter.Region) || len(filter.State) > 80 || len(filter.Query) > 160 {
 		return entity.Query{}, nil, contract.ErrInvalid
 	}
 	if !utf8.ValidString(filter.State) || !utf8.ValidString(filter.Query) || strings.ContainsRune(filter.State, 0) || strings.ContainsRune(filter.Query, 0) {

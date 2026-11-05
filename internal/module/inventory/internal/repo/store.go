@@ -72,7 +72,9 @@ func (s *Store) Scopes(ctx context.Context, q entity.Query) ([]entity.Scope, err
 		return rows, nil
 	}
 	db := s.db.WithContext(ctx).Table("inventory_scopes").Where("account_id IN ?", q.AccountIDs)
-	if q.Kind != "" {
+	if q.Kind == contract.Instances {
+		db = db.Where("kind IN ?", []string{contract.LightsailInstance, contract.EC2Instance})
+	} else if q.Kind != "" {
 		db = db.Where("kind=?", q.Kind)
 	}
 	if q.Region != "" {
@@ -87,7 +89,9 @@ func (s *Store) Resources(ctx context.Context, q entity.Query) ([]entity.Resourc
 		return rows, nil
 	}
 	db := s.db.WithContext(ctx).Table("resource_snapshots r").Select("r.*,s.account_id,s.kind,s.region AS scope_region").Joins("JOIN inventory_scopes s ON s.id=r.scope_id").Where("s.account_id IN ?", q.AccountIDs)
-	if q.Kind != "" {
+	if q.Kind == contract.Instances {
+		db = db.Where("s.kind IN ?", []string{contract.LightsailInstance, contract.EC2Instance})
+	} else if q.Kind != "" {
 		db = db.Where("s.kind=?", q.Kind)
 	}
 	if q.Region != "" {

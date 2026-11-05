@@ -26,7 +26,11 @@ type SystemView struct {
 	Error         bool
 }
 
-type Renderer struct{ templates *template.Template }
+type Renderer struct {
+	templates *template.Template
+	// PreviewMode marks the whole workspace as read-and-preview only when cloud writes are disabled.
+	PreviewMode bool
+}
 
 type UserView struct {
 	ID                          int64
@@ -38,7 +42,8 @@ type Layout struct {
 }
 type layoutModel struct {
 	Layout
-	Content template.HTML
+	PreviewMode bool
+	Content     template.HTML
 }
 
 func RoleLabel(role string) string {
@@ -102,6 +107,8 @@ func ResourceKind(value string) string {
 		return "EC2 实例"
 	case "ec2_address":
 		return "EC2 弹性 IP"
+	case "instances":
+		return "实例"
 	default:
 		return value
 	}
@@ -256,6 +263,12 @@ func NewRenderer() (*Renderer, error) {
 		"addressAction": func(value string) string {
 			return map[string]string{"allocate": "创建静态 IP", "replace": "更换实例 IP", "attach": "绑定地址", "detach": "解绑地址", "release": "释放地址"}[value]
 		},
+		"initial": func(value string) string {
+			for _, r := range value {
+				return string(r)
+			}
+			return "?"
+		},
 		"usd":           func(cents int64) string { return fmt.Sprintf("%d.%02d", cents/100, cents%100) },
 		"roleLabel":     RoleLabel,
 		"actionLabel":   ActionLabel,
@@ -324,7 +337,7 @@ func (r *Renderer) Page(name string, layout Layout, value any) ([]byte, error) {
 		return nil, err
 	}
 	// Only already-escaped output from an embedded template is trusted here.
-	return r.Render("layout", layoutModel{Layout: layout, Content: template.HTML(content)})
+	return r.Render("layout", layoutModel{Layout: layout, PreviewMode: r.PreviewMode, Content: template.HTML(content)})
 }
 
 func Static() fs.FS {

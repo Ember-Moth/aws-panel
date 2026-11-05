@@ -1,15 +1,24 @@
 {{define "accounts"}}
-<div class="page-header"><div class="container-xl"><div class="row align-items-center g-3">
-  <div class="col"><div class="page-pretitle">CLOUD ACCOUNTS</div><h1 class="page-title">AWS 账号</h1><p class="text-secondary mt-2 mb-0">管理账号身份与访问连接。</p></div>
-  {{if .CanManage}}<div class="col-auto"><a class="btn btn-primary" href="/accounts/new">添加账号</a></div>{{end}}
-</div></div></div>
-<div class="page-body"><div class="container-xl">
-  {{if and .CanManage (not .VaultReady)}}<div class="alert alert-info">凭据存储尚未配置。添加访问凭据前，请先在服务器初始化主密钥并配置密钥文件。</div>{{end}}
-  <div class="card"><div class="table-responsive"><table class="table table-vcenter card-table">
-    <thead><tr><th>账号</th><th>AWS ID</th><th>默认出口</th><th>状态</th><th></th></tr></thead><tbody>
-    {{range .Items}}<tr><td class="text-nowrap">{{.Name}}</td><td><code>{{.AWSAccountID}}</code></td><td>{{if .DefaultRouteMode}}{{routeMode .DefaultRouteMode}}{{else}}受限{{end}}{{if .DefaultProxyName}}<div class="small text-secondary">{{.DefaultProxyName}}</div>{{end}}</td><td>{{if .Active}}<span class="badge bg-green-lt">已启用</span>{{else}}<span class="badge bg-secondary-lt">已停用</span>{{end}}</td><td class="text-end"><a class="btn btn-sm" href="/accounts/{{.ID}}">查看</a></td></tr>
-    {{else}}<tr><td colspan="5" class="text-center text-secondary py-5">暂无可访问的 AWS 账号</td></tr>{{end}}
-    </tbody></table></div></div>
+<div class="page-header"><div class="container-xl page-head"><div><h1 class="page-title">{{if .CanManage}}账号与代理{{else}}AWS 账号{{end}}</h1><p class="mt-1 mb-0">{{len .Items}} 个账号{{if .CanManage}} · {{len .Proxies}} 个代理出口{{end}} · 展开账号查看访问连接</p></div>
+{{if .CanManage}}<div class="page-actions"><a class="btn" href="/proxies/new">添加代理</a><a class="btn btn-primary" href="/accounts/new">添加账号</a></div>{{end}}</div></div>
+<div class="page-body"><div class="container-xl stack">
+{{if and .CanManage (not .VaultReady)}}<div class="alert alert-info">凭据存储尚未配置。添加访问凭据前，请先在服务器初始化主密钥并配置密钥文件。</div>{{end}}
+<div class="split-view">
+<section class="card split-detail" aria-label="AWS 账号"><div class="account-grid account-grid-head" aria-hidden="true"><span></span><span>账号</span><span class="hide-sm">默认出口</span><span class="hide-sm">连接</span><span>状态</span></div>
+{{range .Items}}<details class="account-row" {{if eq .Health "failed"}}open{{end}}><summary class="account-grid"><span class="account-chevron" aria-hidden="true"></span><span><strong>{{.Name}}</strong><span class="data-id d-block">{{.AWSAccountID}}</span></span><span class="hide-sm">{{if .DefaultRouteMode}}{{routeMode .DefaultRouteMode}}{{if .DefaultProxyName}}<span class="small text-secondary d-block">{{.DefaultProxyName}}</span>{{end}}{{else}}受限{{end}}</span><span class="hide-sm text-secondary">{{len .Connections}} 个连接</span><span>{{if eq .Health "verified"}}<span class="badge bg-green-lt">正常</span>{{else if eq .Health "failed"}}<span class="badge bg-red-lt">验证失败</span>{{else if eq .Health "disabled"}}<span class="badge bg-secondary-lt">已停用</span>{{else}}<span class="badge bg-yellow-lt">待验证</span>{{end}}</span></summary>
+<div class="account-body">{{$account := .}}
+{{range .Connections}}<div class="connection-line"><div><strong>{{.Name}}</strong><div class="small text-secondary">{{if .AuthType}}{{authType .AuthType}}{{end}}{{if .AccessKeyMasked}} · {{.AccessKeyMasked}}{{end}} · {{.Region}}</div></div>
+<div class="small">{{if .RouteMode}}{{routeMode .RouteMode}}{{with index $.ProxyNames (textptr .ProxyID)}} · {{.}}{{end}}{{else}}—{{end}}</div>
+<div id="verification-{{.ID}}"><span class="badge {{if eq .Status "verified"}}bg-green-lt{{else if eq .Status "failed"}}bg-red-lt{{else}}bg-secondary-lt{{end}}">{{connectionStatus .Status}}</span>{{if .VerifiedAt}}<div class="small text-secondary">{{beijing .VerifiedAt}}</div>{{end}}{{if .Code}}<div class="small text-danger">{{.Code}}</div>{{end}}</div>
+{{if $account.CanManage}}<div class="connection-actions"><form method="post" action="/connections/{{.ID}}/verify" hx-post="/connections/{{.ID}}/verify" hx-target="#verification-{{.ID}}" hx-swap="innerHTML" hx-disabled-elt="find button"><input type="hidden" name="_csrf" value="{{$.CSRF}}"><button class="btn btn-sm" type="submit">验证</button></form><a class="btn btn-sm" href="/connections/{{.ID}}/edit">编辑</a></div>{{end}}</div>
+{{else}}<p class="small text-secondary mb-0 py-2">尚未添加访问连接{{if not .Active}}；此账号已停用，不会发起 AWS 请求{{end}}。</p>{{end}}
+<div class="account-foot">{{if and .CanManage $.VaultReady}}<a class="btn btn-sm" href="/accounts/{{.ID}}/connections/new">添加连接</a>{{end}}{{if .CanManage}}<a href="/accounts/{{.ID}}/edit">账号设置</a><a href="/accounts/{{.ID}}/access">访问权限</a>{{end}}<a href="/accounts/{{.ID}}">账号详情</a></div>
+</div></details>{{else}}<div class="empty-state"><h3>暂无可访问的 AWS 账号</h3><p>{{if .CanManage}}添加账号后，再为它配置访问连接并验证身份。{{else}}请联系管理员授予账号访问权限。{{end}}</p></div>{{end}}
+<p class="card-note">验证只确认账号身份和请求链路，不代表拥有全部 AWS 操作权限。</p></section>
+{{if .CanManage}}<aside class="card split-panel" aria-labelledby="proxy-title"><div class="card-header"><h2 class="card-title" id="proxy-title">代理出口</h2><a class="ms-auto small" href="/proxies">管理代理</a></div>
+<ul class="proxy-list">{{range .Proxies}}<li><div class="proxy-line"><a class="fw-medium" href="/proxies/{{.ID}}/edit">{{.Name}}</a><span class="kind-tag">{{if eq .Protocol "http"}}HTTP{{else}}SOCKS5{{end}}</span>{{if .Active}}<span class="badge bg-green-lt ms-auto">启用</span>{{else}}<span class="badge bg-secondary-lt ms-auto">已停用</span>{{end}}</div><div class="data-id">{{.Host}}:{{.Port}}</div><div class="small text-secondary">{{.Accounts}} 个账号默认 · {{.Connections}} 个连接使用</div></li>{{else}}<li class="small text-secondary">尚未配置代理，访问连接将直连 AWS。</li>{{end}}</ul>
+<p class="card-note">代理故障时请求失败，不会回退直连。</p></aside>{{end}}
+</div>
 </div></div>
 {{end}}
 {{define "account-edit"}}

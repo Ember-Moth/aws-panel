@@ -146,6 +146,7 @@ function launchBundles(row) {
   const blueprint = data.blueprints.find(value => value.id === launchField(row, "blueprint_id").value);
   const ipv4 = launchField(row, "ip_type").value !== "ipv6";
   launchChoices(launchField(row, "bundle_id"), data.bundles.filter(value => value.public_ipv4 === ipv4 && value.power >= (blueprint?.min_power ?? Infinity)), value => `${value.id} · ${value.cpu} vCPU / ${value.ram_gb} GB / ${value.disk_gb} GB · $${(value.monthly_cents / 100).toFixed(2)}/月`, value => value.id);
+  document.dispatchEvent(new Event("launch:catalogue"));
 }
 function launchButtons(form) {
   const rows = form.querySelectorAll("[data-launch-group]");
@@ -542,3 +543,36 @@ async function loadWavelength(form, refresh = false){
 }
 document.addEventListener('click',event=>{const button=event.target.closest('[data-wavelength-load]');if(button)loadWavelength(button.closest('form'), true);});
 document.addEventListener('change',event=>{const form=event.target.closest('[data-wavelength-form]');if(!form)return;if(event.target.name==='region'||event.target.name==='connection_id'){form.dataset.wavelengthSelected='';loadWavelength(form);}if(event.target.name==='wavelength_zone_id')form.querySelector('[data-wavelength-submit]').disabled=!form.querySelector('[name="wavelength_zone_id"]:checked');});
+
+// Create summary: mirrors the batch form so totals, cost and per-group scope stay visible while editing.
+function updateLaunchSummary() {
+ const summary = document.querySelector("[data-launch-summary]"), form = document.querySelector("[data-lightsail-form]");
+ if (!summary || !form) return;
+ let count = 0, cents = 0, priced = true, ipv4 = false;
+ const list = summary.querySelector("[data-summary-list]"); list.replaceChildren();
+ form.querySelectorAll("[data-launch-group]").forEach((row, index) => {
+  const field = name => row.querySelector(`[name="${name}"]`);
+  const names = (field("names")?.value || "").split(/[\s,，]+/).filter(Boolean).length;
+  const connection = field("connection_id"), bundle = field("bundle_id"), ip = field("ip_type");
+  const connectionText = connection?.value ? connection.selectedOptions[0]?.closest("optgroup")?.label || connection.selectedOptions[0]?.textContent : "未选择连接";
+  const bundleText = bundle?.value ? bundle.selectedOptions[0]?.textContent || bundle.value : "";
+  const price = /\$([\d.]+)\/月/.exec(bundleText);
+  if (names && price) cents += Math.round(parseFloat(price[1]) * 100) * names; else if (names) priced = false;
+  if (ip?.value !== "ipv6") ipv4 = true;
+  count += names;
+  const item = document.createElement("li");
+  const title = document.createElement("strong"); title.textContent = `${index + 1}. ${connectionText}`;
+  const detail = document.createElement("span"); detail.textContent = `${field("region")?.value || "未选区域"} · ${bundle?.value || "未选套餐"} · ${names} 台`;
+  item.append(title, detail); list.append(item);
+ });
+ summary.querySelector("[data-summary-count]").textContent = String(count);
+ const groups = form.querySelectorAll("[data-launch-group]").length;
+ summary.querySelector("[data-summary-groups]").textContent = count ? `${groups} 组账号区域配置` : "尚未填写实例名称";
+ summary.querySelector("[data-summary-cost]").textContent = count && priced ? `$${(cents / 100).toFixed(2)} / 月` : count ? "加载套餐后显示" : "—";
+ summary.querySelector("[data-summary-ip]").textContent = ipv4 ? "含 IPv4 的实例自动分配并绑定静态 IP" : "仅 IPv6，不分配公网 IPv4";
+}
+["input","change"].forEach(type => document.addEventListener(type, event => { if (event.target.closest("[data-lightsail-form]")) updateLaunchSummary(); }));
+document.addEventListener("DOMContentLoaded", updateLaunchSummary);
+document.addEventListener("htmx:afterSwap", updateLaunchSummary);
+document.addEventListener("launch:catalogue", updateLaunchSummary);
+document.addEventListener("click", event => { if (event.target.closest("[data-summary-submit]")) document.querySelector("[data-lightsail-form]")?.requestSubmit(); });

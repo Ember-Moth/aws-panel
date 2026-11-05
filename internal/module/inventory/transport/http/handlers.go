@@ -72,6 +72,18 @@ type listView struct {
 	Pending        bool
 	CanOperate     bool
 	Lightsail      bool
+	// Instances marks the instance workspace (EC2, Lightsail or both) with its in-page detail panel.
+	Instances  bool
+	SelectURL  map[string]string
+	SelectedID string
+	Selected   *contract.ResourceDetail
+	Actions    []actionLink
+	Danger     []actionLink
+}
+
+// actionLink opens an existing preview-first workflow for the selected instance.
+type actionLink struct {
+	Label, URL string
 }
 type scopesView struct {
 	List           contract.ScopeList
@@ -170,6 +182,52 @@ func preserveRegion(options *contract.Options, region string) {
 	}
 	options.Regions = append(options.Regions, region)
 }
+func verifiedConnection(options contract.Options, accountID string) string {
+	for _, a := range options.Accounts {
+		if a.ID != accountID {
+			continue
+		}
+		for _, v := range a.Connections {
+			if v.Status == "verified" {
+				return v.ID
+			}
+		}
+	}
+	return ""
+}
+func instanceKind(kind string) bool {
+	return kind == contract.Instances || kind == contract.EC2Instance || kind == contract.LightsailInstance
+}
+
+// instanceActions links a selected instance to the operation forms that preview each change.
+func instanceActions(r contract.Resource, connection string) (actions, danger []actionLink) {
+	if connection == "" || !r.Present {
+		return nil, nil
+	}
+	scope := url.Values{"connection_id": {connection}, "region": {r.Region}}
+	switch r.Kind {
+	case contract.EC2Instance:
+		op := func(label, action string) actionLink {
+			q := url.Values{"connection_id": {connection}, "region": {r.Region}, "action": {action}, "instance_id": {r.ResourceID}}
+			return actionLink{Label: label, URL: "/ec2?" + q.Encode()}
+		}
+		switch r.State {
+		case "running":
+			actions = append(actions, op("停止", "stop"), op("重启", "reboot"))
+		case "stopped":
+			actions = append(actions, op("启动", "start"))
+		}
+		actions = append(actions, actionLink{Label: "更换 IP", URL: "/ec2/instances/" + url.PathEscape(r.ResourceID) + "/ip?" + scope.Encode()}, op("启用 IPv6", "enable_ipv6"))
+		if r.State != "terminated" && r.State != "shutting-down" {
+			danger = append(danger, op("终止实例…", "terminate"))
+		}
+	case contract.LightsailInstance:
+		if r.Details.Instance != nil && r.Details.Instance.IPType != "ipv6" {
+			actions = append(actions, actionLink{Label: "更换 IP", URL: "/lightsail/instances/" + url.PathEscape(r.Name) + "/ip?" + scope.Encode()})
+		}
+	}
+	return actions, danger
+}
 func filter(c *app.RequestContext, defaultKind string) contract.Filter {
 	kind := c.Query("kind")
 	if kind == "" {
@@ -219,7 +277,7 @@ func pageURL(path string, filter contract.Filter, page int) string {
 // @Failure 400,401,403,503 {object} httpx.Envelope
 // @Router /resources [get]
 func (h *Handler) Resources(ctx context.Context, c *app.RequestContext) {
-	f := filter(c, contract.LightsailInstance)
+	f := filter(c, contract.Instances)
 	if string(c.Path()) == "/lightsail" {
 		f.Kind = contract.LightsailInstance
 	}
@@ -247,26 +305,35 @@ func (h *Handler) Resources(ctx context.Context, c *app.RequestContext) {
 			if r.Kind != "lightsail_instance" || !r.Present || r.Details.Instance == nil || r.Details.Instance.IPType == "ipv6" {
 				continue
 			}
-			connection := ""
-			for _, a := range options.Accounts {
-				if a.ID == r.AccountID {
-					for _, v := range a.Connections {
-						if v.Status == "verified" {
-							connection = v.ID
-							break
-						}
-					}
-				}
-			}
-			if connection != "" {
+			if connection := verifiedConnection(options, r.AccountID); connection != "" {
 				model.IPLinks[r.ID] = "/lightsail/instances/" + url.PathEscape(r.Name) + "/ip?" + url.Values{"connection_id": {connection}, "region": {r.Region}}.Encode()
 			}
 		}
 	}
 
+	base := "/resources"
 	if model.Lightsail {
-		model.Previous = pageURL("/lightsail", f, result.Previous)
-		model.Next = pageURL("/lightsail", f, result.Next)
+		base = "/lightsail"
+		model.Previous = pageURL(base, f, result.Previous)
+		model.Next = pageURL(base, f, result.Next)
+	}
+	if model.Instances = instanceKind(f.Kind); model.Instances {
+		model.SelectURL = map[string]string{}
+		for _, r := range result.Items {
+			model.SelectURL[r.ID] = pageURL(base, f, max(result.Page, 1)) + "&selected=" + url.QueryEscape(r.ID)
+		}
+		selected := c.Query("selected")
+		if selected == "" && len(result.Items) > 0 {
+			selected = result.Items[0].ID
+		}
+		if selected != "" {
+			if detail, err := h.service.Resource(ctx, actor(ctx), selected); err == nil && instanceKind(detail.Resource.Kind) {
+				model.Selected, model.SelectedID = &detail, detail.Resource.ID
+				if model.CanOperate {
+					model.Actions, model.Danger = instanceActions(detail.Resource, verifiedConnection(options, detail.Resource.AccountID))
+				}
+			}
+		}
 	}
 	preserveRegion(&model.Options, f.Region)
 	for _, scope := range result.Scopes {
@@ -279,8 +346,8 @@ func (h *Handler) Resources(ctx context.Context, c *app.RequestContext) {
 		}
 	}
 	title := "资源快照"
-	if model.Lightsail {
-		title = "Lightsail 实例"
+	if model.Instances {
+		title = "实例"
 	}
 	h.render(ctx, c, 200, title, "resources", model)
 }

@@ -1,10 +1,18 @@
 {{define "lightsail-create"}}
-<div class="page-header"><div class="container-xl"><a class="small text-secondary" href="/lightsail">返回 Lightsail 实例</a><h1 class="page-title mt-2">批量创建 Lightsail</h1><p class="text-secondary mt-2">选择账号与区域，加载可用配置，预览每个实例的参数和套餐费用。</p></div></div><div class="page-body"><div class="container-xl">{{template "lightsail-form" .}}</div></div>
+<div class="page-header"><div class="container-xl page-head"><div><a class="small text-secondary" href="/resources">‹ 实例</a><h1 class="page-title mt-1">创建实例</h1><p class="mt-1 mb-0">选择账号与区域，加载可用配置，预览每个实例的参数和套餐费用。</p></div></div></div>
+<div class="page-body"><div class="container-xl stack"><nav class="segmented-nav" aria-label="实例服务"><div class="segmented"><a href="/lightsail/create" aria-current="page">Lightsail</a><a href="/ec2?action=create">EC2</a><a href="/wavelength">Wavelength</a></div><span class="small text-secondary">Lightsail：固定月价套餐，可一次在多个账号区域批量创建</span></nav>
+<div class="create-layout"><div class="create-main">{{template "lightsail-form" .}}</div>
+<aside class="card create-summary" aria-labelledby="launch-summary-title" data-launch-summary><div class="summary-head"><h2 id="launch-summary-title">摘要</h2><div class="summary-total"><strong data-summary-count>0</strong><span> 台实例</span></div><div class="small text-secondary" data-summary-groups>尚未填写实例名称</div></div>
+<div class="summary-section"><h3>月费估算</h3><div class="summary-cost"><strong data-summary-cost>—</strong></div><p>按目录套餐价相加，不含税费、超额流量与快照；预览和执行前都会重新核价。</p></div>
+<div class="summary-section"><h3>每组配置</h3><ul class="summary-list" data-summary-list><li class="text-secondary">选择连接、区域与套餐后显示</li></ul></div>
+<div class="summary-section"><h3>自动完成</h3><ul class="summary-list"><li data-summary-ip>含 IPv4 的实例自动分配并绑定静态 IP</li><li>放行所用 IPv4 / IPv6 的全部公网入站，出站默认允许</li><li>创建记录写入任务中心，可只恢复失败目标</li></ul></div>
+<div class="summary-foot"><button class="btn btn-primary w-100" type="button" data-summary-submit>预览实例与费用</button><p>预览后才会提交{{if not .Options.WritesEnabled}} · 当前为预览模式，不写入 AWS{{end}}</p></div></aside></div>
+</div></div>
 {{end}}
 {{define "lightsail-form"}}
 <section id="lightsail-form" class="card"><div class="card-body p-4">
 {{if .Error}}<div class="alert alert-warning" role="alert">{{.Error}}</div>{{end}}
-{{if not .Options.WritesEnabled}}<div class="mode-notice"><span class="badge">预览模式</span><span>云端写入未启用，可以读取配置并生成预览。</span></div>{{end}}
+
 <form method="post" action="/lightsail/plans" hx-post="/lightsail/plans" hx-target="#lightsail-form" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']" data-lightsail-form>
 <input type="hidden" name="_csrf" value="{{.CSRF}}">
 <div data-launch-groups>{{range .Rows}}{{$target := .Target}}

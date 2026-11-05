@@ -6,7 +6,7 @@
 {{with .Catalogue}}<div class="action-row mb-3"><span class="small text-secondary action-note">{{range .Freshness}}{{template "cache-freshness" .}}{{end}}</span>{{if $.RefreshURL}}<a class="btn btn-sm" href="{{$.RefreshURL}}">刷新最新</a>{{end}}</div>{{end}}
 <p class="context-note">更换需要一个空余地址配额。确认新地址已绑定后，旧的固定地址会自动释放；切换期间已有连接可能中断，DNS 记录需自行更新。</p>
 {{if eq .Value.Service "wavelength"}}<p class="small text-secondary">更换 Carrier IP 会改变业务实例的默认出站地址，父区域入口的 EIP 保持不变。</p>{{end}}
-{{if not .Options.WritesEnabled}}<div class="mode-notice"><span class="badge">预览模式</span><span>可以核对变化，云端写入当前关闭。</span></div>{{end}}
+
 <form method="post" action="/instances/ip/plans" hx-post="/instances/ip/plans" hx-target="#address-form" hx-swap="outerHTML" hx-disabled-elt="find button[type='submit']">
 <input type="hidden" name="_csrf" value="{{.CSRF}}"><input type="hidden" name="connection_id" value="{{.Value.ConnectionID}}"><input type="hidden" name="region" value="{{.Value.Region}}"><input type="hidden" name="service" value="{{.Value.Service}}"><input type="hidden" name="instance_id" value="{{.Value.InstanceID}}"><input type="hidden" name="wavelength_zone_id" value="{{.Value.WavelengthZoneID}}">
 <div class="d-flex gap-2 mt-4"><a class="btn" href="{{.BackURL}}">取消</a><button class="btn btn-primary" type="submit">预览更换 IP</button></div></form></div></section>{{end}}

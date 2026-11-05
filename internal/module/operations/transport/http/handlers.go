@@ -62,12 +62,44 @@ type EventsResponse struct {
 type listView struct {
 	List        contract.JobList
 	Diagnostics bool
+	SelectedID  string
+	Selected    *detailView
 }
 type detailView struct {
 	Detail             contract.Detail
 	CSRF               string
 	Terminal, CanRetry bool
+	Progress           progressView
 }
+
+// progressView summarizes target outcomes for the task header bar.
+type progressView struct {
+	Total, Succeeded, Failed, Active, Waiting      int
+	SucceededPercent, FailedPercent, ActivePercent float64
+}
+
+func summarize(items []contract.Item) progressView {
+	var p progressView
+	for _, item := range items {
+		p.Total++
+		switch item.Status {
+		case contract.Succeeded:
+			p.Succeeded++
+		case contract.Failed, contract.Attention:
+			p.Failed++
+		case contract.Running, contract.Waiting:
+			p.Active++
+		default:
+			p.Waiting++
+		}
+	}
+	if p.Total > 0 {
+		share := func(n int) float64 { return float64(n*1000/p.Total) / 10 }
+		p.SucceededPercent, p.FailedPercent, p.ActivePercent = share(p.Succeeded), share(p.Failed), share(p.Active)
+	}
+	return p
+}
+
 type planView struct {
 	Plan      contract.Plan
 	CSRF, Key string
@@ -155,7 +187,18 @@ func (h *Handler) List(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	principal, _ := auth.Current(ctx)
-	h.render(ctx, c, 200, "任务中心", "jobs", listView{List: result, Diagnostics: h.diagnostics && principal.Role == "admin"})
+	model := listView{List: result, Diagnostics: h.diagnostics && principal.Role == "admin"}
+	if len(result.Items) > 0 {
+		id := c.Query("job")
+		if id == "" {
+			id = result.Items[0].ID
+		}
+		if detail, err := h.service.Detail(ctx, actor(ctx), id); err == nil {
+			selected := makeDetail(detail, auth.CSRF(ctx))
+			model.Selected, model.SelectedID = &selected, detail.Job.ID
+		}
+	}
+	h.render(ctx, c, 200, "任务", "jobs", model)
 }
 func makeDetail(value contract.Detail, csrf string) detailView {
 	terminal := value.Job.Status == contract.Succeeded || value.Job.Status == contract.Failed || value.Job.Status == contract.Cancelled || value.Job.Status == contract.PartialSuccess
@@ -175,7 +218,7 @@ func makeDetail(value contract.Detail, csrf string) detailView {
 		}
 	}
 	canRetry = canRetry && available
-	return detailView{Detail: value, CSRF: csrf, Terminal: terminal, CanRetry: canRetry}
+	return detailView{Detail: value, CSRF: csrf, Terminal: terminal, CanRetry: canRetry, Progress: summarize(value.Items)}
 }
 
 // Detail returns a task and its immutable attempt history.
@@ -203,7 +246,17 @@ func (h *Handler) Detail(ctx context.Context, c *app.RequestContext) {
 		view.HTML(c, 200, body, err)
 		return
 	}
-	h.render(ctx, c, 200, result.Job.Title, "job-detail", model)
+	page := 1
+	if value := c.Query("page"); value != "" {
+		page, _ = strconv.Atoi(value)
+	}
+	list, err := h.service.List(ctx, actor(ctx), page)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	principal, _ := auth.Current(ctx)
+	h.render(ctx, c, 200, "任务", "jobs", listView{List: list, Diagnostics: h.diagnostics && principal.Role == "admin", SelectedID: result.Job.ID, Selected: &model})
 }
 func (h *Handler) DiagnosticForm(ctx context.Context, c *app.RequestContext) {
 	if !h.diagnostics {

@@ -61,9 +61,40 @@ type DeleteRequest struct {
 	Version int64 `json:"version"`
 }
 type accountsView struct {
-	Items                 []contract.Account
+	Items                 []accountRow
+	Proxies               []contract.Proxy
+	ProxyNames            map[string]string
 	CanManage, VaultReady bool
+	CSRF                  string
 }
+
+// accountRow carries an account with its connections so the list can expand in place.
+type accountRow struct {
+	contract.Account
+	Connections []contract.Connection
+	Health      string
+	CanManage   bool
+}
+
+func accountHealth(account contract.Account, connections []contract.Connection) string {
+	if !account.Active {
+		return "disabled"
+	}
+	verified := false
+	for _, connection := range connections {
+		switch connection.Status {
+		case "failed", "expired":
+			return "failed"
+		case "verified":
+			verified = true
+		}
+	}
+	if verified {
+		return "verified"
+	}
+	return "pending"
+}
+
 type accountForm struct {
 	Proxies             []contract.Proxy
 	Account             contract.Account
@@ -179,7 +210,28 @@ func (h *Handler) ListAccounts(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	user, _ := auth.Current(ctx)
-	h.render(ctx, c, 200, "AWS 账号", "accounts", "", "accounts", accountsView{Items: values, CanManage: user.Role == "admin", VaultReady: h.service.VaultReady()})
+	model := accountsView{Items: make([]accountRow, 0, len(values)), CanManage: user.Role == "admin", VaultReady: h.service.VaultReady(), CSRF: auth.CSRF(ctx)}
+	for _, account := range values {
+		row := accountRow{Account: account}
+		if detail, err := h.service.AccountDetail(ctx, actor(ctx), account.ID); err == nil {
+			row.Connections, row.CanManage = detail.Connections, detail.CanManage
+		}
+		row.Health = accountHealth(account, row.Connections)
+		model.Items = append(model.Items, row)
+	}
+	if model.CanManage {
+		if proxies, err := h.service.ListProxies(ctx, actor(ctx)); err == nil {
+			model.Proxies, model.ProxyNames = proxies, map[string]string{}
+			for _, proxy := range proxies {
+				model.ProxyNames[proxy.ID] = proxy.Name
+			}
+		}
+	}
+	title := "AWS 账号"
+	if model.CanManage {
+		title = "账号与代理"
+	}
+	h.render(ctx, c, 200, title, "accounts", "", "accounts", model)
 }
 
 // Detail shows an authorized account and redacted connection information.
