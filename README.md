@@ -5,7 +5,7 @@
 ## 功能
 
 - **概览**：账号池的实例、公网 IPv4、已启用区域，以及 EC2 / Lightsail vCPU 与 Bedrock 模型配额汇总；集中列出需要处理的连接、采集和配额问题。
-- **实例**：EC2、Lightsail 与 Wavelength 实例的统一列表和详情面板，支持手动与定时同步。
+- **实例**：EC2、Lightsail 与 Wavelength 实例的统一列表和详情面板，支持手动与定时同步；按 UTC 月统计每个实例的进出流量，Lightsail 额度池用量接近上限时提醒。
 - **创建与管理**：批量创建 Lightsail；创建并启动、停止、重启、终止 EC2；SSH 密钥或 root 密码登录；双栈网络准备；固定 IP 自动绑定与一键更换。
 - **Wavelength**：Zone Group 开通、双子网网络准备、业务实例与父区域入口，入站 EIP 与出站 Carrier IP 分别管理。
 - **区域与配额**：批量启用 AWS 区域；按账号、区域查询适用配额与用量。

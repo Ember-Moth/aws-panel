@@ -11,6 +11,9 @@ const (
 	EC2Address        = "ec2_address"
 	// Instances is a read-only filter covering both EC2 and Lightsail instances.
 	Instances = "instances"
+	// Traffic scopes collect daily network bytes per instance instead of snapshots.
+	LightsailTraffic = "lightsail_traffic"
+	EC2Traffic       = "ec2_traffic"
 )
 
 type RefreshTarget struct {
@@ -152,6 +155,60 @@ type Resource struct {
 	ObservedAt   time.Time  `json:"observed_at"`
 	Present      bool       `json:"present"`
 	MissingSince *time.Time `json:"missing_since,omitempty"`
+	// Traffic is the current UTC month for instances once traffic has been collected.
+	Traffic *TrafficSummary `json:"traffic,omitempty"`
+}
+
+// TrafficSummary totals one instance's network bytes for the current UTC month.
+// Lightsail allowances are pooled per account, Region and bundle by AWS; the
+// per-instance share is shown for orientation, not as a billing statement.
+type TrafficSummary struct {
+	Month          string     `json:"month"`
+	BytesIn        int64      `json:"bytes_in"`
+	BytesOut       int64      `json:"bytes_out"`
+	PreviousIn     int64      `json:"previous_in"`
+	PreviousOut    int64      `json:"previous_out"`
+	Days           int        `json:"days"`
+	BundleID       string     `json:"bundle_id,omitempty"`
+	AllowanceBytes int64      `json:"allowance_bytes,omitempty"`
+	Percent        float64    `json:"percent,omitempty"`
+	ProjectedBytes int64      `json:"projected_bytes"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
+}
+
+// Total is inbound plus outbound bytes for the current month.
+func (t TrafficSummary) Total() int64 { return t.BytesIn + t.BytesOut }
+
+// PreviousTotal is inbound plus outbound bytes for the previous month.
+func (t TrafficSummary) PreviousTotal() int64 { return t.PreviousIn + t.PreviousOut }
+
+type TrafficDay struct {
+	Day      string `json:"day"`
+	BytesIn  int64  `json:"bytes_in"`
+	BytesOut int64  `json:"bytes_out"`
+}
+
+// TrafficPool is one Lightsail allowance pool: instances of one bundle in one account Region.
+type TrafficPool struct {
+	AccountID      string  `json:"account_id"`
+	AccountName    string  `json:"account_name"`
+	Region         string  `json:"region"`
+	BundleID       string  `json:"bundle_id"`
+	Instances      int     `json:"instances"`
+	UsedBytes      int64   `json:"used_bytes"`
+	AllowanceBytes int64   `json:"allowance_bytes"`
+	Percent        float64 `json:"percent"`
+}
+
+// TrafficOverview aggregates the current UTC month across the actor's accounts.
+type TrafficOverview struct {
+	Month     string        `json:"month"`
+	Known     bool          `json:"known"`
+	Instances int           `json:"instances"`
+	BytesIn   int64         `json:"bytes_in"`
+	BytesOut  int64         `json:"bytes_out"`
+	Pools     []TrafficPool `json:"pools"`
+	UpdatedAt *time.Time    `json:"updated_at,omitempty"`
 }
 type ResourceList struct {
 	Items    []Resource `json:"items"`
@@ -169,6 +226,8 @@ type ScopeList struct {
 type ResourceDetail struct {
 	Resource Resource `json:"resource"`
 	Scope    Scope    `json:"scope"`
+	// TrafficDaily covers the last 31 UTC days with collected data.
+	TrafficDaily []TrafficDay `json:"traffic_daily,omitempty"`
 }
 type ScheduleRequest struct {
 	Name            string          `json:"name"`

@@ -267,7 +267,7 @@ func pageURL(path string, filter contract.Filter, page int) string {
 // @Produce json
 // @Security SessionCookie
 // @Param account_id query string false "Account UUID"
-// @Param kind query string false "account_region, lightsail_region, lightsail_instance, lightsail_static_ip, ec2_instance or ec2_address"
+// @Param kind query string false "instances (default), account_region, lightsail_region, lightsail_instance, lightsail_static_ip, ec2_instance or ec2_address; instance rows include current-month traffic once lightsail_traffic / ec2_traffic scopes are synced"
 // @Param region query string false "AWS Region"
 // @Param state query string false "AWS state"
 // @Param q query string false "Name or resource ID substring"

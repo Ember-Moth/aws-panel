@@ -70,3 +70,35 @@ type Overview struct {
 	CarrierKnown                bool
 	IPJSON, RegionJSON          string
 }
+
+// Traffic is one instance's network bytes for one UTC day (Day is YYYY-MM-DD).
+type Traffic struct {
+	ResourceID, Name, BundleID, Day   string
+	AllowanceBytes, BytesIn, BytesOut int64
+	ObservedAt                        time.Time
+}
+
+// TrafficTotal sums one instance for the current and previous UTC month.
+type TrafficTotal struct {
+	AccountID, Kind, Region, ResourceID, BundleID string
+	AllowanceBytes                                int64
+	BytesIn, BytesOut, PreviousIn, PreviousOut    int64
+	Days                                          int
+	ObservedAt                                    *time.Time
+}
+type TrafficDay struct {
+	Day               string
+	BytesIn, BytesOut int64
+}
+
+// TrafficPool sums one Lightsail allowance pool for the current UTC month.
+type TrafficPool struct {
+	AccountID, Region, BundleID string
+	Instances                   int
+	UsedBytes, AllowanceBytes   int64
+}
+type TrafficAggregate struct {
+	Instances         int
+	BytesIn, BytesOut int64
+	ObservedAt        *time.Time
+}

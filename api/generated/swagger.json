@@ -4509,7 +4509,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "account_region, lightsail_region, lightsail_instance, lightsail_static_ip, ec2_instance or ec2_address",
+                        "description": "instances (default), account_region, lightsail_region, lightsail_instance, lightsail_static_ip, ec2_instance or ec2_address; instance rows include current-month traffic once lightsail_traffic / ec2_traffic scopes are synced",
                         "name": "kind",
                         "in": "query"
                     },
@@ -6270,6 +6270,9 @@
                         "type": "string"
                     }
                 },
+                "traffic": {
+                    "$ref": "#/definitions/contract.Traffic"
+                },
                 "warnings": {
                     "type": "array",
                     "items": {
@@ -6638,6 +6641,14 @@
                 },
                 "state": {
                     "type": "string"
+                },
+                "traffic": {
+                    "description": "Traffic is the current UTC month for instances once traffic has been collected.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/contract.TrafficSummary"
+                        }
+                    ]
                 }
             }
         },
@@ -6649,6 +6660,13 @@
                 },
                 "scope": {
                     "$ref": "#/definitions/contract.Scope"
+                },
+                "traffic_daily": {
+                    "description": "TrafficDaily covers the last 31 UTC days with collected data.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/contract.TrafficDay"
+                    }
                 }
             }
         },
@@ -7015,6 +7033,87 @@
                     "type": "boolean"
                 },
                 "worker_heartbeat": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.Traffic": {
+            "type": "object",
+            "properties": {
+                "bytes_in": {
+                    "type": "integer"
+                },
+                "bytes_out": {
+                    "type": "integer"
+                },
+                "instances": {
+                    "type": "integer"
+                },
+                "known": {
+                    "type": "boolean"
+                },
+                "month": {
+                    "type": "string"
+                },
+                "pools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.TrafficPool"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.TrafficDay": {
+            "type": "object",
+            "properties": {
+                "bytes_in": {
+                    "type": "integer"
+                },
+                "bytes_out": {
+                    "type": "integer"
+                },
+                "day": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.TrafficSummary": {
+            "type": "object",
+            "properties": {
+                "allowance_bytes": {
+                    "type": "integer"
+                },
+                "bundle_id": {
+                    "type": "string"
+                },
+                "bytes_in": {
+                    "type": "integer"
+                },
+                "bytes_out": {
+                    "type": "integer"
+                },
+                "days": {
+                    "type": "integer"
+                },
+                "month": {
+                    "type": "string"
+                },
+                "percent": {
+                    "type": "number"
+                },
+                "previous_in": {
+                    "type": "integer"
+                },
+                "previous_out": {
+                    "type": "integer"
+                },
+                "projected_bytes": {
+                    "type": "integer"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -8106,6 +8205,35 @@
                 },
                 "region": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_Ember-Moth_aws-panel_internal_module_dashboard_contract.TrafficPool": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "account_name": {
+                    "type": "string"
+                },
+                "allowance_bytes": {
+                    "type": "integer"
+                },
+                "bundle_id": {
+                    "type": "string"
+                },
+                "instances": {
+                    "type": "integer"
+                },
+                "percent": {
+                    "type": "number"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "used_bytes": {
+                    "type": "integer"
                 }
             }
         },

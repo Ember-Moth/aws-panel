@@ -23,6 +23,7 @@ type Snapshot = source.Snapshot
 type FetchedResource = source.Resource
 type Service interface {
 	Overview(context.Context, int64) ([]contract.Observation, error)
+	Traffic(ctx context.Context, actorID int64, accountID, region string) (contract.TrafficOverview, error)
 	Options(context.Context, int64) (contract.Options, error)
 	Resources(context.Context, int64, contract.Filter) (contract.ResourceList, error)
 	Scopes(context.Context, int64, contract.Filter) (contract.ScopeList, error)

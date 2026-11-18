@@ -38,6 +38,13 @@
 
 `servicequotas:ListServiceQuotas` 是可选的，缺失时配额显示未知；`ec2:DescribeVpcs` 与 `DescribeInternetGateways` 只用于配额页的 VPC 用量。Bedrock 配额同样通过它读取，不调用任何模型。
 
+## 只读：实例流量
+
+- Lightsail 实例流量：`lightsail:GetInstances`、`lightsail:GetBundles`、`lightsail:GetInstanceMetricData`。
+- EC2 实例流量：`ec2:DescribeInstances`、`cloudwatch:GetMetricData`。CloudWatch 的 `GetMetricData` 按请求的指标数计费，每次同步每个实例 2 个指标。
+
+缺少这些权限只会让对应的流量同步失败，不影响实例快照。
+
 ## 区域启用
 
 `account:ListRegions`、`account:GetRegionOptStatus`、`account:EnableRegion`。

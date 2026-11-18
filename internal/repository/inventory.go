@@ -20,6 +20,11 @@ type InventoryStore interface {
 	BeginRefresh(context.Context, entity.Scope, entity.Lease, string, string) (entity.Ticket, error)
 	CompleteRefresh(context.Context, entity.Ticket, []entity.Snapshot, int, string) error
 	FailRefresh(context.Context, entity.Ticket, string) error
+	CompleteTraffic(context.Context, entity.Ticket, []entity.Traffic, int, string) error
+	TrafficTotals(ctx context.Context, accounts, resources []string, month, previous string) ([]entity.TrafficTotal, error)
+	TrafficDaily(ctx context.Context, accounts []string, resource, from string) ([]entity.TrafficDay, error)
+	TrafficPools(ctx context.Context, accounts []string, region, month string) ([]entity.TrafficPool, error)
+	TrafficAggregate(ctx context.Context, accounts []string, region, month string) (entity.TrafficAggregate, error)
 	Schedules(context.Context, int64, bool, int, int) ([]entity.Schedule, error)
 	Schedule(context.Context, string) (entity.Schedule, error)
 	ClaimSchedules(context.Context, string, int, time.Duration) ([]entity.Schedule, error)

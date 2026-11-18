@@ -45,6 +45,7 @@ type Clients interface {
 }
 type Inventory interface {
 	Overview(context.Context, int64) ([]iv.Observation, error)
+	Traffic(ctx context.Context, actorID int64, accountID, region string) (iv.TrafficOverview, error)
 }
 type Jobs interface {
 	Prepare(context.Context, int64, oc.PlanRequest) (oc.Plan, error)
@@ -168,6 +169,15 @@ func (s *Service) Read(ctx context.Context, actor int64, q contract.Query) (cont
 	legacy, err := s.deps.Inventory.Overview(ctx, actor)
 	if err != nil {
 		view.Warnings = append(view.Warnings, "已有资源快照暂时无法读取，仪表盘保留独立采集的数据。")
+	}
+	view.Traffic = contract.Traffic{Pools: []contract.TrafficPool{}}
+	if traffic, err := s.deps.Inventory.Traffic(ctx, actor, q.AccountID, q.Region); err != nil {
+		view.Warnings = append(view.Warnings, "实例流量暂时无法读取。")
+	} else {
+		view.Traffic = contract.Traffic{Month: traffic.Month, Known: traffic.Known, Instances: traffic.Instances, BytesIn: traffic.BytesIn, BytesOut: traffic.BytesOut, UpdatedAt: traffic.UpdatedAt, Pools: make([]contract.TrafficPool, 0, len(traffic.Pools))}
+		for _, p := range traffic.Pools {
+			view.Traffic.Pools = append(view.Traffic.Pools, contract.TrafficPool{AccountID: p.AccountID, AccountName: p.AccountName, Region: p.Region, BundleID: p.BundleID, Instances: p.Instances, UsedBytes: p.UsedBytes, AllowanceBytes: p.AllowanceBytes, Percent: p.Percent})
+		}
 	}
 	lsRegions := map[string]iv.Observation{}
 	for _, row := range legacy {

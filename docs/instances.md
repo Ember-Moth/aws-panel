@@ -6,7 +6,8 @@
 
 - 顶部分段控件切换“全部实例 / EC2 / Lightsail”；次级链接切换到静态 IP、弹性 / Carrier IP、账号区域、Lightsail 可用区域、同步记录和定时同步。
 - 筛选栏可按账号、区域、AWS 状态、名称或资源 ID 过滤，并可包含最近同步中未发现的历史记录。每页 25 项。
-- 点击某行，右侧详情面板显示网络（公网 IPv4、IPv6、私网地址、Carrier IP、VPC / 子网 / 安全组）、配置（规格、镜像、可用区、磁盘、登录）以及归属与同步时间。
+- 点击某行，右侧详情面板显示网络（公网 IPv4、IPv6、私网地址、Carrier IP、VPC / 子网 / 安全组）、配置（规格、镜像、可用区、磁盘、登录）、[流量](#流量)以及归属与同步时间。
+- 同步过实例流量后，列表多出“本月流量”一列；Lightsail 实例同时显示占套餐额度的比例。
 - 对拥有操作权限的成员，详情面板提供该实例可用的操作：EC2 的启动 / 停止 / 重启、更换 IP、启用 IPv6，“更多”中的终止；Lightsail 的更换 IP。每个操作都打开对应的预览页，确认后才提交任务。
 - 页头的“创建 Lightsail”进入批量创建；“EC2 工作台”进入 EC2 实时列表、创建与网络准备。
 
@@ -22,6 +23,8 @@
 | Lightsail 静态 IP | Lightsail `GetStaticIps` |
 | EC2 实例 | EC2 `DescribeInstances`：AMI / 规格、VPC / 子网、安全组、主网卡、IPv4 / IPv6、根卷删除策略 |
 | 弹性 / Carrier IP | EC2 `DescribeAddresses`：分配 ID、绑定对象、网络边界组 |
+| Lightsail 实例流量 | Lightsail `GetInstanceMetricData`（`NetworkIn` / `NetworkOut`）与 `GetBundles`，见[流量](#流量) |
+| EC2 实例流量 | CloudWatch `GetMetricData`（`AWS/EC2` 的 `NetworkIn` / `NetworkOut`），见[流量](#流量) |
 
 - **手动同步**：点击“同步资源”，选择连接、类型和区域，一批最多 50 个范围。拥有账号读取权限的成员即可提交，不受云端写入开关影响。
 - **定时同步**：间隔 5 至 1440 分钟，从下一个间隔开始运行；错过的时间点不会在重启后集中补发。每次运行使用创建成员的当前权限和连接的当前已验证配置。相同范围已有未完成任务时，本次跳过。
@@ -33,6 +36,19 @@
 - 只有完整成功的同步才把未出现的记录标为“本次完整同步未发现”，并保留最后观测的数据。这不代表资源已在 AWS 删除。
 - 资源身份使用 AWS ARN 或资源 ID，同一账号更换连接不会产生重复记录。
 - 对 AWS 的请求按账号、区域和服务限速：默认每秒 4 次、突发 4 次、最多 2 个并发响应。
+
+## 流量
+
+在“同步资源”中选择“Lightsail 实例流量”或“EC2 实例流量”，按区域读取该区域全部实例的网络进出字节数，按 UTC 自然日保存。
+
+- **建议每天定时同步**。每次读取从上个 UTC 月 1 日到当前时刻的日合计，并覆盖已有的同一天；AWS 不再返回的旧日期继续保留在面板中（最多约 13 个月）。Lightsail 的指标保留期较短，长时间不同步会让月度合计缺少早期日期。
+- **月份按 UTC 计算**，与 AWS 账单一致；界面中的其他时间仍是北京时间。
+- **Lightsail**：每个实例另外记录套餐（bundle）及其每月流量额度。AWS 把同一账号、同一区域内相同套餐的实例额度合并成一个额度池；入站与出站都计入额度，只有出站超出部分收费，经私网 IP 的流量不计费。详情面板显示本实例占其套餐额度的比例，概览按额度池汇总。额度按 1 GB = 2³⁰ 字节换算，实际账单（含按小时折算的额度）以 AWS 为准。
+- **EC2**：CloudWatch 的 `NetworkIn` / `NetworkOut` 包含实例所有网卡的流量（包括 VPC 内网），只反映实例收发了多少，不等同于计费的公网数据传输。
+- **月底预估**按本月已用量和已过时间线性推算，月初不足一天时按一天计算。
+- 一个区域单次最多 1000 个实例，超出时同步失败并保留已有数据。EC2 每 250 个实例合并为一次 CloudWatch 请求；Lightsail 每个实例需要两次请求。
+
+详情面板的“流量”分区显示本月入站、出站和合计，上月合计，近 30 天每日柱状图，以及（Lightsail）额度比例与月底预估。尚未采集时，面板提供该实例所在区域的同步入口。概览的“本月流量”卡片汇总全部实例；Lightsail 额度池用量达到 80% 时会出现在“需要处理”中。
 
 ## 创建 Lightsail
 
@@ -145,4 +161,4 @@ JSON 接口前缀为 `/api/v1`：
 - 地址：`/addresses/options`、`/addresses/catalogue`、`/addresses/plans`、`/addresses/plans/{id}`、`/addresses/plans/{id}/submit`。
 - 配额：`/quotas`、`/quotas/options`、`/quotas/regions`。
 
-目录、区域、实例、地址与配额接口支持可选的 `refresh=true`，响应中的 `freshness` 给出 `updated_at`、`refresh_after`、`cached`、`stale`、`refreshing` 和 `refresh_failed`。完整结构见 [Swagger](../api/generated/swagger.json)。
+实例快照的 `traffic` 字段给出当前 UTC 月的流量汇总，资源详情另有 `traffic_daily`。目录、区域、实例、地址与配额接口支持可选的 `refresh=true`，响应中的 `freshness` 给出 `updated_at`、`refresh_after`、`cached`、`stale`、`refreshing` 和 `refresh_failed`。完整结构见 [Swagger](../api/generated/swagger.json)。

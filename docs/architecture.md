@@ -91,7 +91,7 @@ Asynq 只提供至少一次投递，因此重复副作用由以下机制共同�
 | identity | members、sessions、account_grants |
 | accounts | aws_accounts、connections、proxy_profiles、secrets |
 | operations | plans、jobs、job_items、job_steps、job_attempts、job_events、operations_outbox、operation_effects、operation_target_locks、operations_diagnostic_effects |
-| inventory | inventory_scopes、inventory_runs、resource_snapshots、inventory_schedules |
+| inventory | inventory_scopes、inventory_runs、resource_snapshots、instance_traffic、inventory_schedules |
 | dashboard | dashboard_snapshots、dashboard_runs |
 | lightsail | lightsail_creations |
 | platform | platform_settings、platform_heartbeats、audit_events |

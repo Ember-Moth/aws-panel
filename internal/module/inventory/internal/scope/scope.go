@@ -17,7 +17,12 @@ func RegionOK(value string) bool {
 	return len(value) <= 40 && regionPattern.MatchString(value) && !strings.HasPrefix(value, "cn-") && !strings.HasPrefix(value, "us-gov-")
 }
 func KindOK(value string) bool {
-	return value == contract.AccountRegion || value == contract.LightsailRegion || value == contract.LightsailInstance || value == contract.LightsailStaticIP || value == contract.EC2Instance || value == contract.EC2Address
+	return value == contract.AccountRegion || value == contract.LightsailRegion || value == contract.LightsailInstance || value == contract.LightsailStaticIP || value == contract.EC2Instance || value == contract.EC2Address || Traffic(value)
+}
+
+// Traffic reports scopes that accumulate daily metrics rather than replace snapshots.
+func Traffic(kind string) bool {
+	return kind == contract.LightsailTraffic || kind == contract.EC2Traffic
 }
 func Regional(kind string) bool {
 	return kind != contract.AccountRegion && kind != contract.LightsailRegion
@@ -48,6 +53,10 @@ func Label(kind string) string {
 		return "EC2 实例"
 	case contract.EC2Address:
 		return "EC2 弹性 / Carrier IP"
+	case contract.LightsailTraffic:
+		return "Lightsail 实例流量"
+	case contract.EC2Traffic:
+		return "EC2 实例流量"
 	default:
 		return kind
 	}

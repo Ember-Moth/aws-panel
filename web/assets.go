@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	dc "github.com/Ember-Moth/aws-panel/internal/module/dashboard/contract"
+	idc "github.com/Ember-Moth/aws-panel/internal/module/inventory/contract"
 	"html/template"
 	"io/fs"
 	"strconv"
@@ -109,6 +110,10 @@ func ResourceKind(value string) string {
 		return "EC2 弹性 IP"
 	case "instances":
 		return "实例"
+	case "lightsail_traffic":
+		return "Lightsail 实例流量"
+	case "ec2_traffic":
+		return "EC2 实例流量"
 	default:
 		return value
 	}
@@ -220,6 +225,52 @@ func JobColor(value string) string {
 	}
 }
 
+// FormatBytes renders a byte count with binary units, as AWS bills data transfer.
+func FormatBytes(value int64) string {
+	if value < 1024 {
+		return strconv.FormatInt(value, 10) + " B"
+	}
+	units := []string{"KB", "MB", "GB", "TB", "PB"}
+	size := float64(value) / 1024
+	unit := 0
+	for size >= 1024 && unit < len(units)-1 {
+		size /= 1024
+		unit++
+	}
+	if size >= 100 {
+		return strconv.FormatFloat(size, 'f', 0, 64) + " " + units[unit]
+	}
+	return strconv.FormatFloat(size, 'f', 1, 64) + " " + units[unit]
+}
+
+// TrafficBar is one day of the detail panel chart, scaled to the busiest day.
+type TrafficBar struct {
+	Day, Label          string
+	BytesIn, BytesOut   int64
+	InHeight, OutHeight float64
+}
+
+// TrafficBars scales daily totals into stacked bar heights (percent of the tallest day).
+func TrafficBars(days []idc.TrafficDay) []TrafficBar {
+	var peak int64
+	for _, d := range days {
+		peak = max(peak, d.BytesIn+d.BytesOut)
+	}
+	bars := make([]TrafficBar, 0, len(days))
+	for _, d := range days {
+		bar := TrafficBar{Day: d.Day, BytesIn: d.BytesIn, BytesOut: d.BytesOut}
+		if len(d.Day) == 10 {
+			bar.Label = d.Day[5:]
+		}
+		if peak > 0 {
+			bar.InHeight = float64(d.BytesIn*1000/peak) / 10
+			bar.OutHeight = float64(d.BytesOut*1000/peak) / 10
+		}
+		bars = append(bars, bar)
+	}
+	return bars
+}
+
 func NewRenderer() (*Renderer, error) {
 	templates, err := template.New("pages").Funcs(template.FuncMap{
 		"dashboardMetric": func(values []dc.Metric, key string) dc.Metric {
@@ -263,6 +314,9 @@ func NewRenderer() (*Renderer, error) {
 		"addressAction": func(value string) string {
 			return map[string]string{"allocate": "创建静态 IP", "replace": "更换实例 IP", "attach": "绑定地址", "detach": "解绑地址", "release": "释放地址"}[value]
 		},
+		"bytes":        FormatBytes,
+		"trafficBars":  TrafficBars,
+		"trafficTotal": func(in, out int64) int64 { return in + out },
 		"initial": func(value string) string {
 			for _, r := range value {
 				return string(r)

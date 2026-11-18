@@ -256,6 +256,9 @@ func (s *Service) Resources(ctx context.Context, actorID int64, filter contract.
 			scopeIDs[row.ScopeID] = true
 		}
 	}
+	if err := s.attachTraffic(ctx, q.AccountIDs, result.Items); err != nil {
+		return contract.ResourceList{}, err
+	}
 	if len(scopeRows) == 0 {
 		q.Page = 1
 		q.Limit = 25
@@ -317,7 +320,22 @@ func (s *Service) Resource(ctx context.Context, actorID int64, id string) (contr
 	if err != nil {
 		return contract.ResourceDetail{}, err
 	}
-	return contract.ResourceDetail{Resource: value, Scope: scopes[0]}, nil
+	result := contract.ResourceDetail{Resource: value, Scope: scopes[0]}
+	if trafficKind(value.Kind) != "" {
+		items := []contract.Resource{result.Resource}
+		if err := s.attachTraffic(ctx, []string{row.AccountID}, items); err != nil {
+			return contract.ResourceDetail{}, err
+		}
+		result.Resource = items[0]
+		days, err := s.deps.Store.TrafficDaily(ctx, []string{row.AccountID}, row.ResourceID, clock.Now().UTC().AddDate(0, 0, -30).Format(time.DateOnly))
+		if err != nil {
+			return contract.ResourceDetail{}, err
+		}
+		for _, day := range days {
+			result.TrafficDaily = append(result.TrafficDaily, contract.TrafficDay{Day: day.Day, BytesIn: day.BytesIn, BytesOut: day.BytesOut})
+		}
+	}
+	return result, nil
 }
 
 var keyPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{16,128}$`)

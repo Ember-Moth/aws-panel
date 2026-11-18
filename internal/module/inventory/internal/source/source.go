@@ -16,8 +16,18 @@ type Resource struct {
 }
 type Snapshot struct {
 	Resources []Resource
+	Traffic   []TrafficRow
 	Pages     int
 	RequestID string
+}
+
+// TrafficRow is one instance's network bytes for one UTC day.
+type TrafficRow struct {
+	ResourceID, Name, BundleID string
+	AllowanceBytes             int64
+	Day                        time.Time
+	BytesIn, BytesOut          int64
+	ObservedAt                 time.Time
 }
 type Cloud interface {
 	Fetch(context.Context, aws.Config, Request) (Snapshot, error)

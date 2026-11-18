@@ -53,6 +53,8 @@ type inventoryAWS struct {
 	enableModes    map[string]string
 	optPolls       map[string]int
 	extra          func(http.ResponseWriter, *http.Request, string, string, string, map[string]any) bool
+	// monitoring answers CloudWatch, whose rpcv2 CBOR body is not JSON.
+	monitoring func(w http.ResponseWriter, body []byte, account, region string)
 }
 
 func newInventoryAWS(t *testing.T) *inventoryAWS {
@@ -173,6 +175,15 @@ func (f *inventoryAWS) handler(expectedAccount string) http.Handler {
 		if service == "sts" {
 			w.Header().Set("Content-Type", "text/xml")
 			fmt.Fprintf(w, `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/"><GetCallerIdentityResult><Account>%s</Account><Arn>arn:aws:iam::%s:user/InventoryFixture</Arn><UserId>fixture</UserId></GetCallerIdentityResult><ResponseMetadata><RequestId>fixture-sts</RequestId></ResponseMetadata></GetCallerIdentityResponse>`, account, account)
+			return
+		}
+		if service == "monitoring" {
+			if f.monitoring == nil {
+				f.t.Error("unexpected CloudWatch request")
+				w.WriteHeader(400)
+				return
+			}
+			f.monitoring(w, body, account, region)
 			return
 		}
 		var input map[string]any

@@ -85,7 +85,11 @@ func (*Executor) Plan(ctx context.Context, raw json.RawMessage, targets []oc.Tar
 			target.Label += " · " + request.Region
 		}
 		body, _ := json.Marshal(request)
-		items = append(items, oc.ItemPlan{Target: target, Steps: []oc.StepPlan{{Kind: "fetch", Label: "读取完整分页并更新快照", Input: body}}})
+		label := "读取完整分页并更新快照"
+		if scope.Traffic(request.Kind) {
+			label = "读取实例网络指标并更新日流量"
+		}
+		items = append(items, oc.ItemPlan{Target: target, Steps: []oc.StepPlan{{Kind: "fetch", Label: label, Input: body}}})
 	}
 	return items, nil
 }
@@ -118,7 +122,10 @@ func (e *Executor) Execute(ctx context.Context, call oc.Call) oc.Result {
 		data, err = e.deps.Cloud.Fetch(ctx, cfg, source.Request{Kind: request.Kind, Region: request.Region, AWSAccountID: call.Target.Binding.AWSAccountID, Partition: call.Target.Binding.Partition})
 	}
 	var snapshots []entity.Snapshot
-	if err == nil {
+	var traffic []entity.Traffic
+	if err == nil && scope.Traffic(request.Kind) {
+		traffic, err = validateTraffic(data)
+	} else if err == nil {
 		snapshots, err = validate(data, request)
 	}
 	if err == nil {
@@ -130,6 +137,16 @@ func (e *Executor) Execute(ctx context.Context, call oc.Call) oc.Result {
 		defer cancel()
 		_ = e.deps.Store.FailRefresh(persist, ticket, result.Code)
 		return result
+	}
+	if scope.Traffic(request.Kind) {
+		if err := e.deps.Store.CompleteTraffic(ctx, ticket, traffic, data.Pages, data.RequestID); err != nil {
+			return oc.Result{State: oc.Waiting, Code: "SNAPSHOT_COMMIT_UNCONFIRMED", After: 2 * time.Second}
+		}
+		instances := map[string]bool{}
+		for _, row := range traffic {
+			instances[row.ResourceID] = true
+		}
+		return oc.Result{State: oc.Succeeded, Code: "SNAPSHOT_UPDATED", Output: oc.Output{ResourceID: "inventory/" + ticket.Scope.ID, RequestID: data.RequestID, Summary: fmt.Sprintf("已更新 %d 个实例的 %d 条日流量", len(instances), len(traffic))}}
 	}
 	if err := e.deps.Store.CompleteRefresh(ctx, ticket, snapshots, data.Pages, data.RequestID); err != nil {
 		return oc.Result{State: oc.Waiting, Code: "SNAPSHOT_COMMIT_UNCONFIRMED", After: 2 * time.Second}
@@ -194,6 +211,28 @@ func validate(data source.Snapshot, request contract.RefreshTarget) ([]entity.Sn
 			return nil, contract.ErrResponse
 		}
 		rows = append(rows, entity.Snapshot{ResourceID: resource.ID, Name: resource.Name, Region: resource.Region, State: resource.State, Details: string(details), ObservedAt: resource.ObservedAt})
+	}
+	return rows, nil
+}
+
+// validateTraffic bounds the metric rows before they are persisted.
+func validateTraffic(data source.Snapshot) ([]entity.Traffic, error) {
+	if data.Pages < 1 || data.Pages > 256 || len(data.Traffic) > 100000 || len(data.RequestID) > 256 {
+		return nil, contract.ErrResponse
+	}
+	rows := make([]entity.Traffic, 0, len(data.Traffic))
+	seen := map[string]bool{}
+	for _, v := range data.Traffic {
+		if !validText(v.ResourceID, 2048) || !validText(v.Name, 255) || len(v.BundleID) > 80 || v.BytesIn < 0 || v.BytesOut < 0 || v.AllowanceBytes < 0 || v.Day.IsZero() || v.ObservedAt.IsZero() {
+			return nil, contract.ErrResponse
+		}
+		day := v.Day.UTC().Format(time.DateOnly)
+		key := v.ResourceID + "/" + day
+		if seen[key] {
+			return nil, contract.ErrResponse
+		}
+		seen[key] = true
+		rows = append(rows, entity.Traffic{ResourceID: v.ResourceID, Name: v.Name, BundleID: v.BundleID, Day: day, AllowanceBytes: v.AllowanceBytes, BytesIn: v.BytesIn, BytesOut: v.BytesOut, ObservedAt: v.ObservedAt})
 	}
 	return rows, nil
 }

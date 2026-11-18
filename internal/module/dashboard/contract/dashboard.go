@@ -86,6 +86,29 @@ type Account struct {
 	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
 	FailedScopes   int        `json:"failed_scopes"`
 }
+
+// TrafficPool is one Lightsail data transfer allowance pool (account, Region, bundle).
+type TrafficPool struct {
+	AccountID      string  `json:"account_id"`
+	AccountName    string  `json:"account_name"`
+	Region         string  `json:"region"`
+	BundleID       string  `json:"bundle_id"`
+	Instances      int     `json:"instances"`
+	UsedBytes      int64   `json:"used_bytes"`
+	AllowanceBytes int64   `json:"allowance_bytes"`
+	Percent        float64 `json:"percent"`
+}
+
+// Traffic totals collected instance traffic for the current UTC month.
+type Traffic struct {
+	Month     string        `json:"month"`
+	Known     bool          `json:"known"`
+	Instances int           `json:"instances"`
+	BytesIn   int64         `json:"bytes_in"`
+	BytesOut  int64         `json:"bytes_out"`
+	Pools     []TrafficPool `json:"pools"`
+	UpdatedAt *time.Time    `json:"updated_at,omitempty"`
+}
 type Query struct {
 	AccountID string `json:"account_id,omitempty"`
 	Region    string `json:"region,omitempty"`
@@ -105,6 +128,7 @@ type Overview struct {
 	Query           Query       `json:"query"`
 	CheckedAt       time.Time   `json:"checked_at"`
 	Warnings        []string    `json:"warnings"`
+	Traffic         Traffic     `json:"traffic"`
 }
 type RefreshRequest struct {
 	AccountID      string `json:"account_id,omitempty"`
