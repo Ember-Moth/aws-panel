@@ -34,6 +34,34 @@ docker compose --env-file deploy/.env -f deploy/compose.yaml up -d --build app
 | `AWS_PANEL_CLOUD_WRITES_ENABLED` | 云端写入开关，默认 `false` |
 | `AWS_PANEL_DIAGNOSTICS` | 管理员本地任务自检，默认 `false` |
 
+### 使用预构建镜像
+
+CI 在检查全部通过后，把多架构镜像（`linux/amd64`、`linux/arm64`）发布到 GitHub Container Registry：
+
+| 标签 | 来源 |
+| --- | --- |
+| `main` | `main` 分支的最新提交 |
+| `sha-<短提交号>` | 对应 `main` 提交，适合固定部署版本 |
+| `1.2.3`、`1.2`、`latest` | 推送 `v1.2.3` 这类版本标签时发布；`latest` 指向最新版本 |
+
+在 `deploy/.env` 中设置镜像，并去掉命令中的 `--build`，改为先拉取：
+
+```sh
+# deploy/.env
+AWS_PANEL_IMAGE=ghcr.io/ember-moth/aws-panel:main
+```
+
+```sh
+docker compose --env-file deploy/.env -f deploy/compose.yaml pull migrate vault app
+docker compose --env-file deploy/.env -f deploy/compose.yaml up -d postgres redis
+docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm migrate
+docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm vault vault init
+docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm app admin init --username admin
+docker compose --env-file deploy/.env -f deploy/compose.yaml up -d app
+```
+
+如果拉取时提示需要认证，在 GitHub 的包设置中把 `aws-panel` 镜像设为 Public，或先用具有 `read:packages` 权限的令牌执行 `docker login ghcr.io`。
+
 ## 二进制部署
 
 需要 Go（版本见 `go.mod`）、PostgreSQL 和 Redis。数据库与角色需事先创建，迁移只管理已有数据库中的表。
@@ -106,7 +134,7 @@ TLS 在反向代理终止时，代理需保留 `Host`、设置 `X-Forwarded-Prot
 ## 升级
 
 1. 记录当前镜像版本、schema 和活动任务；停止应用，按[运维](operations.md#离线备份)完成配对备份。
-2. 用目标版本执行 `migrate up`，再运行 `migrate status` 与 `vault status`。
+2. 把 `AWS_PANEL_IMAGE` 改为目标版本并拉取（自行构建则带 `--build`），用目标版本执行 `migrate up`，再运行 `migrate status` 与 `vault status`。
 3. 启动新应用，检查健康状态、登录和任务中心。
 
 只提供向上迁移。不要仅回退镜像后强行启动旧二进制；需要回退时恢复升级前的数据库和主密钥。

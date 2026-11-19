@@ -47,7 +47,7 @@ docker compose --env-file deploy/.env -f deploy/compose.yaml up -d --build app
 
 云端写入默认关闭：面板可以查询并生成预览，但不会修改 AWS 资源。确认 IAM 权限后，在 `deploy/.env` 中设置 `AWS_PANEL_CLOUD_WRITES_ENABLED=true` 并重启应用。
 
-不使用容器的安装方式、配置项与反向代理设置见[部署与配置](docs/deployment.md)。
+也可以直接使用 CI 发布到 GitHub Container Registry 的多架构镜像 `ghcr.io/ember-moth/aws-panel`，见[使用预构建镜像](docs/deployment.md#使用预构建镜像)。不使用容器的安装方式、配置项与反向代理设置见[部署与配置](docs/deployment.md)。
 
 ## 文档
 
