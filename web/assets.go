@@ -349,6 +349,13 @@ func NewRenderer() (*Renderer, error) {
 		"verificationStage": func(value string) string {
 			return map[string]string{"configuration": "配置检查", "proxy": "代理连接", "network": "网络连接", "tls": "TLS 链路", "aws": "AWS 响应", "identity": "账号身份"}[value]
 		},
+		"verificationCode": VerificationCode,
+		"partitionName": func(value string) string {
+			if name, ok := map[string]string{"aws": "AWS 商业区域", "aws-cn": "AWS 中国", "aws-us-gov": "AWS GovCloud"}[value]; ok {
+				return name
+			}
+			return value
+		},
 		"textptr": func(value *string) string {
 			if value == nil {
 				return ""
@@ -400,4 +407,39 @@ func Static() fs.FS {
 		panic(err)
 	}
 	return sub
+}
+
+var verificationCodes = map[string]string{
+	"VERIFIED":                "已验证",
+	"ACCOUNT_MISMATCH":        "凭据所属账号与配置不一致",
+	"CONNECTION_DISABLED":     "连接、账号或代理已停用",
+	"CREDENTIALS_EXPIRED":     "临时凭据已过期",
+	"CONNECTION_UNVERIFIED":   "角色来源连接尚未验证",
+	"CONNECTION_CHANGED":      "配置在验证期间发生变化，请重新验证",
+	"VAULT_UNAVAILABLE":       "凭据存储不可用",
+	"DEPENDENCY_UNAVAILABLE":  "服务暂不可用",
+	"INVALID_INPUT":           "连接配置不完整",
+	"NOT_FOUND":               "连接或来源不存在",
+	"FORBIDDEN":               "没有权限",
+	"TLS_VALIDATION_FAILED":   "AWS TLS 证书验证失败",
+	"PROXY_AUTH_FAILED":       "代理用户名或密码错误",
+	"PROXY_CONNECTION_FAILED": "代理不可用",
+	"TIMEOUT":                 "连接超时",
+	"CONNECTION_FAILED":       "无法连接 AWS",
+	"InvalidClientTokenId":    "Access Key ID 无效",
+	"SignatureDoesNotMatch":   "Secret Access Key 不正确",
+	"ExpiredToken":            "临时凭据已过期",
+	"AccessDenied":            "AWS 拒绝访问",
+}
+
+// VerificationCode turns a stored connection verification code into a short
+// Chinese description; unknown AWS error codes are shown as AWS 拒绝 with the code.
+func VerificationCode(code string) string {
+	if text, ok := verificationCodes[code]; ok {
+		return text
+	}
+	if code == "" {
+		return ""
+	}
+	return "AWS 拒绝：" + code
 }

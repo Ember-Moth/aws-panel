@@ -98,8 +98,15 @@ func accountHealth(account contract.Account, connections []contract.Connection) 
 type accountForm struct {
 	Proxies             []contract.Proxy
 	Account             contract.Account
-	New                 bool
+	Setup               accountSetup
+	New, VaultReady     bool
 	CSRF, Error, Action string
+}
+
+// accountSetup keeps the non-secret fields of the first connection entered with a
+// new account, so a failed submission can be shown again.
+type accountSetup struct {
+	AuthType, AccessKeyID, Region string
 }
 type proxyForm struct {
 	Proxy               contract.Proxy
@@ -257,7 +264,10 @@ func (h *Handler) Detail(ctx context.Context, c *app.RequestContext) {
 }
 func (h *Handler) AccountForm(ctx context.Context, c *app.RequestContext) {
 	id := c.Param("id")
-	model := accountForm{New: id == "", Account: contract.Account{Partition: "aws", Active: true, DefaultRouteMode: "direct"}, CSRF: auth.CSRF(ctx), Action: "/accounts"}
+	model := accountForm{New: id == "", Account: contract.Account{Partition: "aws", Active: true, DefaultRouteMode: "direct"}, VaultReady: h.service.VaultReady(), Setup: accountSetup{AuthType: "access_key"}, CSRF: auth.CSRF(ctx), Action: "/accounts"}
+	if !model.VaultReady {
+		model.Setup.AuthType = "later"
+	}
 	if id != "" {
 		detail, err := h.service.AccountDetail(ctx, actor(ctx), id)
 		if err != nil {
@@ -300,7 +310,17 @@ func (h *Handler) SaveAccount(ctx context.Context, c *app.RequestContext) {
 			req.DefaultRouteMode = "proxy"
 		}
 	}
-	value, err := h.service.SaveAccount(ctx, actor(ctx), id, req, auth.Meta(ctx))
+	setup := accountSetup{AuthType: c.PostForm("auth_type"), AccessKeyID: strings.TrimSpace(c.PostForm("access_key_id")), Region: c.PostForm("region")}
+	var err error
+	if !api(c) && id == "" && (setup.AuthType == "access_key" || setup.AuthType == "temporary") {
+		var credentials contract.Credentials
+		credentials, err = credentialInput(c, setup.AuthType)
+		req.Connection = &contract.ConnectionRequest{AuthType: setup.AuthType, Region: setup.Region, RouteMode: "inherit", Credentials: &credentials}
+	}
+	var value contract.Account
+	if err == nil {
+		value, err = h.service.SaveAccount(ctx, actor(ctx), id, req, auth.Meta(ctx))
+	}
 	if err != nil {
 		if api(c) {
 			fail(c, err)
@@ -316,8 +336,11 @@ func (h *Handler) SaveAccount(ctx context.Context, c *app.RequestContext) {
 			fail(c, loadErr)
 			return
 		}
-		h.render(ctx, c, code, "账号配置", "account-edit", "account-form", "accounts", accountForm{Proxies: proxies, New: id == "", Account: contract.Account{DefaultRouteMode: req.DefaultRouteMode, DefaultProxyID: req.DefaultProxyID, ID: id, Name: req.Name, Partition: req.Partition, AWSAccountID: req.AWSAccountID, Active: req.Active != nil && *req.Active, Version: req.Version}, Action: action, CSRF: auth.CSRF(ctx), Error: fault.Message})
+		h.render(ctx, c, code, "账号配置", "account-edit", "account-form", "accounts", accountForm{Proxies: proxies, New: id == "", VaultReady: h.service.VaultReady(), Setup: setup, Account: contract.Account{DefaultRouteMode: req.DefaultRouteMode, DefaultProxyID: req.DefaultProxyID, ID: id, Name: req.Name, Partition: req.Partition, AWSAccountID: c.PostForm("aws_account_id"), Active: req.Active != nil && *req.Active, Version: req.Version}, Action: action, CSRF: auth.CSRF(ctx), Error: fault.Message})
 		return
+	}
+	if req.Connection != nil {
+		h.verifyInitial(ctx, value.ID)
 	}
 	if api(c) {
 		code := 201
@@ -540,27 +563,47 @@ func connectionInput(c *app.RequestContext) (contract.ConnectionRequest, error) 
 		req.SourceConnectionID = nil
 		req.RoleARN = ""
 	}
-	credentials := contract.Credentials{}
-	if req.AuthType == "assume_role" {
-		credentials.ExternalID = c.PostForm("external_id")
-	} else {
-		credentials.AccessKeyID = c.PostForm("access_key_id")
-		credentials.SecretAccessKey = c.PostForm("secret_access_key")
-		if req.AuthType == "temporary" {
-			credentials.SessionToken = c.PostForm("session_token")
-			if value := c.PostForm("expires_at"); value != "" {
-				expires, err := time.ParseInLocation("2006-01-02T15:04", value, clock.Location())
-				if err != nil {
-					return req, contract.Invalid("请填写正确的北京时间到期时间")
-				}
-				credentials.ExpiresAt = &expires
-			}
-		}
+	credentials, err := credentialInput(c, req.AuthType)
+	if err != nil {
+		return req, err
 	}
 	if c.Param("id") == "" || c.PostForm("replace_credentials") == "true" || credentials.AccessKeyID != "" || credentials.SecretAccessKey != "" || credentials.SessionToken != "" || credentials.ExternalID != "" || credentials.ExpiresAt != nil {
 		req.Credentials = &credentials
 	}
 	return req, nil
+}
+
+// credentialInput reads the secret fields of a connection form for one auth type.
+func credentialInput(c *app.RequestContext, authType string) (contract.Credentials, error) {
+	credentials := contract.Credentials{}
+	if authType == "assume_role" {
+		credentials.ExternalID = c.PostForm("external_id")
+		return credentials, nil
+	}
+	credentials.AccessKeyID = strings.TrimSpace(c.PostForm("access_key_id"))
+	credentials.SecretAccessKey = strings.TrimSpace(c.PostForm("secret_access_key"))
+	if authType == "temporary" {
+		credentials.SessionToken = strings.TrimSpace(c.PostForm("session_token"))
+		if value := c.PostForm("expires_at"); value != "" {
+			expires, err := time.ParseInLocation("2006-01-02T15:04", value, clock.Location())
+			if err != nil {
+				return credentials, contract.Invalid("请填写正确的北京时间到期时间")
+			}
+			credentials.ExpiresAt = &expires
+		}
+	}
+	return credentials, nil
+}
+
+// verifyInitial checks the identity of the connection created with a new
+// account, so the account page opens with a verification result. A failure is
+// recorded on the connection and shown there.
+func (h *Handler) verifyInitial(ctx context.Context, accountID string) {
+	detail, err := h.service.AccountDetail(ctx, actor(ctx), accountID)
+	if err != nil || len(detail.Connections) != 1 {
+		return
+	}
+	_, _ = h.service.Verify(ctx, actor(ctx), detail.Connections[0].ID, auth.Meta(ctx))
 }
 
 // SaveConnection creates an account connection.

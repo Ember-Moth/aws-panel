@@ -20,9 +20,15 @@ function configureCredentialForms(root = document) {
           if (field.hasAttribute("data-credential-required")) field.required = enabled && replace;
         });
       });
+      const accountID = form.querySelector("[data-account-id]");
+      if (accountID) accountID.required = kind === "later";
+      const region = form.querySelector("[data-region-default]");
+      if (region && form.elements.partition) region.placeholder = {"aws-cn": "cn-north-1", "aws-us-gov": "us-gov-west-1"}[form.elements.partition.value] || "us-east-1";
       const proxy = form.querySelector("[data-proxy-section]");
-      proxy.hidden = !["socks5","http","proxy"].includes(form.elements.route_mode.value);
-      form.elements.proxy_id.required = !proxy.hidden;form.elements.proxy_id.disabled=proxy.hidden;
+      if (proxy) {
+        proxy.hidden = !["socks5","http","proxy"].includes(form.elements.route_mode.value);
+        form.elements.proxy_id.required = !proxy.hidden;form.elements.proxy_id.disabled=proxy.hidden;
+      }
     };
     if (!form.dataset.initialized) { form.addEventListener("change", update); form.dataset.initialized = "true"; }
     update();

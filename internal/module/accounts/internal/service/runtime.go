@@ -447,7 +447,11 @@ func (s *Service) Verify(ctx context.Context, actorID int64, id string, meta aut
 				if parseErr != nil || identity.AccountID != nodes[0].Account.AWSAccountID || parsed.Partition != nodes[0].Account.Partition || parsed.AccountID != identity.AccountID {
 					result.Stage = "identity"
 					result.Code = "ACCOUNT_MISMATCH"
-					result.Message = "凭据返回的账号或分区与配置不一致"
+					result.Message = "凭据所属的账号或分区与配置不一致"
+					if accountPattern.MatchString(identity.AccountID) {
+						result.AccountID = identity.AccountID
+						result.Message = "凭据属于 AWS 账号 " + identity.AccountID + "，与配置的账号或分区不一致"
+					}
 				} else {
 					result.OK = true
 					result.Stage = "identity"

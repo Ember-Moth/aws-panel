@@ -5032,6 +5032,14 @@
                 "aws_account_id": {
                     "type": "string"
                 },
+                "connection": {
+                    "description": "Connection optionally creates the first access connection together with a\nnew account. When aws_account_id is empty it is derived from the access key.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/contract.ConnectionRequest"
+                        }
+                    ]
+                },
                 "default_proxy_id": {
                     "type": "string"
                 },

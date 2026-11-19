@@ -223,8 +223,37 @@ func TestAccountsVaultRoutingAndAuthorization(t *testing.T) {
 		t.Fatal(err)
 	}
 	result, err := service.Verify(ctx, admin.ID, mismatch.ID, meta)
-	if err != nil || result.OK || result.Code != "ACCOUNT_MISMATCH" {
+	if err != nil || result.OK || result.Code != "ACCOUNT_MISMATCH" || result.AccountID != accountA.AWSAccountID {
 		t.Fatal("wrong AWS account was marked verified")
+	}
+	// A new account can be created together with its first connection; both are
+	// written in one transaction and the connection inherits the account egress.
+	if _, err := service.SaveAccount(ctx, admin.ID, "", ac.AccountRequest{Name: "Bad region", Partition: "aws", AWSAccountID: "444444444444",
+		Connection: &ac.ConnectionRequest{AuthType: "access_key", Region: "cn-north-1", Credentials: &keyA}}, meta); err == nil {
+		t.Fatal("initial connection with a foreign-partition region accepted")
+	}
+	if _, err := service.SaveAccount(ctx, admin.ID, "", ac.AccountRequest{Name: "Undecodable", Partition: "aws",
+		Connection: &ac.ConnectionRequest{AuthType: "access_key", Credentials: &keyA}}, meta); err == nil {
+		t.Fatal("account ID invented for an undecodable access key")
+	}
+	onboarded, err := service.SaveAccount(ctx, admin.ID, "", ac.AccountRequest{Name: "Onboarded", Partition: "aws", AWSAccountID: "444444444444", DefaultRouteMode: "proxy", DefaultProxyID: &p1.ID,
+		Connection: &ac.ConnectionRequest{AuthType: "access_key", Credentials: &keyA}}, meta)
+	if err != nil {
+		t.Fatalf("account with initial connection rejected (or the failed attempt left a row behind): %v", err)
+	}
+	onboardedDetail, err := service.AccountDetail(ctx, admin.ID, onboarded.ID)
+	if err != nil || len(onboardedDetail.Connections) != 1 || onboardedDetail.Connections[0].RouteMode != "inherit" || onboardedDetail.Connections[0].Region != "us-east-1" {
+		t.Fatalf("initial connection not created with defaults: %v %+v", err, onboardedDetail)
+	}
+	result, err = service.Verify(ctx, admin.ID, onboardedDetail.Connections[0].ID, meta)
+	if err != nil || result.Code != "ACCOUNT_MISMATCH" || result.AccountID != accountA.AWSAccountID {
+		t.Fatalf("initial connection verification did not report the real account: %v %+v", err, result)
+	}
+	if err := service.Delete(ctx, admin.ID, "connection", onboardedDetail.Connections[0].ID, onboardedDetail.Connections[0].Version, meta); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.Delete(ctx, admin.ID, "aws_account", onboarded.ID, onboarded.Version, meta); err != nil {
+		t.Fatal(err)
 	}
 	temporary := keyA
 	temporary.SessionToken = "temporary-fixture"

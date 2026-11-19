@@ -369,8 +369,8 @@ a.metric-card:hover {border-color:var(--ap-input-border);color:var(--ap-text);te
 .account-row>summary::-webkit-details-marker {display:none;}
 .account-row>summary:hover {background:var(--ap-subtle);}
 .account-row strong {font-weight:600;}
-.account-chevron {width:8px;height:8px;border-right:1.6px solid var(--ap-muted);border-bottom:1.6px solid var(--ap-muted);transform:rotate(-45deg);transition:transform 120ms;justify-self:center;}
-.account-row[open] .account-chevron {transform:rotate(45deg);}
+.account-chevron {width:8px;height:8px;border-right:1.6px solid var(--ap-muted);border-bottom:1.6px solid var(--ap-muted);transform:translateX(-2px) rotate(-45deg);transition:transform 120ms;justify-self:center;}
+.account-row[open] .account-chevron {transform:translateY(-2px) rotate(45deg);}
 .account-body {background:var(--ap-subtle);border-top:1px solid var(--ap-border);padding:4px 20px 14px 52px;}
 .connection-line {display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--ap-border);}
 .connection-line strong {font-weight:500;}

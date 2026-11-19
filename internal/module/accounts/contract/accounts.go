@@ -19,10 +19,13 @@ type AccountRequest struct {
 	DefaultRouteMode string  `json:"default_route_mode,omitempty"`
 	DefaultProxyID   *string `json:"default_proxy_id,omitempty"`
 	Partition        string  `json:"partition"`
-	AWSAccountID     string  `json:"aws_account_id"`
+	AWSAccountID     string  `json:"aws_account_id,omitempty"`
 	Name             string  `json:"name"`
 	Active           *bool   `json:"active,omitempty"`
 	Version          int64   `json:"version,omitempty"`
+	// Connection optionally creates the first access connection together with a
+	// new account. When aws_account_id is empty it is derived from the access key.
+	Connection *ConnectionRequest `json:"connection,omitempty"`
 }
 type ProxyAuth struct {
 	Username string `json:"username"`

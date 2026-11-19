@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/base32"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"regexp"
 	"strconv"
@@ -262,6 +264,15 @@ func (s *Service) SaveAccount(ctx context.Context, actorID int64, id string, req
 		return contract.Account{}, err
 	}
 	req.Name = strings.TrimSpace(req.Name)
+	req.AWSAccountID = strings.TrimSpace(req.AWSAccountID)
+	if req.Connection != nil {
+		if id != "" {
+			return contract.Account{}, contract.Invalid("只能在创建账号时同时添加访问连接")
+		}
+		if err := prepareInitialConnection(&req); err != nil {
+			return contract.Account{}, err
+		}
+	}
 	if !nameOK(req.Name) || !partitionOK(req.Partition) || !accountPattern.MatchString(req.AWSAccountID) {
 		return contract.Account{}, contract.Invalid("请填写名称、分区和 12 位 AWS 账号 ID")
 	}
@@ -324,9 +335,83 @@ func (s *Service) SaveAccount(ctx context.Context, actorID int64, id string, req
 		if err := tx.SaveAccount(ctx, record, expected); err != nil {
 			return err
 		}
-		return tx.AppendAudit(ctx, audit(meta, actor, action, "aws_account", record.ID, map[string]string{"version": strconv.FormatInt(record.Version, 10)}))
+		if err := tx.AppendAudit(ctx, audit(meta, actor, action, "aws_account", record.ID, map[string]string{"version": strconv.FormatInt(record.Version, 10)})); err != nil {
+			return err
+		}
+		if req.Connection == nil {
+			return nil
+		}
+		_, err := s.writeConnection(ctx, tx, actor, record.ID, "", *req.Connection, meta)
+		return err
 	})
 	return accountView(record), err
+}
+
+// prepareInitialConnection fills defaults for a connection created together with
+// its account and, when the account ID is omitted, derives it from the access key.
+func prepareInitialConnection(req *contract.AccountRequest) error {
+	connection := req.Connection
+	if connection.AuthType != "access_key" && connection.AuthType != "temporary" {
+		return contract.Invalid("创建账号时只能同时添加 Access Key 或临时凭据连接")
+	}
+	if connection.Credentials == nil {
+		return contract.Invalid("请填写访问凭据")
+	}
+	if strings.TrimSpace(connection.Name) == "" {
+		connection.Name = "默认连接"
+	}
+	if connection.RouteMode == "" {
+		connection.RouteMode = "inherit"
+	}
+	connection.Region = strings.TrimSpace(connection.Region)
+	if connection.Region == "" {
+		connection.Region = defaultRegion(req.Partition)
+	}
+	if err := checkConnection(connection); err != nil {
+		return err
+	}
+	if req.AWSAccountID == "" {
+		derived, ok := accountFromAccessKey(connection.Credentials.AccessKeyID)
+		if !ok {
+			return contract.Invalid("无法从 Access Key ID 推算账号 ID，请手动填写 12 位 AWS 账号 ID")
+		}
+		req.AWSAccountID = derived
+	}
+	return nil
+}
+
+func defaultRegion(partition string) string {
+	switch partition {
+	case "aws-cn":
+		return "cn-north-1"
+	case "aws-us-gov":
+		return "us-gov-west-1"
+	default:
+		return "us-east-1"
+	}
+}
+
+// accountFromAccessKey decodes the AWS account ID embedded in an AKIA/ASIA access
+// key ID. Keys issued before AWS adopted this encoding decode to another number;
+// identity verification then reports the mismatch.
+func accountFromAccessKey(key string) (string, bool) {
+	key = strings.TrimSpace(key)
+	if len(key) != 20 || (!strings.HasPrefix(key, "AKIA") && !strings.HasPrefix(key, "ASIA")) {
+		return "", false
+	}
+	raw, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(key[4:])
+	if err != nil || len(raw) < 6 {
+		return "", false
+	}
+	var value uint64
+	for _, b := range raw[:6] {
+		value = value<<8 | uint64(b)
+	}
+	id := (value & 0x7fffffffff80) >> 7
+	if id == 0 || id > 999999999999 {
+		return "", false
+	}
+	return fmt.Sprintf("%012d", id), true
 }
 func (s *Service) ListProxies(ctx context.Context, actorID int64) ([]contract.Proxy, error) {
 	if _, err := s.actor(ctx, actorID, true); err != nil {
@@ -543,129 +628,149 @@ func (s *Service) SaveConnection(ctx context.Context, actorID int64, accountID, 
 	if err != nil {
 		return contract.Connection{}, err
 	}
-	req.Name = strings.TrimSpace(req.Name)
-	if !validID(accountID) || !nameOK(req.Name) || (req.AuthType != "access_key" && req.AuthType != "temporary" && req.AuthType != "assume_role") {
+	if !validID(accountID) {
 		return contract.Connection{}, contract.ErrInvalid
 	}
-	if req.RouteMode != "direct" && req.RouteMode != "socks5" && req.RouteMode != "http" && req.RouteMode != "proxy" && req.RouteMode != "inherit" {
-		return contract.Connection{}, contract.Invalid("请选择账号默认出口、直连或代理")
-	}
-	if (req.RouteMode == "direct" || req.RouteMode == "inherit") && req.ProxyID != nil {
-		return contract.Connection{}, contract.Invalid("继承账号或直连模式不能指定独立代理")
-	}
-	if req.Credentials != nil && !credentialsOK(req.AuthType, req.Credentials) {
-		return contract.Connection{}, contract.Invalid("凭据不完整、已过期或与认证类型不匹配")
+	if err := checkConnection(&req); err != nil {
+		return contract.Connection{}, err
 	}
 	var record entity.Connection
 	err = s.deps.Store.InAccountsTx(ctx, func(tx repository.AccountsTx) error {
 		if err := tx.LockAccounts(ctx); err != nil {
 			return err
 		}
-		account, err := tx.Account(ctx, accountID)
-		if err != nil {
-			return err
-		}
-		if account.DeletedAt != nil {
-			return contract.ErrNotFound
-		}
-		if !regionOK(account.Partition, req.Region) {
-			return contract.Invalid("区域与 AWS 分区不匹配")
-		}
-		if req.RouteMode != "inherit" {
-			mode, proxyID, err := resolveRoute(ctx, tx, req.RouteMode, req.ProxyID)
-			if err != nil {
-				return err
-			}
-			req.RouteMode = mode
-			req.ProxyID = proxyID
-		}
-
-		if req.AuthType == "assume_role" {
-			role, err := arn.Parse(req.RoleARN)
-			if err != nil || role.Partition != account.Partition || role.AccountID != account.AWSAccountID || role.Service != "iam" || !strings.HasPrefix(role.Resource, "role/") ||
-				req.SourceConnectionID == nil || !validID(*req.SourceConnectionID) {
-				return contract.Invalid("角色 ARN 或来源连接不正确")
-			}
-			source, err := tx.Connection(ctx, *req.SourceConnectionID)
-			if err != nil {
-				return err
-			}
-			sourceAccount, err := tx.Account(ctx, source.AccountID)
-			if err != nil {
-				return err
-			}
-			if sourceAccount.Partition != account.Partition {
-				return contract.Invalid("角色来源必须处于同一 AWS 分区")
-			}
-		} else if req.SourceConnectionID != nil || req.RoleARN != "" {
-			return contract.ErrInvalid
-		}
-		expected := int64(0)
-		now := clock.Now()
-		action := "accounts.connection.created"
-		if id == "" {
-			if req.Credentials == nil {
-				return contract.Invalid("新连接需要提供凭据或角色参数")
-			}
-			record = entity.Connection{ID: uuid.NewString(), AccountID: accountID, SecretID: uuid.NewString(), Active: true, Version: 1, CreatedAt: now}
-		} else {
-			if !validID(id) || req.Active == nil {
-				return contract.ErrInvalid
-			}
-			record, err = tx.Connection(ctx, id)
-			if err != nil {
-				return err
-			}
-			if record.AccountID != accountID {
-				return contract.ErrNotFound
-			}
-			if record.Version != req.Version {
-				return contract.ErrConflict
-			}
-			if record.AuthType != req.AuthType && req.Credentials == nil {
-				return contract.Invalid("更改认证类型时必须重新提供凭据")
-			}
-			expected = record.Version
-			record.Version++
-			record.Active = *req.Active
-			action = "accounts.connection.updated"
-		}
-		record.Name = req.Name
-		record.AuthType = req.AuthType
-		if expected == 0 && req.Active != nil {
-			record.Active = *req.Active
-		}
-		record.Region = req.Region
-		record.RouteMode = req.RouteMode
-		record.ProxyID = req.ProxyID
-		record.SourceConnectionID = req.SourceConnectionID
-		record.RoleARN = req.RoleARN
-		record.UpdatedAt = now
-		record.VerificationStatus = "pending"
-		record.VerificationStage = ""
-		record.VerificationCode = ""
-		record.VerificationFingerprint = ""
-		record.PrincipalARN = ""
-		record.VerifiedAt = nil
-		if req.Credentials != nil {
-			if err := s.seal(ctx, tx, record.SecretID, "connection", record.ID, "aws_credentials", req.Credentials); err != nil {
-				return err
-			}
-			record.CredentialExpiresAt = req.Credentials.ExpiresAt
-			record.AccessKeySuffix = ""
-			if key := req.Credentials.AccessKeyID; len(key) >= 4 {
-				record.AccessKeySuffix = key[len(key)-4:]
-			}
-		}
-		if err := tx.SaveConnection(ctx, record, expected); err != nil {
-			return err
-		}
-		if _, err := tx.Graph(ctx, record.ID); err != nil {
-			return err
-		}
-		return tx.AppendAudit(ctx, audit(meta, actor, action, "connection", record.ID, map[string]string{"version": strconv.FormatInt(record.Version, 10)}))
+		var err error
+		record, err = s.writeConnection(ctx, tx, actor, accountID, id, req, meta)
+		return err
 	})
 	return connectionView(record, true), err
+}
+
+// checkConnection validates the request shape before any transaction starts.
+func checkConnection(req *contract.ConnectionRequest) error {
+	req.Name = strings.TrimSpace(req.Name)
+	if !nameOK(req.Name) || (req.AuthType != "access_key" && req.AuthType != "temporary" && req.AuthType != "assume_role") {
+		return contract.ErrInvalid
+	}
+	if req.RouteMode != "direct" && req.RouteMode != "socks5" && req.RouteMode != "http" && req.RouteMode != "proxy" && req.RouteMode != "inherit" {
+		return contract.Invalid("请选择账号默认出口、直连或代理")
+	}
+	if (req.RouteMode == "direct" || req.RouteMode == "inherit") && req.ProxyID != nil {
+		return contract.Invalid("继承账号或直连模式不能指定独立代理")
+	}
+	if req.Credentials != nil && !credentialsOK(req.AuthType, req.Credentials) {
+		return contract.Invalid("凭据不完整、已过期或与认证类型不匹配")
+	}
+	return nil
+}
+
+// writeConnection creates or updates a connection inside an accounts transaction
+// that already holds the accounts lock.
+func (s *Service) writeConnection(ctx context.Context, tx repository.AccountsTx, actor auth.Principal, accountID, id string, req contract.ConnectionRequest, meta auth.RequestMeta) (entity.Connection, error) {
+	var record entity.Connection
+	account, err := tx.Account(ctx, accountID)
+	if err != nil {
+		return record, err
+	}
+	if account.DeletedAt != nil {
+		return record, contract.ErrNotFound
+	}
+	if !regionOK(account.Partition, req.Region) {
+		return record, contract.Invalid("区域与 AWS 分区不匹配")
+	}
+	if req.RouteMode != "inherit" {
+		mode, proxyID, err := resolveRoute(ctx, tx, req.RouteMode, req.ProxyID)
+		if err != nil {
+			return record, err
+		}
+		req.RouteMode = mode
+		req.ProxyID = proxyID
+	}
+
+	if req.AuthType == "assume_role" {
+		role, err := arn.Parse(req.RoleARN)
+		if err != nil || role.Partition != account.Partition || role.AccountID != account.AWSAccountID || role.Service != "iam" || !strings.HasPrefix(role.Resource, "role/") ||
+			req.SourceConnectionID == nil || !validID(*req.SourceConnectionID) {
+			return record, contract.Invalid("角色 ARN 或来源连接不正确")
+		}
+		source, err := tx.Connection(ctx, *req.SourceConnectionID)
+		if err != nil {
+			return record, err
+		}
+		sourceAccount, err := tx.Account(ctx, source.AccountID)
+		if err != nil {
+			return record, err
+		}
+		if sourceAccount.Partition != account.Partition {
+			return record, contract.Invalid("角色来源必须处于同一 AWS 分区")
+		}
+	} else if req.SourceConnectionID != nil || req.RoleARN != "" {
+		return record, contract.ErrInvalid
+	}
+	expected := int64(0)
+	now := clock.Now()
+	action := "accounts.connection.created"
+	if id == "" {
+		if req.Credentials == nil {
+			return record, contract.Invalid("新连接需要提供凭据或角色参数")
+		}
+		record = entity.Connection{ID: uuid.NewString(), AccountID: accountID, SecretID: uuid.NewString(), Active: true, Version: 1, CreatedAt: now}
+	} else {
+		if !validID(id) || req.Active == nil {
+			return record, contract.ErrInvalid
+		}
+		record, err = tx.Connection(ctx, id)
+		if err != nil {
+			return record, err
+		}
+		if record.AccountID != accountID {
+			return record, contract.ErrNotFound
+		}
+		if record.Version != req.Version {
+			return record, contract.ErrConflict
+		}
+		if record.AuthType != req.AuthType && req.Credentials == nil {
+			return record, contract.Invalid("更改认证类型时必须重新提供凭据")
+		}
+		expected = record.Version
+		record.Version++
+		record.Active = *req.Active
+		action = "accounts.connection.updated"
+	}
+	record.Name = req.Name
+	record.AuthType = req.AuthType
+	if expected == 0 && req.Active != nil {
+		record.Active = *req.Active
+	}
+	record.Region = req.Region
+	record.RouteMode = req.RouteMode
+	record.ProxyID = req.ProxyID
+	record.SourceConnectionID = req.SourceConnectionID
+	record.RoleARN = req.RoleARN
+	record.UpdatedAt = now
+	record.VerificationStatus = "pending"
+	record.VerificationStage = ""
+	record.VerificationCode = ""
+	record.VerificationFingerprint = ""
+	record.PrincipalARN = ""
+	record.VerifiedAt = nil
+	if req.Credentials != nil {
+		if err := s.seal(ctx, tx, record.SecretID, "connection", record.ID, "aws_credentials", req.Credentials); err != nil {
+			return record, err
+		}
+		record.CredentialExpiresAt = req.Credentials.ExpiresAt
+		record.AccessKeySuffix = ""
+		if key := req.Credentials.AccessKeyID; len(key) >= 4 {
+			record.AccessKeySuffix = key[len(key)-4:]
+		}
+	}
+	if err := tx.SaveConnection(ctx, record, expected); err != nil {
+		return record, err
+	}
+	if _, err := tx.Graph(ctx, record.ID); err != nil {
+		return record, err
+	}
+	return record, tx.AppendAudit(ctx, audit(meta, actor, action, "connection", record.ID, map[string]string{"version": strconv.FormatInt(record.Version, 10)}))
 }
 
 func resolveRoute(ctx context.Context, store repository.AccountsStore, mode string, proxyID *string) (string, *string, error) {
