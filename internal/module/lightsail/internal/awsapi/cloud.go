@@ -55,18 +55,34 @@ func (Cloud) Regions(ctx context.Context, cfg aws.Config) ([]contract.Region, er
 		if state == "" {
 			state = "UNKNOWN"
 		}
-		zone := false
-		for _, v := range row.AvailabilityZones {
-			zone = zone || strings.EqualFold(aws.ToString(v.State), "available")
-		}
 		name := aws.ToString(row.DisplayName)
 		if name == "" {
 			name = code
 		}
-		result = append(result, contract.Region{Code: code, Name: name, State: state, Available: zone && (state == "ENABLED" || state == "ENABLED_BY_DEFAULT")})
+		result = append(result, contract.Region{Code: code, Name: name, State: state, Available: regionAvailable(state, row.AvailabilityZones)})
 	}
 	sort.Slice(result, func(i, j int) bool { return result[i].Code < result[j].Code })
 	return result, nil
+}
+
+// regionAvailable reports whether a Lightsail region can be offered for launch.
+// GetRegions fills in availability zones only for the region the request is sent
+// to, so other regions arrive with an empty list; their zones are checked when the
+// region's own catalogue is loaded. A listed set of zones must contain one that
+// is available.
+func regionAvailable(state string, zones []lt.AvailabilityZone) bool {
+	if state != "ENABLED" && state != "ENABLED_BY_DEFAULT" {
+		return false
+	}
+	if len(zones) == 0 {
+		return true
+	}
+	for _, zone := range zones {
+		if strings.EqualFold(aws.ToString(zone.State), "available") {
+			return true
+		}
+	}
+	return false
 }
 
 func pages(ctx context.Context, fetch func(*string) (string, error)) error {
